@@ -4,7 +4,7 @@
   "InternalName": "MiniGamesEmporium",
   "Punchline": "Host BAR 777 and other mini games with automated queue management.",
   "Description": "A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.",
-  "Changelog": "**Beta Release v0.0.0.1**\n- BAR 777: pay entry fee, roll /random to hit the winning number within allotted rolls\n- Walk-in and Queue modes\n- Configurable queue keyword with per-channel toggles (say, shout, yell, tell)\n- Persistent queue across restarts\n- Trade verification and Boosted Pot support\n- Live roll tracking and automatic win detection\n- Six customisable chat templates with auto-send toggles\n- Rate-limited outbound chat queue\n- Statistics panel and Transaction History ledger\n- Neon nightclub UI theme with per-game accent colours\n- Commands: /mge, /minigamesemporium, /mgeconfig",
+  "Changelog": "- Added IPC provider for BAR 777 game info and window opened event for Gamba Where.",
   "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
   "ApplicableVersion": "any",
   "Tags": [

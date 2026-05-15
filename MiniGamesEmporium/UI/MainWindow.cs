@@ -14,12 +14,17 @@ using MiniGamesEmporium.Games.Bar777;
 namespace MiniGamesEmporium.UI;
 public sealed class MainWindow : Window, IDisposable
 {
+    public event Action? WindowOpened;
+
     private readonly TransactionHistoryTab transactionHistoryTab;
     private readonly SessionHistoryTab sessionHistoryTab;
     private readonly MiniGamesTab miniGamesTab;
     private readonly SettingsTab settingsTab;
     private readonly SessionService sessionService;
     private bool focusSettingsTab;
+
+    public override void OnOpen() => WindowOpened?.Invoke();
+
     public void OpenSettingsTab()
     {
         IsOpen = true;

@@ -6,7 +6,7 @@
     <Author>OOFGames</Author>
     <Description>A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.</Description>
     <Punchline>Host BAR 777 and other mini games with automated queue management.</Punchline>
-    <Version>0.0.0.2</Version>
+    <Version>0.0.1.0</Version>
     <PackageProjectUrl>https://github.com/OOFGamesss/MiniGamesEmporium</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>

@@ -6,6 +6,7 @@ using Dalamud.Plugin.Services;
 using ECommons;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.IPC;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.State;
 using MiniGamesEmporium.UI;
@@ -22,6 +23,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
     private const string MainCommandFull = "/minigamesemporium";
     private const string MainCommandShort = "/mge";
     private const string ConfigCommand = "/mgeconfig";
@@ -31,6 +33,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly SessionService sessionService;
     private readonly ChatListener chatListener;
     private readonly ChatQueueService chatQueueService;
+    private readonly WindowOpenedIpc windowOpenedIpc;
+    private readonly Bar777GameInfoIpcProvider bar777IpcProvider;
     public MiniGamesEmporium()
     {
         ECommonsMain.Init(PluginInterface, this);
@@ -43,6 +47,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         chatListener = new ChatListener(ChatGui, Configuration, sessionService, Log, ObjectTable);
         mainWindow = new MainWindow(Configuration, sessionService, chatQueueService);
         windowSystem.AddWindow(mainWindow);
+        windowOpenedIpc = new WindowOpenedIpc(PluginInterface, mainWindow);
+        bar777IpcProvider = new Bar777GameInfoIpcProvider(PluginInterface, Framework, Configuration, sessionService);
         CommandManager.AddHandler(MainCommandFull, new CommandInfo(OnCommand)
         {
             HelpMessage = "Opens the Mini Games Emporium window.",
@@ -65,6 +71,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
         PluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
+        windowOpenedIpc.Dispose();
+        bar777IpcProvider.Dispose();
         chatListener.Dispose();
         chatQueueService.Dispose();
         windowSystem.RemoveAllWindows();
