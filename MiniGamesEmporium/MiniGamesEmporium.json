@@ -1,0 +1,23 @@
+{
+  "Author": "OOFGames",
+  "Name": "Mini Games Emporium",
+  "InternalName": "MiniGamesEmporium",
+  "Punchline": "Host BAR 777 and other mini games with automated queue management.",
+  "Description": "A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.",
+  "Changelog": "**Initial Release:**\nBAR 777 game! \n- players pay an entry fee and roll /random to hit the winning number within their allotted rolls\n- Walk-in mode - no queue required; host targets a player directly to start a game\n- Queue mode - players type a keyword in say, shout, yell, or tell to join an automatic waitlist\n- Configurable queue keyword and per-channel toggles (say, shout, yell, tell)\n- Persistent queue - waitlist survives plugin restarts and mid-event crashes\n- Automatic queue promotion - next player is pulled in automatically after End Session & Process Next\n- Trade verification - plugin detects incoming Gil trades and confirms payment against the configured entry cost\n- Boosted Pot support - add extra Gil to the prize pool on top of trade revenue\n- Roll tracking - every /random roll is logged and compared against the winning number in real time\n- Win detection - win shout fires automatically when a player hits the target roll\n- Six customisable chat message templates: Payment Request, Tell Amount Request, Start Rolls, Halfway, Unlucky, Win Shout\n- Auto-send toggles for Halfway, Unlucky, and Win Shout messages\n- Rate-limited chat queue - all outbound messages fire with a one-second gap to avoid server filters\n- Statistics panel - shows Boosted Pot, Taken in Trades, Players Played, and In Queue live during a session\n- Transaction History ledger - every Gil trade is recorded with player, game, amount, and timestamp\n- History survives restarts for venue audits\n- Neon nightclub UI theme with per-game accent colours\n- Placeholder panels for Minefield Gambit and Gambler Derby (coming soon)\n- Placeholder panels for Hot Shots, Beer Pong, Darts, and 8 Ball Pool (coming soon)\n- Commands: /mge, /minigamesemporium, /mgeconfig",
+  "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "minigames",
+    "bar777",
+    "queue",
+    "gil",
+    "gamba",
+    "chat"
+  ],
+  "DalamudApiLevel": 15,
+  "DownloadLinkInstall": "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/MiniGamesEmporium/latest.zip",
+  "DownloadLinkUpdate": "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/MiniGamesEmporium/latest.zip",
+  "DownloadLinkTesting": "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/MiniGamesEmporium/latest.zip",
+  "IconUrl": "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/images/minigamesemporium.png"
+}

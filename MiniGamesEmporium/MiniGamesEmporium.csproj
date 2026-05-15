@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <PropertyGroup>
+    <AssemblyName>MiniGamesEmporium</AssemblyName>
+    <Name>Mini Games Emporium</Name>
+    <Author>OOFGames</Author>
+    <Description>A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.</Description>
+    <Punchline>Host BAR 777 and other mini games with automated queue management.</Punchline>
+    <Version>0.0.0.1</Version>
+    <PackageProjectUrl>https://github.com/OOFGamesss/MiniGamesEmporium</PackageProjectUrl>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="Images\**\*.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ECommons" Version="[3.2.0.18, )" />
+  </ItemGroup>
+</Project>
