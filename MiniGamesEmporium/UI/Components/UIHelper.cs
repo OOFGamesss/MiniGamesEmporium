@@ -3,6 +3,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 
 namespace MiniGamesEmporium.UI.Components;
 
@@ -83,19 +84,15 @@ internal static class UIHelper
             style.FramePadding.Y * 2 + height);
     }
 
-    internal static void PushGreenButtonColours()
-    {
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.1f, 0.6f, 0.1f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.2f, 0.8f, 0.2f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.05f, 0.4f, 0.05f, 1f));
-    }
+    internal static ImRaii.ColorDisposable PushGreenButtonColours() =>
+        new ImRaii.ColorDisposable()
+            .Push(ImGuiCol.Button,        new Vector4(0.1f,  0.6f,  0.1f,  1f))
+            .Push(ImGuiCol.ButtonHovered, new Vector4(0.2f,  0.8f,  0.2f,  1f))
+            .Push(ImGuiCol.ButtonActive,  new Vector4(0.05f, 0.4f,  0.05f, 1f));
 
-    internal static void PushRedButtonColours()
-    {
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.1f, 0.1f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.8f, 0.2f, 0.2f, 1f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.4f, 0.05f, 0.05f, 1f));
-    }
-
-    internal static void PopButtonColours() => ImGui.PopStyleColor(3);
+    internal static ImRaii.ColorDisposable PushRedButtonColours() =>
+        new ImRaii.ColorDisposable()
+            .Push(ImGuiCol.Button,        new Vector4(0.6f, 0.1f,  0.1f,  1f))
+            .Push(ImGuiCol.ButtonHovered, new Vector4(0.8f, 0.2f,  0.2f,  1f))
+            .Push(ImGuiCol.ButtonActive,  new Vector4(0.4f, 0.05f, 0.05f, 1f));
 }
