@@ -29,6 +29,7 @@ public sealed class Bar777ChatSettingsTab
         ImGui.TextDisabled("  {boughtrolls} = rolls this player actually purchased (from session trade)");
         ImGui.TextDisabled("  {remaining}   = rolls remaining (or Gil owed in the Amount Request message)");
         ImGui.TextDisabled("  {totalpot}    = total pot (boosted pot + trades)");
+        ImGui.TextDisabled("  {keyword}     = queue join keyword (from config)");
         ImGui.Spacing();
         DrawHybridMessageSection();
         ImGui.Spacing();

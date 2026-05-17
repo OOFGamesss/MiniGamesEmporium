@@ -62,18 +62,7 @@ public sealed class Bar777StatsTab
         var yellClicked = UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Pot", "##YellPot");
         ImGui.PopStyleColor(3);
         if (yellClicked)
-        {
-            var session = this.config.ActiveSession;
-            var playerName = session?.PlayerName ?? string.Empty;
-            var playerWorld = session?.PlayerWorld;
-            var fullName = string.IsNullOrEmpty(playerWorld) ? playerName : $"{playerName}@{playerWorld}";
-            var msg = Bar777MessageFormatter.Format(
-                this.config.Bar777.Chat.YellPotMessage,
-                this.config,
-                fullName,
-                totalPotOverride: totalPot);
-            this.chatQueue.Enqueue(msg);
-        }
+            AnnouncePot.Execute(this.config, this.chatQueue, totalPot);
         ImGui.PopStyleVar();
         ImGui.TableSetColumnIndex(2);
         ImGui.TextColored(EmporiumNeonTheme.WinGold, $"{totalPot:N0} Gil");

@@ -8,8 +8,7 @@ public static class AnnounceKeyword
 {
     public static void Execute(PluginConfiguration config, ChatQueueService chatQueue)
     {
-        var msg = config.Bar777.Chat.AnnounceKeywordMessage
-            .Replace("{keyword}", config.QueueKeyword);
+        var msg = Bar777MessageFormatter.Format(config.Bar777.Chat.AnnounceKeywordMessage, config);
         chatQueue.Enqueue(msg);
     }
 }
