@@ -17,21 +17,28 @@ public static class Bar777MessageFormatter
         string? remainingOverride = null)
     {
         var session = config.ActiveSession;
-        var rollsAllowed = session?.RollsAllowed ?? config.Bar777.RollCount;
-        var totalTraded = config.Transactions
-            .Where(t => t.GameName == Bar777GameIds.DisplayName)
-            .Sum(t => (long)t.Amount);
-        var totalPot = totalPotOverride ?? config.Bar777.BoostedPot + totalTraded;
+        var rollsAllowed = session?.RollsAllowed ?? config.Bar777.MaxRolls;
+        var boughtRolls  = session?.RollsAllowed ?? 0;
+        var totalPot = totalPotOverride ?? config.Bar777.BoostedPot + config.Bar777.SessionTradedTotal;
         var remaining = remainingOverride
             ?? (session != null
                 ? Math.Max(0, session.RollsAllowed - session.RollsUsed).ToString()
                 : rollsAllowed.ToString());
+        var isTell = template.TrimStart().StartsWith("/tell", StringComparison.OrdinalIgnoreCase);
+        var displayPlayer = isTell ? playerName : StripWorld(playerName);
         return template
-            .Replace("{player}",   playerName)
-            .Replace("{position}", queuePosition.ToString())
-            .Replace("{cost}",     config.Bar777.Cost.ToString("N0"))
-            .Replace("{rolls}",    rollsAllowed.ToString())
-            .Replace("{remaining}", remaining)
-            .Replace("{totalpot}", totalPot.ToString("N0"));
+            .Replace("{player}",     displayPlayer)
+            .Replace("{position}",   queuePosition.ToString())
+            .Replace("{cost}",       config.Bar777.CostPerRoll.ToString("N0"))
+            .Replace("{rolls}",      rollsAllowed.ToString())
+            .Replace("{boughtrolls}", boughtRolls.ToString())
+            .Replace("{remaining}",  remaining)
+            .Replace("{totalpot}",   totalPot.ToString("N0"));
+    }
+
+    private static string StripWorld(string name)
+    {
+        var at = name.IndexOf('@');
+        return at >= 0 ? name[..at] : name;
     }
 }

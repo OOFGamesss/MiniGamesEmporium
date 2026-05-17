@@ -12,6 +12,7 @@ public sealed class Bar777GameInfoIpc
     public long BoostedPot { get; set; }
     public long TotalPot { get; set; }
     public long CostPerRoll { get; set; }
+    public int MaxRolls { get; set; }
     public int PlayersPlayed { get; set; }
     public int? Queue { get; set; }
 
@@ -27,7 +28,8 @@ public sealed class Bar777GameInfoIpc
         {
             BoostedPot    = config.Bar777.BoostedPot,
             TotalPot      = config.Bar777.BoostedPot + amountInTrades,
-            CostPerRoll   = config.Bar777.Cost,
+            CostPerRoll   = config.Bar777.CostPerRoll,
+            MaxRolls      = config.Bar777.MaxRolls,
             PlayersPlayed = config.Bar777.PlayersPlayed,
             Queue         = config.Bar777.UseQueue ? config.QueuedPlayers.Count : null,
             GameLabel     = $"BAR {config.Bar777.WinNumber}",

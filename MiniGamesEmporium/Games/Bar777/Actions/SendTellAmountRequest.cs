@@ -9,7 +9,7 @@ public static class SendTellAmountRequest
 {
     public static void Execute(string playerName, PluginConfiguration config, ChatQueueService chatQueue, int amountPaid = 0)
     {
-        var gilOwed = Math.Max(0, config.Bar777.Cost - amountPaid);
+        var gilOwed = Math.Max(0, config.Bar777.CostPerRoll - amountPaid);
         var msg = Bar777MessageFormatter.Format(
             config.Bar777.Chat.TellAmountRequestMessage,
             config,

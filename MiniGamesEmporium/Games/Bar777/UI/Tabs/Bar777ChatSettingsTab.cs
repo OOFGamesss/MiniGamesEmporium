@@ -22,12 +22,13 @@ public sealed class Bar777ChatSettingsTab
         ImGui.Separator();
         ImGui.Spacing();
         ImGui.TextDisabled("All placeholders work in every message field:");
-        ImGui.TextDisabled("  {player}    = player name with @World (e.g. Amari Tempest@Omega)");
-        ImGui.TextDisabled("  {position}  = player's position in the waiting list");
-        ImGui.TextDisabled("  {cost}      = configured entry cost in Gil");
-        ImGui.TextDisabled("  {rolls}     = configured roll count");
-        ImGui.TextDisabled("  {remaining} = rolls remaining (or Gil owed in the Amount Request message)");
-        ImGui.TextDisabled("  {totalpot}  = total pot (boosted pot + trades)");
+        ImGui.TextDisabled("  {player}      = player name; @World included only for /tell messages (e.g. Amari Tempest@Omega)");
+        ImGui.TextDisabled("  {position}    = player's position in the waiting list");
+        ImGui.TextDisabled("  {cost}        = cost per roll in Gil");
+        ImGui.TextDisabled("  {rolls}       = max rolls allowed per session (from config)");
+        ImGui.TextDisabled("  {boughtrolls} = rolls this player actually purchased (from session trade)");
+        ImGui.TextDisabled("  {remaining}   = rolls remaining (or Gil owed in the Amount Request message)");
+        ImGui.TextDisabled("  {totalpot}    = total pot (boosted pot + trades)");
         ImGui.Spacing();
         DrawHybridMessageSection();
         ImGui.Spacing();
@@ -66,8 +67,8 @@ public sealed class Bar777ChatSettingsTab
     {
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Manual Trigger Messages");
         ImGui.Spacing();
-        ImGui.TextUnformatted("/tell Amount Request");
-        ImGui.TextDisabled("Sent by the '/tell Amount Request' button. {remaining} = gil still owed.");
+        ImGui.TextUnformatted("Request Gil");
+        ImGui.TextDisabled("Sent by the 'Request Gil' button.");
         {
             var val = this.config.Bar777.Chat.TellAmountRequestMessage;
             ImGui.SetNextItemWidth(-1f);
@@ -78,8 +79,8 @@ public sealed class Bar777ChatSettingsTab
             }
         }
         ImGui.Spacing();
-        ImGui.TextUnformatted("/yell Pot");
-        ImGui.TextDisabled("Sent by the '/yell Pot' button on the stats panel. {totalpot} = total pot.");
+        ImGui.TextUnformatted("Announce Pot");
+        ImGui.TextDisabled("Sent by the 'Announce Pot' button on the stats panel.");
         {
             var val = this.config.Bar777.Chat.YellPotMessage;
             ImGui.SetNextItemWidth(-1f);
@@ -91,7 +92,7 @@ public sealed class Bar777ChatSettingsTab
         }
         ImGui.Spacing();
         ImGui.TextUnformatted("Announce keyword");
-        ImGui.TextDisabled("Sent by the 'Announce Keyword' button in the queue panel. {keyword} = the configured join keyword.");
+        ImGui.TextDisabled("Sent by the 'Announce Keyword' button in the queue panel.");
         {
             var val = this.config.Bar777.Chat.AnnounceKeywordMessage;
             ImGui.SetNextItemWidth(-1f);
@@ -114,7 +115,7 @@ public sealed class Bar777ChatSettingsTab
                 this.config.Save();
             }
         }
-        ImGui.TextDisabled("Auto-sent when half the rolls are used. {remaining} = rolls left.");
+        ImGui.TextDisabled("Auto-sent when half the rolls are used.");
         {
             var val = this.config.Bar777.Chat.HalfwayMessage;
             ImGui.SetNextItemWidth(-1f);
@@ -152,7 +153,7 @@ public sealed class Bar777ChatSettingsTab
                 this.config.Save();
             }
         }
-        ImGui.TextDisabled("Auto-sent when a win is detected. {totalpot} = total pot.");
+        ImGui.TextDisabled("Auto-sent when a win is detected.");
         {
             var val = this.config.Bar777.Chat.WinShoutMessage;
             ImGui.SetNextItemWidth(-1f);
@@ -172,7 +173,7 @@ public sealed class Bar777ChatSettingsTab
             }
         }
         ImGui.TextDisabled("Auto-sent via /tell when a player successfully joins the queue. Only fires if");
-        ImGui.TextDisabled("they were not already in the queue. {player} = player name, {position} = their queue number.");
+        ImGui.TextDisabled("they were not already in the queue.");
         {
             var val = this.config.Bar777.Chat.JoinQueueMessage;
             ImGui.SetNextItemWidth(-1f);
@@ -193,7 +194,6 @@ public sealed class Bar777ChatSettingsTab
         }
         ImGui.TextDisabled("Auto-sent via /tell when a player's queue position reaches the threshold or below.");
         ImGui.TextDisabled("Sends once per player per session. A manual resend button appears in the queue list.");
-        ImGui.TextDisabled("{player} = player name.");
         ImGui.Spacing();
         ImGui.TextUnformatted("Queue position threshold:");
         {

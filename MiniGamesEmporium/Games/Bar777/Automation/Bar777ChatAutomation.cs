@@ -40,10 +40,7 @@ public sealed class Bar777ChatAutomation : IDisposable
     private void OnWinDetected(string playerName, int rollValue)
     {
         if (!this.config.Bar777.Chat.AutoSendWinShout) return;
-        var totalTraded = this.config.Transactions
-            .Where(t => t.GameName == Bar777GameIds.DisplayName)
-            .Sum(t => (long)t.Amount);
-        var pot = this.config.Bar777.BoostedPot + totalTraded;
+        var pot = this.config.Bar777.BoostedPot + this.config.Bar777.SessionTradedTotal;
         AnnounceWin.Execute(FullName(playerName), pot, this.config, this.chatQueue);
     }
     private void OnSessionLost(string playerName)
@@ -54,9 +51,6 @@ public sealed class Bar777ChatAutomation : IDisposable
     private void OnPlayerEnqueued(string rawPlayerEntry)
     {
         var position = GetDisplayOrdinal(rawPlayerEntry);
-        // When the queue was empty and the session is Waiting..., this player is about to be promoted
-        // to the active slot. OnSessionUpdated will skip them so no reminder will fire automatically.
-        // Send the reminder directly here instead so they know it is their turn.
         var becomingCurrent = this.config.QueuedPlayers.Count == 1
             && Bar777GameIds.IsWaitingPlaceholder(this.config.ActiveSession?.PlayerName);
         if (becomingCurrent && this.config.Bar777.Chat.AutoSendReminderToPlay)
@@ -77,7 +71,6 @@ public sealed class Bar777ChatAutomation : IDisposable
         var currentName = this.config.ActiveSession?.PlayerName?.Trim();
         var hasActiveCurrent = !string.IsNullOrEmpty(currentName) && !Bar777GameIds.IsAnyPlaceholder(currentName);
         var targetName = ParseName(rawPlayerEntry);
-        // Start at 1 when there is a current player so that the first waiting player is #2, not #1.
         var ordinal = hasActiveCurrent ? 1 : 0;
         foreach (var entry in queue)
         {
@@ -101,7 +94,6 @@ public sealed class Bar777ChatAutomation : IDisposable
         if (threshold <= 0) return;
         var currentName = this.config.ActiveSession?.PlayerName?.Trim();
         var hasActiveCurrent = !string.IsNullOrEmpty(currentName) && !Bar777GameIds.IsAnyPlaceholder(currentName);
-        // Start at 1 when there is a current player so waiting positions are numbered from 2 upwards.
         var displayOrdinal = hasActiveCurrent ? 1 : 0;
         foreach (var entry in queue)
         {

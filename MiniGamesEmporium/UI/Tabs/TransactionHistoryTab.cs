@@ -24,6 +24,8 @@ public sealed class TransactionHistoryTab
         ImGui.TextDisabled($"Total transactions: {this.config.Transactions.Count}");
         ImGui.Separator();
         ImGui.Spacing();
+        ImGui.TextColored(EmporiumNeonTheme.GamblerDerbyYellow, "Transactions older than 30 days are automatically removed when the plugin loads.");
+        ImGui.Spacing();
         using var table = ImRaii.Table(
             "##TransactionTable",
             4,

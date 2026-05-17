@@ -3,6 +3,7 @@ using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI;
 using MiniGamesEmporium.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.UI;
 using MiniGamesEmporium.Games.MinefieldGambit.UI;
 using MiniGamesEmporium.Games.GamblerDerby.UI;
 using MiniGamesEmporium.Games.HotShots.UI;
@@ -19,6 +20,7 @@ namespace MiniGamesEmporium.UI.Tabs;
 public sealed class MiniGamesTab : IDisposable
 {
     private readonly Bar777Panel bar777Panel;
+    private readonly DeathrollTournamentPanel deathrollTournamentPanel;
     private readonly MinefieldGambitPanel minefieldGambitPanel;
     private readonly GamblerDerbyPanel gamblerDerbyPanel;
     private readonly HotShotsPanel hotShotsPanel;
@@ -31,6 +33,7 @@ public sealed class MiniGamesTab : IDisposable
     public MiniGamesTab(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue)
     {
         this.bar777Panel = new Bar777Panel(config, sessionService, chatQueue);
+        this.deathrollTournamentPanel = new DeathrollTournamentPanel();
         this.minefieldGambitPanel = new MinefieldGambitPanel();
         this.gamblerDerbyPanel = new GamblerDerbyPanel();
         this.hotShotsPanel = new HotShotsPanel();
@@ -56,6 +59,7 @@ public sealed class MiniGamesTab : IDisposable
         using var tabBar = ImRaii.TabBar("##MGE_GameTabBar_v4");
         if (!tabBar.Success) return;
         DrawBar777Tab();
+        DrawDeathrollTournamentTab();
         DrawMinefieldGambitTab();
         DrawGamblerDerbyTab();
         DrawHotShotsTab();
@@ -69,6 +73,13 @@ public sealed class MiniGamesTab : IDisposable
         using var tab = ImRaii.TabItem("BAR 777");
         if (!tab.Success) return;
         this.bar777Panel.Draw();
+    }
+    private void DrawDeathrollTournamentTab()
+    {
+        using var chrome = new EmporiumNeonTheme.DeathrollTournamentTabItemScope();
+        using var tab = ImRaii.TabItem("Deathroll Tournament");
+        if (!tab.Success) return;
+        this.deathrollTournamentPanel.Draw();
     }
     private void DrawMinefieldGambitTab()
     {

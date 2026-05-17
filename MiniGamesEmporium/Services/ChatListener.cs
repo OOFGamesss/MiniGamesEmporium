@@ -34,6 +34,7 @@ public sealed class ChatListener : IDisposable
     }
     private void OnChatMessage(IHandleableChatMessage message)
     {
+        if (this.sessionService.IsPaused) return;
         var senderText = message.Sender?.TextValue ?? string.Empty;
         var messageText = message.Message?.TextValue ?? string.Empty;
         var kind = message.LogKind;

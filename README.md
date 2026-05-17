@@ -21,6 +21,7 @@ The plugin lives inside FFXIV via the [Dalamud](https://github.com/goatcorp/Dala
 | Game | Status |
 |---|---|
 | **BAR 777** | ✅ Live |
+| Deathroll Tournament | 🔜 Coming Soon |
 | Minefield Gambit | 🔜 Coming Soon |
 | Gambler Derby | 🔜 Coming Soon |
 | Hot Shots | 🔜 Coming Soon |
@@ -93,24 +94,24 @@ All outbound messages are queued with a one-second gap between each to stay with
 
 > **BAR 777 Door (Pre-Session)**
 >
-> ![BAR 777 Door (Pre-Session)](MiniGamesEmporium/Images/start-session-tab.png)
+> ![BAR 777 Door (Pre-Session)](MiniGamesEmporium/Images/start-session-tab.png?v=2)
 
 ---
 > **Game Tab: Queue Mode**
 >
-> ![Game Tab: Queue Mode](MiniGamesEmporium/Images/queue-mode.png)
+> ![Game Tab: Queue Mode](MiniGamesEmporium/Images/queue-mode.png?v=2)
 
 ---
 
 > **Game Tab: Walk-in Mode**
 >
-> ![Game Tab: Walk-in Mode](MiniGamesEmporium/Images/walk-in-mode.png)
+> ![Game Tab: Walk-in Mode](MiniGamesEmporium/Images/walk-in-mode.png?v=2)
 
 ---
 
 > **Chat Settings Tab**
 >
-> ![Chat Settings Tab](MiniGamesEmporium/Images/chat-settings.png)
+> ![Chat Settings Tab](MiniGamesEmporium/Images/chat-settings.png?v=2)
 
 ---
 

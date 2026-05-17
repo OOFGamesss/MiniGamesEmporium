@@ -1,4 +1,6 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777;
@@ -31,16 +33,14 @@ public sealed class Bar777StatsTab
     }
     public void DrawInline(bool showQueue)
     {
-        var totalTraded = this.config.Transactions
-            .Where(t => t.GameName == Bar777GameIds.DisplayName)
-            .Sum(t => (long)t.Amount);
+        var totalTraded = this.config.Bar777.SessionTradedTotal;
         var totalPot = this.config.Bar777.BoostedPot + totalTraded;
         using var child = ImRaii.Child("##Bar777StatsPanel", new Vector2(-1, GetInlineHeight(showQueue)), true);
         if (!child.Success) return;
         using var table = ImRaii.Table("##Bar777StatsTable", 3, ImGuiTableFlags.None, new Vector2(-1, 0));
         if (!table.Success) return;
         ImGui.TableSetupColumn("##StatsLabel",  ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("##StatsAction", ImGuiTableColumnFlags.WidthFixed, 76f);
+        ImGui.TableSetupColumn("##StatsAction", ImGuiTableColumnFlags.WidthFixed, 130f);
         ImGui.TableSetupColumn("##StatsValue",  ImGuiTableColumnFlags.WidthFixed, 180f);
         DrawTotalPotRow(totalPot);
         DrawRow("Boosted Pot",     $"{this.config.Bar777.BoostedPot:N0} Gil", EmporiumNeonTheme.WinGold);
@@ -57,10 +57,8 @@ public sealed class Bar777StatsTab
         ImGui.TableSetColumnIndex(1);
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2f);
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(4f, 0f));
-        ImGui.PushStyleColor(ImGuiCol.Button,        YellButtonColour);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, YellButtonColourHovered);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  YellButtonColourActive);
-        if (ImGui.Button("/yell Pot##YellPot", new Vector2(-1, 0)))
+        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Bullhorn, "Announce Pot##YellPot",
+                YellButtonColour, YellButtonColourActive, YellButtonColourHovered, new Vector2(-1, 0)))
         {
             var session = this.config.ActiveSession;
             var playerName = session?.PlayerName ?? string.Empty;
@@ -73,7 +71,6 @@ public sealed class Bar777StatsTab
                 totalPotOverride: totalPot);
             this.chatQueue.Enqueue(msg);
         }
-        ImGui.PopStyleColor(3);
         ImGui.PopStyleVar();
         ImGui.TableSetColumnIndex(2);
         ImGui.TextColored(EmporiumNeonTheme.WinGold, $"{totalPot:N0} Gil");

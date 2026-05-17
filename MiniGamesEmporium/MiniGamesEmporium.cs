@@ -44,6 +44,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         Configuration.SessionHistory ??= new List<SessionRecord>();
         chatQueueService = new ChatQueueService();
         sessionService = new SessionService(Configuration);
+        sessionService.PruneOldTransactions();
         chatListener = new ChatListener(ChatGui, Configuration, sessionService, Log, ObjectTable);
         mainWindow = new MainWindow(Configuration, sessionService, chatQueueService);
         windowSystem.AddWindow(mainWindow);

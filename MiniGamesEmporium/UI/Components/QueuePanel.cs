@@ -11,6 +11,7 @@ namespace MiniGamesEmporium.UI.Components;
 public sealed class QueuePanel
 {
     private readonly SessionService sessionService;
+    private string comboFilter = string.Empty;
     public QueuePanel(SessionService sessionService) => this.sessionService = sessionService;
     private const float QueueListMinScrollHeightPx = 96f;
     private static readonly Vector4 ReminderButton        = new(0.04f, 0.42f, 0.16f, 1f);
@@ -23,7 +24,7 @@ public sealed class QueuePanel
     private static readonly Vector4 AnnounceButtonHovered = new(0.72f, 0.65f, 0.05f, 1f);
     private static readonly Vector4 AnnounceButtonActive  = new(0.90f, 0.82f, 0.06f, 1f);
     public void Draw(
-        ref string manualAddBuffer,
+        IReadOnlyList<string> nearbyPlayers,
         bool fillColumnHeight = false,
         string? currentSessionPlayerName = null,
         Func<string, bool>? hasBeenReminded = null,
@@ -57,7 +58,7 @@ public sealed class QueuePanel
             : 180f;
         DrawQueueList(listScrollH, currentName, hasBeenReminded, onManualReminder);
         ImGui.Spacing();
-        DrawManualAddRow(ref manualAddBuffer);
+        DrawManualAddRow(nearbyPlayers);
     }
     private void DrawCurrentHostingRow(string? currentSessionPlayerName, Func<string, bool>? hasBeenReminded, Action<string, int>? onManualReminder)
     {
@@ -110,7 +111,6 @@ public sealed class QueuePanel
         ImGui.TableSetupColumn(waitColumnTitle, ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("##Actions", ImGuiTableColumnFlags.WidthFixed, actionsColWidth);
         ImGui.TableHeadersRow();
-        // Start at 1 when there is a real current player so displayed ordinals match the tells.
         var displayOrdinal = currentSessionPlayerName != null ? 1 : 0;
         var firstWaiting = true;
         for (var i = 0; i < queue.Count; i++)
@@ -165,15 +165,45 @@ public sealed class QueuePanel
         var cName = cAt < 0 ? currentSessionPlayerName : currentSessionPlayerName[..cAt];
         return qName.Equals(cName, StringComparison.OrdinalIgnoreCase);
     }
-    private void DrawManualAddRow(ref string buffer)
+    private void DrawManualAddRow(IReadOnlyList<string> nearbyPlayers)
     {
-        ImGui.SetNextItemWidth(-60f);
-        ImGui.InputText("##ManualAdd", ref buffer, 64);
-        ImGui.SameLine();
-        if (ImGui.Button("Add##QueueAdd") && !string.IsNullOrWhiteSpace(buffer))
+        var queue = this.sessionService.Queue;
+        var preview = nearbyPlayers.Count == 0 ? "No players nearby" : "Add player to queue...";
+        ImGui.SetNextItemWidth(-1);
+        using var combo = ImRaii.Combo("##NearbyAdd", preview, ImGuiComboFlags.HeightLarge);
+        if (!combo.Success) return;
+        if (nearbyPlayers.Count == 0)
         {
-            this.sessionService.TryEnqueuePlayer(buffer.Trim());
-            buffer = string.Empty;
+            ImGui.TextDisabled("No players in the area.");
+            return;
         }
+        if (ImGui.IsWindowAppearing())
+            ImGui.SetKeyboardFocusHere();
+        ImGui.SetNextItemWidth(-1);
+        ImGui.InputText("##NearbyFilter", ref this.comboFilter, 64);
+        var any = false;
+        foreach (var player in nearbyPlayers)
+        {
+            if (IsAlreadyQueued(player, queue)) continue;
+            if (!player.Contains(this.comboFilter, StringComparison.OrdinalIgnoreCase)) continue;
+            any = true;
+            if (!ImGui.Selectable(player)) continue;
+            this.sessionService.TryEnqueuePlayer(player);
+            this.comboFilter = string.Empty;
+            ImGui.CloseCurrentPopup();
+        }
+        if (!any) ImGui.TextDisabled("No matches.");
+    }
+    private static bool IsAlreadyQueued(string nearbyEntry, IReadOnlyList<string> queue)
+    {
+        var at = nearbyEntry.IndexOf('@');
+        var nearbyName = at < 0 ? nearbyEntry : nearbyEntry[..at];
+        foreach (var q in queue)
+        {
+            var qAt = q.IndexOf('@');
+            var qName = qAt < 0 ? q : q[..qAt];
+            if (qName.Equals(nearbyName, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
     }
 }

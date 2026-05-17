@@ -21,7 +21,9 @@ public sealed class MainWindow : Window, IDisposable
     private readonly MiniGamesTab miniGamesTab;
     private readonly SettingsTab settingsTab;
     private readonly SessionService sessionService;
+    private readonly PluginConfiguration config;
     private bool focusSettingsTab;
+    private bool pendingStopConfirm;
 
     public override void OnOpen() => WindowOpened?.Invoke();
 
@@ -46,6 +48,7 @@ public sealed class MainWindow : Window, IDisposable
         this.miniGamesTab = new MiniGamesTab(config, sessionService, chatQueue);
         this.settingsTab = new SettingsTab(config);
         this.sessionService = sessionService;
+        this.config = config;
     }
     public void Dispose()
     {
@@ -67,6 +70,7 @@ public sealed class MainWindow : Window, IDisposable
             DrawSettingsTab();
         }
         DrawBar777StopSessionMainTabRowButton(tabBarRowScreenY);
+        DrawStopSessionConfirmPopup();
     }
     private void DrawBar777StopSessionMainTabRowButton(float tabBarRowScreenY)
     {
@@ -74,18 +78,61 @@ public sealed class MainWindow : Window, IDisposable
         if (session == null || !Bar777GameIds.Matches(session.GameName))
             return;
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8f, 3f));
-        const string labelVis = "Stop Session";
-        var fp = ImGui.GetStyle().FramePadding;
-        var fb = ImGui.GetStyle().FrameBorderSize;
-        var btnW = ImGui.CalcTextSize(labelVis).X + fp.X * 2f + fb * 2f;
-        var btnH = ImGui.GetTextLineHeight() + fp.Y * 2f + fb * 2f;
-        var tabBandH = ImGui.GetFrameHeight();
-        var yBtn = tabBarRowScreenY + MathF.Max(0f, (tabBandH - btnH) * 0.5f);
-        var winPos = ImGui.GetWindowPos();
-        var crMax = ImGui.GetWindowContentRegionMax();
-        var scrollX = ImGui.GetScrollX();
-        var xBtn = winPos.X + crMax.X - btnW - scrollX;
-        ImGui.SetCursorScreenPos(new Vector2(xBtn, yBtn));
+        try
+        {
+            var fp = ImGui.GetStyle().FramePadding;
+            var fb = ImGui.GetStyle().FrameBorderSize;
+            var btnH = ImGui.GetTextLineHeight() + fp.Y * 2f + fb * 2f;
+            var yBtn = tabBarRowScreenY + MathF.Max(0f, (ImGui.GetFrameHeight() - btnH) * 0.5f);
+            var xRight = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
+            const string stopLabel = "Stop Session";
+            var stopBtnW = ImGui.CalcTextSize(stopLabel).X + fp.X * 2f + fb * 2f;
+            var xStop = xRight - stopBtnW;
+            var isPaused = this.sessionService.IsPaused;
+            var pauseLabel = isPaused ? "Continue Session" : "Pause Session";
+            var pauseBtnW = ImGui.CalcTextSize(pauseLabel).X + fp.X * 2f + fb * 2f;
+            DrawPauseResumeButton(isPaused, pauseLabel, new Vector2(xStop - pauseBtnW - 4f, yBtn), new Vector2(pauseBtnW, btnH));
+            DrawStopSessionButton(stopLabel, new Vector2(xStop, yBtn), new Vector2(stopBtnW, btnH));
+        }
+        finally
+        {
+            ImGui.PopStyleVar();
+        }
+    }
+    private void DrawPauseResumeButton(bool isPaused, string label, Vector2 pos, Vector2 size)
+    {
+        ImGui.SetCursorScreenPos(pos);
+        if (isPaused)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.04f, 0.38f, 0.08f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.08f, 0.72f, 0.15f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.06f, 0.52f, 0.10f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border, EmporiumNeonTheme.MinefieldGreenDim);
+        }
+        else
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.62f, 0.56f, 0.03f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.78f, 0.72f, 0.04f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.48f, 0.44f, 0.02f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border, EmporiumNeonTheme.GamblerDerbyYellowDim);
+        }
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.98f, 0.98f, 1f));
+        try
+        {
+            if (ImGui.Button($"{label}##MGE_Bar777PauseMain", size))
+            {
+                if (isPaused) this.sessionService.ResumeSession();
+                else this.sessionService.PauseSession();
+            }
+        }
+        finally
+        {
+            ImGui.PopStyleColor(5);
+        }
+    }
+    private void DrawStopSessionButton(string label, Vector2 pos, Vector2 size)
+    {
+        ImGui.SetCursorScreenPos(pos);
         ImGui.PushStyleColor(ImGuiCol.Button, EmporiumNeonTheme.Bar777Red);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1f, 0.22f, 0.38f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.72f, 0.08f, 0.22f, 1f));
@@ -93,14 +140,41 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.98f, 0.98f, 1f));
         try
         {
-            if (ImGui.Button($"{labelVis}##MGE_Bar777StopMain", new Vector2(btnW, btnH)))
-                this.sessionService.CancelSession();
+            if (ImGui.Button($"{label}##MGE_Bar777StopMain", size))
+                this.pendingStopConfirm = true;
         }
         finally
         {
             ImGui.PopStyleColor(5);
-            ImGui.PopStyleVar();
         }
+    }
+    private void DrawStopSessionConfirmPopup()
+    {
+        if (this.pendingStopConfirm)
+        {
+            ImGui.OpenPopup("##StopSessionConfirm");
+            this.pendingStopConfirm = false;
+        }
+        var centre = ImGui.GetMainViewport().GetCenter();
+        ImGui.SetNextWindowPos(centre, ImGuiCond.Always, new Vector2(0.5f, 0.5f));
+        using var popup = ImRaii.Popup("##StopSessionConfirm", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
+        if (!popup.Success) return;
+        ImGui.TextColored(EmporiumNeonTheme.Bar777Red, "Stop BAR 777 session?");
+        ImGui.Separator();
+        ImGui.Spacing();
+        var stopMessage = this.config.Bar777.UseQueue
+            ? "The queue will be cleared and all session stats will be reset."
+            : "All session stats will be reset.";
+        ImGui.TextUnformatted(stopMessage);
+        ImGui.Spacing();
+        if (ImGui.Button("Stop Session##ConfirmStop", new Vector2(120, 0)))
+        {
+            this.sessionService.CancelSession();
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (ImGui.Button("Cancel##CancelStop", new Vector2(80, 0)))
+            ImGui.CloseCurrentPopup();
     }
     private void DrawSessionHistoryTab()
     {

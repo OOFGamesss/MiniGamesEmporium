@@ -24,23 +24,23 @@ public static class Bar777PreSessionSettingsFields
     }
     private static void DrawCostSetting(PluginConfiguration config)
     {
-        var cost = config.Bar777.Cost;
-        ImGui.TextDisabled("Entry Cost (Gil)");
+        var cost = config.Bar777.CostPerRoll;
+        ImGui.TextDisabled("Cost Per Roll (Gil)");
         ImGui.SetNextItemWidth(ResolvedFieldWidth());
         if (ImGuiEx.InputFancyNumeric("##Cost", ref cost, 100_000))
         {
-            config.Bar777.Cost = Math.Max(0, cost);
+            config.Bar777.CostPerRoll = Math.Max(0, cost);
             config.Save();
         }
     }
     private static void DrawRollCountSetting(PluginConfiguration config)
     {
-        var rolls = config.Bar777.RollCount;
-        ImGui.TextDisabled("Roll Count");
+        var rolls = config.Bar777.MaxRolls;
+        ImGui.TextDisabled("Max Rolls");
         ImGui.SetNextItemWidth(ResolvedFieldWidth());
         if (ImGuiEx.InputFancyNumeric("##RollCount", ref rolls, 1))
         {
-            config.Bar777.RollCount = Math.Clamp(rolls, 1, 100);
+            config.Bar777.MaxRolls = Math.Clamp(rolls, 1, 100);
             config.Save();
         }
     }

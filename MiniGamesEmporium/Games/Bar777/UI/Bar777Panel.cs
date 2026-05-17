@@ -9,6 +9,7 @@ using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.Games.Bar777.UI.Tabs;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
+using MiniGamesEmporium.Utility;
 using System;
 using System.Numerics;
 
@@ -28,7 +29,6 @@ public sealed class Bar777Panel : IDisposable
     private float trackedBar777BlockingDoorSpanPx =
         GameSessionDoorStyles.Bar777BlockingDoor.SeedTrackedContentSpanPx;
     private float trackedGameInfoCardSpanPx = 140f;
-    private string queueManualAddBuffer = string.Empty;
     private readonly PluginConfiguration config;
     private readonly SessionService sessionService;
     private readonly GameTab gameTab;
@@ -129,7 +129,7 @@ public sealed class Bar777Panel : IDisposable
         }
         var showReminders = this.config.Bar777.Chat.AutoSendReminderToPlay;
         this.queuePanel.Draw(
-            ref this.queueManualAddBuffer,
+            NearbyPlayerList.GetSorted(),
             fillColumnHeight: true,
             currentForSidebar,
             hasBeenReminded: showReminders ? this.chatAutomation.HasBeenReminded : null,

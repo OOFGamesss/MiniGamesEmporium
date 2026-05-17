@@ -49,7 +49,7 @@ public sealed class SessionService
         session.PlayerName = name;
         session.PlayerWorld = world;
         session.PlayerSet = false;
-        session.RollsAllowed = this.config.Bar777.RollCount;
+        session.RollsAllowed = this.config.Bar777.MaxRolls;
         session.RollsUsed = 0;
         session.RollLog = [];
         session.PaymentVerified = false;
@@ -80,12 +80,13 @@ public sealed class SessionService
         if (this.config.ActiveSession != null) return;
         if (string.IsNullOrWhiteSpace(playerName)) return;
         var (name, world) = ParseQueuedName(playerName.Trim());
+        IsPaused = false;
         this.config.ActiveSession = new ActiveSessionState
         {
             GameName = gameName,
             PlayerName = name,
             PlayerWorld = world,
-            RollsAllowed = this.config.Bar777.RollCount,
+            RollsAllowed = this.config.Bar777.MaxRolls,
             RollsUsed = 0,
             PaymentVerified = false,
             WinTriggered = false,
@@ -113,17 +114,22 @@ public sealed class SessionService
             session.PlayerSet = true;
         }
         session.AmountTraded += amount;
-        if (session.AmountTraded < this.config.Bar777.Cost)
-        {
-            this.config.Save();
-            SessionUpdated?.Invoke();
-            return;
-        }
+        this.config.Save();
+        SessionUpdated?.Invoke();
+    }
+    public void StartGameWithRolls(int rollCount)
+    {
+        var session = this.config.ActiveSession;
+        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
+        if (session.PaymentVerified) return;
+        if (rollCount < 1) return;
+        session.RollsAllowed = Math.Min(rollCount, this.config.Bar777.MaxRolls);
         session.PaymentVerified = true;
         this.config.Bar777.PlayersPlayed++;
+        this.config.Bar777.SessionTradedTotal += session.AmountTraded;
         this.config.Transactions.Add(new TransactionRecord
         {
-            PlayerName = playerName,
+            PlayerName = session.PlayerName,
             Amount = session.AmountTraded,
             Timestamp = DateTime.UtcNow,
             GameName = session.GameName,
@@ -161,6 +167,34 @@ public sealed class SessionService
         this.config.Save();
         SessionUpdated?.Invoke();
     }
+    public void RemoveRoll(int index)
+    {
+        var session = this.config.ActiveSession;
+        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
+        var log = session.RollLog;
+        if (log == null || index < 0 || index >= log.Count) return;
+        var removedValue = log[index];
+        log.RemoveAt(index);
+        session.RollsUsed = Math.Max(0, session.RollsUsed - 1);
+        if (session.WinTriggered && removedValue == this.config.Bar777.WinNumber)
+            session.WinTriggered = log.Contains(this.config.Bar777.WinNumber);
+        this.config.Save();
+        SessionUpdated?.Invoke();
+    }
+    public bool IsPaused { get; private set; }
+
+    public void PauseSession()
+    {
+        IsPaused = true;
+        SessionUpdated?.Invoke();
+    }
+
+    public void ResumeSession()
+    {
+        IsPaused = false;
+        SessionUpdated?.Invoke();
+    }
+
     public ActiveSessionState? GetActiveSession() => this.config.ActiveSession;
     public void LockWalkInPlayer(string charName, string worldName)
     {
@@ -189,6 +223,7 @@ public sealed class SessionService
     }
     public void CancelSession()
     {
+        IsPaused = false;
         RecordSessionHistory();
         ClearGameStats();
         this.config.QueuedPlayers.Clear();
@@ -198,17 +233,26 @@ public sealed class SessionService
     }
     public void ClearGameStats()
     {
-        this.config.Transactions.Clear();
         this.config.Bar777.PlayersPlayed = 0;
         this.config.Bar777.BoostedPot = 0;
+        this.config.Bar777.SessionTradedTotal = 0;
+    }
+
+    public void PruneOldTransactions()
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-30);
+        this.config.Transactions.RemoveAll(t => t.Timestamp < cutoff);
+        this.config.Save();
     }
     public void EndWalkInAndReset()
     {
+        IsPaused = false;
+        ClearGameStats();
         this.config.ActiveSession = new ActiveSessionState
         {
             GameName = Bar777GameIds.DisplayName,
             PlayerName = Bar777GameIds.WalkInPlayerPlaceholder,
-            RollsAllowed = this.config.Bar777.RollCount,
+            RollsAllowed = this.config.Bar777.MaxRolls,
             AmountTraded = 0,
             RollLog = [],
             StartedAt = DateTime.UtcNow,
@@ -218,6 +262,7 @@ public sealed class SessionService
     }
     public void EndQueuePlayerAndProcessNext()
     {
+        ClearGameStats();
         RemoveCurrentBar777FromWaitlistAndStartNext();
     }
     public void EndSessionWalkIn()
@@ -236,9 +281,7 @@ public sealed class SessionService
     {
         var session = this.config.ActiveSession;
         if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
-        var amountInTrades = this.config.Transactions
-            .Where(t => t.GameName == Bar777GameIds.DisplayName)
-            .Sum(t => (long)t.Amount);
+        var amountInTrades = this.config.Bar777.SessionTradedTotal;
         var totalPot = this.config.Bar777.BoostedPot + amountInTrades;
         this.config.SessionHistory.Add(new SessionRecord
         {

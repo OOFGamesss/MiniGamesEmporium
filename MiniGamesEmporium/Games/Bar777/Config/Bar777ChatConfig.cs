@@ -7,9 +7,9 @@ namespace MiniGamesEmporium.Games.Bar777.Config;
 public class Bar777ChatConfig
 {
     public string StartRollsMessage { get; set; } =
-        "/say {player}, you may now begin your {rolls} rolls!";
+        "/say {player}, you may now begin your {boughtrolls} rolls!";
     public string TellAmountRequestMessage { get; set; } =
-        "/tell {player} Please trade {cost} Gil for {rolls} rolls in BAR 777.";
+        "/tell {player} Please trade, it is {cost} gil per roll, you can buy max {rolls} rolls.";
     public string HalfwayMessage { get; set; } =
         "/say {player} You have {remaining} rolls left!";
     public bool AutoSendHalfway { get; set; } = false;

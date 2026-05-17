@@ -21,6 +21,8 @@ public static class EmporiumNeonTheme
     public static readonly Vector4 DartsBlueDim = new(0.08f, 0.28f, 0.55f, 1f);
     public static readonly Vector4 EightBallPoolPurple = new(0.70f, 0.15f, 1f, 1f);
     public static readonly Vector4 EightBallPoolPurpleDim = new(0.38f, 0.08f, 0.55f, 1f);
+    public static readonly Vector4 DeathrollTournamentPink = new(1f, 0.20f, 0.60f, 1f);
+    public static readonly Vector4 DeathrollTournamentPinkDim = new(0.55f, 0.10f, 0.32f, 1f);
     public static readonly Vector4 NeonCyan = new(0.2f, 0.98f, 0.95f, 1f);
     public static readonly Vector4 NeonMagenta = new(0.95f, 0.25f, 0.85f, 1f);
     public static readonly Vector4 WinGold = new(1f, 0.92f, 0.2f, 1f);
@@ -72,6 +74,11 @@ public static class EmporiumNeonTheme
     private static readonly Vector4 EightBallPoolTabActive = new(0.30f, 0.06f, 0.46f, 1f);
     private static readonly Vector4 EightBallPoolTabUnfocused = new(0.05f, 0.02f, 0.07f, 1f);
     private static readonly Vector4 EightBallPoolTabUnfocusedActive = new(0.24f, 0.05f, 0.36f, 1f);
+    private static readonly Vector4 DeathrollTournamentTabBase = new(0.08f, 0.03f, 0.05f, 1f);
+    private static readonly Vector4 DeathrollTournamentTabHovered = new(0.28f, 0.06f, 0.16f, 1f);
+    private static readonly Vector4 DeathrollTournamentTabActive = new(0.42f, 0.06f, 0.22f, 1f);
+    private static readonly Vector4 DeathrollTournamentTabUnfocused = new(0.06f, 0.02f, 0.04f, 1f);
+    private static readonly Vector4 DeathrollTournamentTabUnfocusedActive = new(0.32f, 0.05f, 0.18f, 1f);
     public readonly struct Scope : IDisposable
     {
         private readonly int colours;
@@ -230,6 +237,19 @@ public static class EmporiumNeonTheme
             ImGui.PushStyleColor(ImGuiCol.TabActive, EightBallPoolTabActive);
             ImGui.PushStyleColor(ImGuiCol.TabUnfocused, EightBallPoolTabUnfocused);
             ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, EightBallPoolTabUnfocusedActive);
+        }
+        public void Dispose() => ImGui.PopStyleColor(ColourCount);
+    }
+    public readonly struct DeathrollTournamentTabItemScope : IDisposable
+    {
+        private const int ColourCount = 5;
+        public DeathrollTournamentTabItemScope()
+        {
+            ImGui.PushStyleColor(ImGuiCol.Tab, DeathrollTournamentTabBase);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered, DeathrollTournamentTabHovered);
+            ImGui.PushStyleColor(ImGuiCol.TabActive, DeathrollTournamentTabActive);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocused, DeathrollTournamentTabUnfocused);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, DeathrollTournamentTabUnfocusedActive);
         }
         public void Dispose() => ImGui.PopStyleColor(ColourCount);
     }
