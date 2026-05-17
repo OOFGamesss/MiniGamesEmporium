@@ -1,6 +1,5 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777;
@@ -57,8 +56,12 @@ public sealed class Bar777StatsTab
         ImGui.TableSetColumnIndex(1);
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2f);
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(4f, 0f));
-        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Bullhorn, "Announce Pot##YellPot",
-                YellButtonColour, YellButtonColourActive, YellButtonColourHovered, new Vector2(-1, 0)))
+        ImGui.PushStyleColor(ImGuiCol.Button,        YellButtonColour);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, YellButtonColourHovered);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  YellButtonColourActive);
+        var yellClicked = UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Pot", "##YellPot");
+        ImGui.PopStyleColor(3);
+        if (yellClicked)
         {
             var session = this.config.ActiveSession;
             var playerName = session?.PlayerName ?? string.Empty;

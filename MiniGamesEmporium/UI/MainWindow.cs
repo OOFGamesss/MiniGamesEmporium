@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using MiniGamesEmporium.Config;
@@ -81,25 +82,24 @@ public sealed class MainWindow : Window, IDisposable
         try
         {
             var fp = ImGui.GetStyle().FramePadding;
-            var fb = ImGui.GetStyle().FrameBorderSize;
-            var btnH = ImGui.GetTextLineHeight() + fp.Y * 2f + fb * 2f;
-            var yBtn = tabBarRowScreenY + MathF.Max(0f, (ImGui.GetFrameHeight() - btnH) * 0.5f);
+            var yBtn = tabBarRowScreenY + MathF.Max(0f, (ImGui.GetFrameHeight() - UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, "Stop Session").Y) * 0.5f);
             var xRight = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
             const string stopLabel = "Stop Session";
-            var stopBtnW = ImGui.CalcTextSize(stopLabel).X + fp.X * 2f + fb * 2f;
-            var xStop = xRight - stopBtnW;
+            var stopBtnSize = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, stopLabel);
+            var xStop = xRight - stopBtnSize.X;
             var isPaused = this.sessionService.IsPaused;
             var pauseLabel = isPaused ? "Continue Session" : "Pause Session";
-            var pauseBtnW = ImGui.CalcTextSize(pauseLabel).X + fp.X * 2f + fb * 2f;
-            DrawPauseResumeButton(isPaused, pauseLabel, new Vector2(xStop - pauseBtnW - 4f, yBtn), new Vector2(pauseBtnW, btnH));
-            DrawStopSessionButton(stopLabel, new Vector2(xStop, yBtn), new Vector2(stopBtnW, btnH));
+            var pauseIcon = isPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
+            var pauseBtnSize = UIHelper.CalcButtonSize(pauseIcon, pauseLabel);
+            DrawPauseResumeButton(isPaused, pauseLabel, new Vector2(xStop - pauseBtnSize.X - 4f, yBtn));
+            DrawStopSessionButton(stopLabel, new Vector2(xStop, yBtn));
         }
         finally
         {
             ImGui.PopStyleVar();
         }
     }
-    private void DrawPauseResumeButton(bool isPaused, string label, Vector2 pos, Vector2 size)
+    private void DrawPauseResumeButton(bool isPaused, string label, Vector2 pos)
     {
         ImGui.SetCursorScreenPos(pos);
         if (isPaused)
@@ -119,7 +119,8 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.98f, 0.98f, 1f));
         try
         {
-            if (ImGui.Button($"{label}##MGE_Bar777PauseMain", size))
+            var icon = isPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
+            if (UIHelper.IconTextButton(icon, label, "##MGE_Bar777PauseMain"))
             {
                 if (isPaused) this.sessionService.ResumeSession();
                 else this.sessionService.PauseSession();
@@ -130,7 +131,7 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.PopStyleColor(5);
         }
     }
-    private void DrawStopSessionButton(string label, Vector2 pos, Vector2 size)
+    private void DrawStopSessionButton(string label, Vector2 pos)
     {
         ImGui.SetCursorScreenPos(pos);
         ImGui.PushStyleColor(ImGuiCol.Button, EmporiumNeonTheme.Bar777Red);
@@ -140,7 +141,7 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.98f, 0.98f, 1f));
         try
         {
-            if (ImGui.Button($"{label}##MGE_Bar777StopMain", size))
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, label, "##MGE_Bar777StopMain"))
                 this.pendingStopConfirm = true;
         }
         finally
@@ -167,13 +168,13 @@ public sealed class MainWindow : Window, IDisposable
             : "All session stats will be reset.";
         ImGui.TextUnformatted(stopMessage);
         ImGui.Spacing();
-        if (ImGui.Button("Stop Session##ConfirmStop", new Vector2(120, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Session", "##ConfirmStop"))
         {
             this.sessionService.CancelSession();
             ImGui.CloseCurrentPopup();
         }
         ImGui.SameLine();
-        if (ImGui.Button("Cancel##CancelStop", new Vector2(80, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Cancel", "##CancelStop"))
             ImGui.CloseCurrentPopup();
     }
     private void DrawSessionHistoryTab()

@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI;
@@ -135,7 +136,7 @@ public sealed class MiniGamesTab : IDisposable
         ImGui.Separator();
         ImGui.Text($"{this.winAlertPlayer} rolled {this.winAlertRoll}!");
         ImGui.Spacing();
-        if (ImGui.Button("Dismiss##WinDismiss", new Vector2(120, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Dismiss", "##WinDismiss"))
         {
             this.showWinAlert = false;
             ImGui.CloseCurrentPopup();

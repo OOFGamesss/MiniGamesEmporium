@@ -1,7 +1,6 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Interface;
-using Dalamud.Interface.Components;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777;
@@ -74,8 +73,12 @@ public sealed class GameTab
             ImGui.TextColored(EmporiumNeonTheme.SuccessMint, fullName);
             ImGui.SetWindowFontScale(1.0f);
             ImGui.SameLine();
-            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.UserSlash, "Un-set Player##UnsetPlayer",
-                    RedButton, RedButtonActive, RedButtonHovered, new Vector2(ButtonW, 0)))
+            ImGui.PushStyleColor(ImGuiCol.Button, RedButton);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, RedButtonHovered);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, RedButtonActive);
+            var unsetClicked = UIHelper.IconTextButton(FontAwesomeIcon.UserSlash, "Un-set Player", "##UnsetPlayer");
+            ImGui.PopStyleColor(3);
+            if (unsetClicked)
                 this.sessionService.UnlockWalkInPlayer();
         }
         else
@@ -123,7 +126,7 @@ public sealed class GameTab
         ImGui.Separator();
         ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Take Bet");
         ImGui.Spacing();
-        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Coins, "Request Gil##TellAmtBtn", size: new Vector2(ButtonW, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Request Gil", "##TellAmtBtn"))
         {
             if (this.config.Bar777.UseQueue)
             {
@@ -142,7 +145,7 @@ public sealed class GameTab
             }
         }
         ImGui.SameLine();
-        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.ArrowRightArrowLeft, "Trade##TradeBtn", size: new Vector2(ButtonW, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.ArrowRightArrowLeft, "Trade", "##TradeBtn"))
         {
             if (this.config.Bar777.UseQueue)
             {
@@ -195,7 +198,7 @@ public sealed class GameTab
         if (noPlayer)
             ImGui.TextDisabled("Target a player first to lock them in.");
         using var disabled = ImRaii.Disabled(this._pendingRollCount < 1 || noPlayer);
-        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Play, "Start Game##StartGame", size: new Vector2(ButtonW, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Game", "##StartGame"))
             this.sessionService.StartGameWithRolls(this._pendingRollCount);
     }
     private void DrawRollsPhase(ActiveSessionState session)
@@ -211,7 +214,7 @@ public sealed class GameTab
         }
         if (!this.config.Bar777.Chat.AutoStartRolls)
         {
-            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Comments, "Send 'Start Rolls' Msg##StartRollsMsg", size: new Vector2(ButtonW, 0)))
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Comments, "Send 'Start Rolls' Msg", "##StartRollsMsg"))
                 AnnouncePaymentReceived.Execute(session.PlayerName, this.config, this.chatQueue);
             ImGui.Spacing();
         }
@@ -284,7 +287,12 @@ public sealed class GameTab
         var sessionDone = session.RollsUsed >= session.RollsAllowed || session.WinTriggered;
         if (session.PaymentVerified && !sessionDone)
         {
-            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.ExclamationTriangle, "End Game Early##EndEarlyBtn", size: new Vector2(ButtonW, 0)))
+            ImGui.PushStyleColor(ImGuiCol.Button, RedButton);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, RedButtonHovered);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, RedButtonActive);
+            var endEarlyClicked = UIHelper.IconTextButton(FontAwesomeIcon.ExclamationTriangle, "End Game Early", "##EndEarlyBtn");
+            ImGui.PopStyleColor(3);
+            if (endEarlyClicked)
                 ImGui.OpenPopup("EndEarlyConfirm##Modal");
             using var modal = ImRaii.PopupModal("EndEarlyConfirm##Modal");
             if (modal.Success)
@@ -292,7 +300,7 @@ public sealed class GameTab
                 ImGui.TextUnformatted("The player hasn't finished their rolls.");
                 ImGui.TextUnformatted("Are you sure you want to end their game?");
                 ImGui.Spacing();
-                if (ImGui.Button("Yes, end early##ConfirmEndEarly", new Vector2(120f, 0)))
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Check, "Yes, end early", "##ConfirmEndEarly"))
                 {
                     if (this.config.Bar777.UseQueue)
                         this.sessionService.EndQueuePlayerAndProcessNext();
@@ -301,7 +309,7 @@ public sealed class GameTab
                     ImGui.CloseCurrentPopup();
                 }
                 ImGui.SameLine();
-                if (ImGui.Button("Cancel##CancelEndEarly", new Vector2(80f, 0)))
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Cancel", "##CancelEndEarly"))
                     ImGui.CloseCurrentPopup();
             }
             ImGui.Spacing();
@@ -310,7 +318,7 @@ public sealed class GameTab
         {
             if (sessionDone)
             {
-                if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.FlagCheckered, "End Game##EndWalkIn", size: new Vector2(ButtonW, 0)))
+                if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##EndWalkIn"))
                     this.sessionService.EndWalkInAndReset();
             }
             return;
@@ -322,7 +330,7 @@ public sealed class GameTab
         }
         if (sessionDone)
         {
-            if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.FlagCheckered, "End Game##EndAndNext", size: new Vector2(ButtonW, 0)))
+            if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##EndAndNext"))
                 this.sessionService.EndQueuePlayerAndProcessNext();
         }
     }
@@ -331,10 +339,10 @@ public sealed class GameTab
         ImGui.Separator();
         ImGui.TextColored(EmporiumNeonTheme.MinefieldGreen, "Queue actions");
         ImGui.Spacing();
-        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.Redo, "To Back Q##GameToBack", size: new Vector2(ButtonW, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Redo, "To Back Q", "##GameToBack"))
             this.sessionService.SendCurrentBar777ToBackOfWaitlistAndStartNext();
         ImGui.SameLine();
-        if (ImGuiComponents.IconButtonWithText(FontAwesomeIcon.UserMinus, "Remove from Q##GameRemove", size: new Vector2(ButtonW, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.UserMinus, "Remove from Q", "##GameRemove"))
             this.sessionService.RemoveCurrentBar777FromWaitlistAndStartNext();
     }
     private static (string CharName, string WorldName) GetCurrentTarget()

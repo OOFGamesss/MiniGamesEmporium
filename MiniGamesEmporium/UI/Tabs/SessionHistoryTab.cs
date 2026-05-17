@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.State;
@@ -31,7 +32,7 @@ public sealed class SessionHistoryTab
         ImGui.PushStyleColor(ImGuiCol.Button,        new Vector4(0.55f, 0.05f, 0.05f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.72f, 0.08f, 0.08f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(0.40f, 0.02f, 0.02f, 1f));
-        if (ImGui.Button("Clear History##ClearSessionHistory"))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Clear History", "##ClearSessionHistory"))
         {
             this.config.SessionHistory.Clear();
             this.config.Save();

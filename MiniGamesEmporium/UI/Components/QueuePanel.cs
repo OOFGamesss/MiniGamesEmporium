@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Services;
 using System;
@@ -38,7 +39,7 @@ public sealed class QueuePanel
             ImGui.PushStyleColor(ImGuiCol.Button,        AnnounceButton);
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, AnnounceButtonHovered);
             ImGui.PushStyleColor(ImGuiCol.ButtonActive,  AnnounceButtonActive);
-            if (ImGui.SmallButton("Announce Keyword##AnnounceKw"))
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Keyword", "##AnnounceKw"))
                 onAnnounceKeyword.Invoke();
             ImGui.PopStyleColor(3);
         }
@@ -73,7 +74,7 @@ public sealed class QueuePanel
             ImGui.PushStyleColor(ImGuiCol.Button,        reminded ? ReminderSentButton        : ReminderButton);
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, reminded ? ReminderSentButtonHovered : ReminderButtonHovered);
             ImGui.PushStyleColor(ImGuiCol.ButtonActive,  reminded ? ReminderSentButtonActive  : ReminderButtonActive);
-            if (ImGui.SmallButton("Remind##RemindCurrent"))
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Bell, "Remind", "##RemindCurrent"))
                 onManualReminder.Invoke(currentSessionPlayerName, 0);
             ImGui.PopStyleColor(3);
         }
@@ -97,7 +98,7 @@ public sealed class QueuePanel
             return;
         }
         var showReminder = onManualReminder != null;
-        var actionsColWidth = showReminder ? 84f : 26f;
+        var actionsColWidth = showReminder ? 84f : 30f;
         int removeIndex = -1;
         int remindIndex = -1;
         int remindDisplayOrdinal = 0;
@@ -130,7 +131,7 @@ public sealed class QueuePanel
                 ImGui.PushStyleColor(ImGuiCol.Button,        reminded ? ReminderSentButton        : ReminderButton);
                 ImGui.PushStyleColor(ImGuiCol.ButtonHovered, reminded ? ReminderSentButtonHovered : ReminderButtonHovered);
                 ImGui.PushStyleColor(ImGuiCol.ButtonActive,  reminded ? ReminderSentButtonActive  : ReminderButtonActive);
-                if (ImGui.SmallButton($"Remind##Remind{i}"))
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Bell, "Remind", $"##Remind{i}"))
                 {
                     remindIndex = i;
                     remindDisplayOrdinal = displayOrdinal;
@@ -138,7 +139,7 @@ public sealed class QueuePanel
                 ImGui.PopStyleColor(3);
                 ImGui.SameLine();
             }
-            if (ImGui.SmallButton($"x##Remove{i}"))
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Times, string.Empty, $"##Remove{i}"))
                 removeIndex = i;
         }
         if (remindIndex >= 0)

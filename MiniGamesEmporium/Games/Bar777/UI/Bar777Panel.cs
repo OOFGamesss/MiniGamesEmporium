@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777;
@@ -18,7 +19,6 @@ using System.Numerics;
 namespace MiniGamesEmporium.Games.Bar777.UI;
 public sealed class Bar777Panel : IDisposable
 {
-    private const float StartSessionButtonWidth = 160f;
     private static readonly Vector4 GreenButton = new(0.04f, 0.42f, 0.16f, 1f);
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive = new(0.10f, 0.70f, 0.28f, 1f);
@@ -216,9 +216,7 @@ public sealed class Bar777Panel : IDisposable
             $"Another game session is still saved ({FormatBlockingSessionLabel(session)}). Clear it before opening BAR 777.");
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
-        if (ImGui.Button(
-                "Discard Saved Session##DiscardBlockingSession",
-                new Vector2(EmporiumNeonTheme.StartDoorPanelWidth, 0)))
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Saved Session", "##DiscardBlockingSession"))
         {
             this.sessionService.CancelSession();
         }
@@ -231,11 +229,12 @@ public sealed class Bar777Panel : IDisposable
             playerForSession = Bar777GameIds.WalkInPlayerPlaceholder;
         else
             playerForSession = queue.Count > 0 ? queue[0] : Bar777GameIds.WaitingPlayerPlaceholder;
-        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - StartSessionButtonWidth) * 0.5f);
+        var startBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Session").X;
+        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - startBtnW) * 0.5f);
         ImGui.PushStyleColor(ImGuiCol.Button, GreenButton);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, GreenButtonHovered);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, GreenButtonActive);
-        var clicked = ImGui.Button("Start Session##StartBar777Door", new Vector2(StartSessionButtonWidth, 0));
+        var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Session", "##StartBar777Door");
         ImGui.PopStyleColor(3);
         if (clicked)
             this.sessionService.StartSession(Bar777GameIds.DisplayName, playerForSession);
