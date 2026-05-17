@@ -247,7 +247,6 @@ public sealed class SessionService
     public void EndWalkInAndReset()
     {
         IsPaused = false;
-        ClearGameStats();
         this.config.ActiveSession = new ActiveSessionState
         {
             GameName = Bar777GameIds.DisplayName,
@@ -262,7 +261,6 @@ public sealed class SessionService
     }
     public void EndQueuePlayerAndProcessNext()
     {
-        ClearGameStats();
         RemoveCurrentBar777FromWaitlistAndStartNext();
     }
     public void EndSessionWalkIn()
