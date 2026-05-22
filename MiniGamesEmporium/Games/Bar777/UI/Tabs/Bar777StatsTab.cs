@@ -2,7 +2,6 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Games.Bar777;
 using MiniGamesEmporium.Games.Bar777.Actions;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;

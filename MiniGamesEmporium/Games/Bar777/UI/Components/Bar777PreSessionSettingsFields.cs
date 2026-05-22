@@ -20,7 +20,8 @@ public static class Bar777PreSessionSettingsFields
     private static float ResolvedFieldWidth()
     {
         var w = ImGui.GetContentRegionAvail().X;
-        return w > 48f ? w : EmporiumNeonTheme.StartDoorPanelWidth;
+        if (w <= 48f) return EmporiumNeonTheme.StartDoorPanelWidth;
+        return MathF.Max(80f, w - ImGui.GetFrameHeight() * 2f - 2f);
     }
     private static void DrawCostSetting(PluginConfiguration config)
     {

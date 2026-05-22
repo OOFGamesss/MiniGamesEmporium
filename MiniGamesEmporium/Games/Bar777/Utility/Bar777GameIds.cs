@@ -2,7 +2,7 @@ using System;
 
 /// <summary>Defines the display name and placeholder constants for BAR 777, and provides helper methods for identifying walk-in and waiting placeholders.</summary>
 
-namespace MiniGamesEmporium.Games.Bar777;
+namespace MiniGamesEmporium.Games.Bar777.Utility;
 public static class Bar777GameIds
 {
     public const string DisplayName = "BAR 777";

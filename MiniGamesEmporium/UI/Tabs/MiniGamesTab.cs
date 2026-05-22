@@ -1,21 +1,24 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
+using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI;
-using MiniGamesEmporium.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.UI;
+using MiniGamesEmporium.Services;
 using MiniGamesEmporium.Games.MinefieldGambit.UI;
 using MiniGamesEmporium.Games.GamblerDerby.UI;
 using MiniGamesEmporium.Games.HotShots.UI;
 using MiniGamesEmporium.Games.BeerPong.UI;
 using MiniGamesEmporium.Games.Darts.UI;
 using MiniGamesEmporium.Games.EightBallPool.UI;
+using MiniGamesEmporium.Games.RussianRoulette.UI;
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Draws the Mini Games tab with themed sub-tabs for BAR 777, Minefield Gambit, and Gambler Derby, and displays a centred win alert popup when a winning roll is detected.</summary>
+/// <summary>Draws the Mini Games tab with themed sub-tabs for BAR 777, Deathroll Tournament, Minefield Gambit, Gambler Derby, Hot Shots, Beer Pong, Darts, 8 Ball Pool, and Russian Roulette, and displays a centred win alert popup when a winning roll is detected.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class MiniGamesTab : IDisposable
@@ -28,19 +31,29 @@ public sealed class MiniGamesTab : IDisposable
     private readonly BeerPongPanel beerPongPanel;
     private readonly DartsPanel dartsPanel;
     private readonly EightBallPoolPanel eightBallPoolPanel;
+    private readonly RussianRoulettePanel russianRoulettePanel;
     private bool showWinAlert = false;
     private string winAlertPlayer = string.Empty;
     private int winAlertRoll = 0;
-    public MiniGamesTab(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue)
+    private readonly DeathrollTournamentService deathrollService;
+    public MiniGamesTab(
+        PluginConfiguration config,
+        SessionService sessionService,
+        ChatQueueService chatQueue,
+        DeathrollTournamentService deathrollService,
+        DeathrollDiscordWebhookService deathrollDiscordService,
+        IPluginLog log)
     {
-        this.bar777Panel = new Bar777Panel(config, sessionService, chatQueue);
-        this.deathrollTournamentPanel = new DeathrollTournamentPanel();
+        this.deathrollService         = deathrollService;
+        this.bar777Panel              = new Bar777Panel(config, sessionService, chatQueue, deathrollService);
+        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log);
         this.minefieldGambitPanel = new MinefieldGambitPanel();
         this.gamblerDerbyPanel = new GamblerDerbyPanel();
         this.hotShotsPanel = new HotShotsPanel();
         this.beerPongPanel = new BeerPongPanel();
         this.dartsPanel = new DartsPanel();
         this.eightBallPoolPanel = new EightBallPoolPanel();
+        this.russianRoulettePanel = new RussianRoulettePanel();
         sessionService.WinDetected += OnWinDetected;
     }
     private void OnWinDetected(string playerName, int roll)
@@ -52,6 +65,7 @@ public sealed class MiniGamesTab : IDisposable
     public void Dispose()
     {
         this.bar777Panel.Dispose();
+        this.deathrollTournamentPanel.Dispose();
     }
     public void Draw()
     {
@@ -67,6 +81,7 @@ public sealed class MiniGamesTab : IDisposable
         DrawBeerPongTab();
         DrawDartsTab();
         DrawEightBallPoolTab();
+        DrawRussianRouletteTab();
     }
     private void DrawBar777Tab()
     {
@@ -123,6 +138,13 @@ public sealed class MiniGamesTab : IDisposable
         using var tab = ImRaii.TabItem("8 Ball Pool");
         if (!tab.Success) return;
         this.eightBallPoolPanel.Draw();
+    }
+    private void DrawRussianRouletteTab()
+    {
+        using var chrome = new EmporiumNeonTheme.RussianRouletteTabItemScope();
+        using var tab = ImRaii.TabItem("Russian Roulette");
+        if (!tab.Success) return;
+        this.russianRoulettePanel.Draw();
     }
     private void DrawWinAlertPopup()
     {

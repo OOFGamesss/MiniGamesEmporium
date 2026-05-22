@@ -2,12 +2,13 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Games.Bar777;
+using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.Bar777.Actions;
 using MiniGamesEmporium.Games.Bar777.Automation;
 using MiniGamesEmporium.Games.Bar777.State;
 using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.Games.Bar777.UI.Tabs;
+using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.Utility;
@@ -31,6 +32,7 @@ public sealed class Bar777Panel : IDisposable
     private float trackedGameInfoCardSpanPx = 140f;
     private readonly PluginConfiguration config;
     private readonly SessionService sessionService;
+    private readonly DeathrollTournamentService deathrollService;
     private readonly GameTab gameTab;
     private readonly QueuePanel queuePanel;
     private readonly Bar777SettingsTab bar777SettingsTab;
@@ -38,11 +40,12 @@ public sealed class Bar777Panel : IDisposable
     private readonly Bar777StatsTab bar777StatsTab;
     private readonly ChatQueueService chatQueue;
     private readonly Bar777ChatAutomation chatAutomation;
-    public Bar777Panel(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue)
+    public Bar777Panel(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, DeathrollTournamentService deathrollService)
     {
         this.config = config;
         this.sessionService = sessionService;
         this.chatQueue = chatQueue;
+        this.deathrollService = deathrollService;
         this.gameTab = new GameTab(config, sessionService, chatQueue);
         this.queuePanel = new QueuePanel(sessionService);
         this.bar777SettingsTab = new Bar777SettingsTab(config);
@@ -140,10 +143,16 @@ public sealed class Bar777Panel : IDisposable
     {
         using var tab = ImRaii.TabItem("Chat");
         if (!tab.Success) return;
-        this.bar777ChatSettingsTab.Draw();
+        using var scroll = ImRaii.Child("##Bar777ChatScroll", new Vector2(-1f, -1f), false);
+        if (scroll.Success) this.bar777ChatSettingsTab.Draw();
     }
     private void DrawStartSessionDoor(ActiveSessionState? session)
     {
+        if (this.deathrollService.IsSessionActive())
+        {
+            DrawDeathrollBlockingDoor();
+            return;
+        }
         if (session != null && !Bar777GameIds.Matches(session.GameName))
         {
             DrawBlockingSessionDoor(session);
@@ -157,6 +166,29 @@ public sealed class Bar777Panel : IDisposable
             ref this.trackedBar777StartDoorSpanPx,
             GameSessionDoorStyles.Bar777StartDoor,
             DrawBar777DoorStartBody);
+    }
+
+    private void DrawDeathrollBlockingDoor()
+    {
+        GameSessionDoorHost.Draw(
+            KnownGameDoorModules.Bar777,
+            DoorSurfaceBlocking,
+            ref this.trackedBar777BlockingDoorSpanPx,
+            GameSessionDoorStyles.Bar777BlockingDoor,
+            DrawDeathrollBlockingDoorBody);
+    }
+
+    private void DrawDeathrollBlockingDoorBody()
+    {
+        var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
+        ImGui.PushTextWrapPos(wrapEnd);
+        ImGui.TextColored(
+            EmporiumNeonTheme.WarningPanel,
+            "A Deathroll Tournament session is currently active. Stop it before opening BAR 777.");
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Tournament Session", "##DiscardDeathrollSession"))
+            this.deathrollService.StopSession();
     }
     private void DrawGameInfoDoorCard()
     {

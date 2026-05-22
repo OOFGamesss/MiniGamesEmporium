@@ -1,5 +1,4 @@
 using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Games.Bar777;
 using System;
 
 /// <summary>Formats BAR 777 chat message templates by substituting placeholders such as {player}, {cost}, {rolls}, {remaining}, {totalpot}, and {keyword} with live session and configuration values.</summary>

@@ -12,5 +12,7 @@ public class SessionRecord
     public long AmountInTrades { get; set; }
     public long TotalPot { get; set; }
     public int PlayersPlayed { get; set; }
+    public int? RoundsPlayed { get; set; }
+    public int? MatchesPlayed { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }

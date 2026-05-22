@@ -6,7 +6,7 @@
     <Author>OOFGames</Author>
     <Description>A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.</Description>
     <Punchline>Host BAR 777 and other mini games with automated queue management.</Punchline>
-    <Version>0.0.3.3</Version>
+    <Version>0.0.4.0</Version>
     <PackageProjectUrl>https://github.com/OOFGamesss/MiniGamesEmporium</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -16,5 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ECommons" Version="[3.2.0.18, )" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
   </ItemGroup>
 </Project>

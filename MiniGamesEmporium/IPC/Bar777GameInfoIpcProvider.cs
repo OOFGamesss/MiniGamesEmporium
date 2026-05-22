@@ -5,6 +5,8 @@ using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
+/// <summary>Registers the BAR 777 IPC gate and pushes updated snapshots to subscribers on session changes and periodic framework ticks.</summary>
+
 namespace MiniGamesEmporium.IPC;
 
 public sealed class Bar777GameInfoIpcProvider : IDisposable

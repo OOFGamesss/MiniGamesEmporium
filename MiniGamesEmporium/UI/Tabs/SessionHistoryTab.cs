@@ -69,6 +69,10 @@ public sealed class SessionHistoryTab
         DrawDetailRow("Boosted Pot",     $"{record.BoostedPot:N0} gil");
         DrawDetailRow("Taken in Trades", $"{record.AmountInTrades:N0} gil");
         DrawDetailRow("Players Played",  record.PlayersPlayed.ToString());
+        if (record.RoundsPlayed.HasValue)
+            DrawDetailRow("Rounds Played",  record.RoundsPlayed.Value.ToString());
+        if (record.MatchesPlayed.HasValue)
+            DrawDetailRow("Matches Played", record.MatchesPlayed.Value.ToString());
         DrawDetailRow("Timestamp",       record.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"));
         ImGui.Unindent(16f);
         ImGui.Spacing();

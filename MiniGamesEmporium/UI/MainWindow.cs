@@ -2,13 +2,15 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.Bar777.Utility;
+using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.UI.Tabs;
 using System;
 using System.Numerics;
-using MiniGamesEmporium.Games.Bar777;
 
 /// <summary>The main plugin window, hosting the top-level tab bar for Mini Games, Session History, Transaction History, and Settings, plus a floating Stop Session button overlaid on the tab band during active BAR 777 sessions.</summary>
 
@@ -22,9 +24,13 @@ public sealed class MainWindow : Window, IDisposable
     private readonly MiniGamesTab miniGamesTab;
     private readonly SettingsTab settingsTab;
     private readonly SessionService sessionService;
+    private readonly DeathrollTournamentService deathrollService;
     private readonly PluginConfiguration config;
     private bool focusSettingsTab;
     private bool pendingStopConfirm;
+    private bool pendingDeathrollStopConfirm;
+    private int prePushedColours;
+    private bool miniGamesTabActive = true;
 
     public override void OnOpen() => WindowOpened?.Invoke();
 
@@ -36,7 +42,10 @@ public sealed class MainWindow : Window, IDisposable
     public MainWindow(
         PluginConfiguration config,
         SessionService sessionService,
-        ChatQueueService chatQueue)
+        ChatQueueService chatQueue,
+        DeathrollTournamentService deathrollService,
+        DeathrollDiscordWebhookService deathrollDiscordService,
+        IPluginLog log)
         : base("Mini Games Emporium##MGE_Main_v2")
     {
         SizeConstraints = new WindowSizeConstraints
@@ -44,17 +53,38 @@ public sealed class MainWindow : Window, IDisposable
             MinimumSize = new Vector2(560, 440),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
         };
+        Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         this.transactionHistoryTab = new TransactionHistoryTab(config);
-        this.sessionHistoryTab = new SessionHistoryTab(config);
-        this.miniGamesTab = new MiniGamesTab(config, sessionService, chatQueue);
-        this.settingsTab = new SettingsTab(config);
-        this.sessionService = sessionService;
-        this.config = config;
+        this.sessionHistoryTab     = new SessionHistoryTab(config);
+        this.miniGamesTab          = new MiniGamesTab(config, sessionService, chatQueue, deathrollService, deathrollDiscordService, log);
+        this.settingsTab           = new SettingsTab(config);
+        this.sessionService        = sessionService;
+        this.deathrollService      = deathrollService;
+        this.config                = config;
     }
     public void Dispose()
     {
         this.miniGamesTab.Dispose();
     }
+    public override void PreDraw()
+    {
+        Flags = this.miniGamesTabActive
+            ? ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse
+            : ImGuiWindowFlags.None;
+        var deep = new Vector4(0.04f, 0.02f, 0.07f, 0.97f);
+        ImGui.PushStyleColor(ImGuiCol.WindowBg,          deep);
+        ImGui.PushStyleColor(ImGuiCol.TitleBg,           deep);
+        ImGui.PushStyleColor(ImGuiCol.TitleBgActive,     EmporiumNeonTheme.MainTabPurpleActive);
+        ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed,  deep);
+        ImGui.PushStyleColor(ImGuiCol.Border,            new Vector4(0.42f, 0.08f, 0.62f, 0.60f));
+        this.prePushedColours = 5;
+    }
+
+    public override void PostDraw()
+    {
+        ImGui.PopStyleColor(this.prePushedColours);
+    }
+
     public override void Draw()
     {
         using var theme = new EmporiumNeonTheme.Scope();
@@ -71,7 +101,9 @@ public sealed class MainWindow : Window, IDisposable
             DrawSettingsTab();
         }
         DrawBar777StopSessionMainTabRowButton(tabBarRowScreenY);
+        DrawDeathrollStopButton(tabBarRowScreenY);
         DrawStopSessionConfirmPopup();
+        DrawDeathrollStopConfirmPopup();
     }
     private void DrawBar777StopSessionMainTabRowButton(float tabBarRowScreenY)
     {
@@ -177,6 +209,107 @@ public sealed class MainWindow : Window, IDisposable
         if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Cancel", "##CancelStop"))
             ImGui.CloseCurrentPopup();
     }
+    private void DrawDeathrollStopButton(float tabBarRowScreenY)
+    {
+        if (!this.deathrollService.IsSessionActive()) return;
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8f, 3f));
+        try
+        {
+            const string stopLabel = "Stop Tournament";
+            var stopBtnSize  = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, stopLabel);
+            var yBtn         = tabBarRowScreenY + MathF.Max(0f, (ImGui.GetFrameHeight() - stopBtnSize.Y) * 0.5f);
+            var xRight       = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
+            var isPaused     = this.sessionService.IsPaused;
+            var pauseLabel   = isPaused ? "Continue Tournament" : "Pause Tournament";
+            var pauseIcon    = isPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
+            var pauseBtnSize = UIHelper.CalcButtonSize(pauseIcon, pauseLabel);
+            var xStop        = xRight - stopBtnSize.X;
+            var xPause       = xStop - pauseBtnSize.X - 4f;
+            DrawDeathrollPauseResumeButton(isPaused, pauseLabel, pauseIcon, new Vector2(xPause, yBtn));
+            DrawDeathrollStopButtonInner(stopLabel, new Vector2(xStop, yBtn));
+        }
+        finally
+        {
+            ImGui.PopStyleVar();
+        }
+    }
+
+    private void DrawDeathrollPauseResumeButton(bool isPaused, string label, FontAwesomeIcon icon, Vector2 pos)
+    {
+        ImGui.SetCursorScreenPos(pos);
+        if (isPaused)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button,        new Vector4(0.04f, 0.38f, 0.08f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.08f, 0.72f, 0.15f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(0.06f, 0.52f, 0.10f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border,        EmporiumNeonTheme.MinefieldGreenDim);
+        }
+        else
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button,        new Vector4(0.62f, 0.56f, 0.03f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.78f, 0.72f, 0.04f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(0.48f, 0.44f, 0.02f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border,        EmporiumNeonTheme.GamblerDerbyYellowDim);
+        }
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.98f, 0.98f, 1f));
+        try
+        {
+            if (UIHelper.IconTextButton(icon, label, "##MGE_DeathrollPauseMain"))
+            {
+                if (isPaused) this.sessionService.ResumeSession();
+                else          this.sessionService.PauseSession();
+            }
+        }
+        finally
+        {
+            ImGui.PopStyleColor(5);
+        }
+    }
+
+    private void DrawDeathrollStopButtonInner(string label, Vector2 pos)
+    {
+        ImGui.SetCursorScreenPos(pos);
+        ImGui.PushStyleColor(ImGuiCol.Button,        EmporiumNeonTheme.Bar777Red);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1f, 0.22f, 0.38f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(0.72f, 0.08f, 0.22f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Border,        EmporiumNeonTheme.Bar777RedDim);
+        ImGui.PushStyleColor(ImGuiCol.Text,          new Vector4(1f, 0.98f, 0.98f, 1f));
+        try
+        {
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, label, "##MGE_DeathrollStopMain"))
+                this.pendingDeathrollStopConfirm = true;
+        }
+        finally
+        {
+            ImGui.PopStyleColor(5);
+        }
+    }
+    private void DrawDeathrollStopConfirmPopup()
+    {
+        if (this.pendingDeathrollStopConfirm)
+        {
+            ImGui.OpenPopup("##DeathrollStopConfirm");
+            this.pendingDeathrollStopConfirm = false;
+        }
+        var centre = ImGui.GetMainViewport().GetCenter();
+        ImGui.SetNextWindowPos(centre, ImGuiCond.Always, new Vector2(0.5f, 0.5f));
+        using var popup = ImRaii.Popup("##DeathrollStopConfirm", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
+        if (!popup.Success) return;
+        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, "Stop Deathroll Tournament?");
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.TextUnformatted("The tournament bracket and all session data will be cleared.");
+        ImGui.Spacing();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Tournament", "##ConfirmDeathrollStop"))
+        {
+            this.sessionService.ResumeSession();
+            this.deathrollService.StopSession();
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Cancel", "##CancelDeathrollStop"))
+            ImGui.CloseCurrentPopup();
+    }
     private void DrawSessionHistoryTab()
     {
         using var tab = ImRaii.TabItem("Session History");
@@ -190,6 +323,7 @@ public sealed class MainWindow : Window, IDisposable
     private void DrawMiniGamesTab()
     {
         using var tab = ImRaii.TabItem("Mini Games");
+        this.miniGamesTabActive = tab.Success;
         if (tab.Success) this.miniGamesTab.Draw();
     }
     private void DrawSettingsTab()

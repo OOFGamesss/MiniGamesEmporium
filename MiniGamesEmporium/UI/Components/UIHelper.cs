@@ -12,13 +12,13 @@ namespace MiniGamesEmporium.UI.Components;
 /// </summary>
 internal static class UIHelper
 {
-    internal static bool IconTextButton(FontAwesomeIcon icon, string label, string id = "")
+    internal static bool IconTextButton(FontAwesomeIcon icon, string label, string id = "", float minWidth = 0f)
     {
-        var iconFont   = UiBuilder.IconFont;
+        var iconFont    = UiBuilder.IconFont;
         var defaultFont = ImGui.GetFont();
-        var fontSize   = ImGui.GetFontSize();
-        var iconStr    = icon.ToIconString();
-        var style      = ImGui.GetStyle();
+        var fontSize    = ImGui.GetFontSize();
+        var iconStr     = icon.ToIconString();
+        var style       = ImGui.GetStyle();
 
         ImGui.PushFont(iconFont);
         var iconSize = ImGui.CalcTextSize(iconStr);
@@ -26,9 +26,13 @@ internal static class UIHelper
 
         var textSize = ImGui.CalcTextSize(label);
         var height   = Math.Max(iconSize.Y, textSize.Y);
+        var contentW = textSize.X > 0f
+            ? iconSize.X + style.ItemInnerSpacing.X + textSize.X
+            : iconSize.X;
+        var naturalW = style.FramePadding.X * 2 + contentW;
 
         var btnSize = new Vector2(
-            style.FramePadding.X * 2 + iconSize.X + style.ItemInnerSpacing.X + textSize.X,
+            Math.Max(naturalW, minWidth),
             style.FramePadding.Y * 2 + height);
 
         var btnId   = string.IsNullOrEmpty(id) ? $"##{label}" : id;
@@ -53,15 +57,20 @@ internal static class UIHelper
 
         var textColor = ImGui.GetColorU32(ImGuiCol.Text);
 
+        var innerW      = btnSize.X - style.FramePadding.X * 2;
+        var contentOffX = style.FramePadding.X + (innerW - contentW) * 0.5f;
         var iconOffsetY = (height - iconSize.Y) * 0.5f;
         var textOffsetY = (height - textSize.Y) * 0.5f;
 
-        var iconPos = new Vector2(min.X + style.FramePadding.X, min.Y + style.FramePadding.Y + iconOffsetY);
+        var iconPos = new Vector2(min.X + contentOffX, min.Y + style.FramePadding.Y + iconOffsetY);
         dl.AddText(iconFont, fontSize, iconPos, textColor, iconStr);
 
-        var textPos = new Vector2(iconPos.X + iconSize.X + style.ItemInnerSpacing.X,
-                                  min.Y + style.FramePadding.Y + textOffsetY);
-        dl.AddText(defaultFont, fontSize, textPos, textColor, label);
+        if (textSize.X > 0f)
+        {
+            var textPos = new Vector2(iconPos.X + iconSize.X + style.ItemInnerSpacing.X,
+                                      min.Y + style.FramePadding.Y + textOffsetY);
+            dl.AddText(defaultFont, fontSize, textPos, textColor, label);
+        }
 
         return clicked;
     }
@@ -79,8 +88,11 @@ internal static class UIHelper
         var textSize = ImGui.CalcTextSize(label);
         var height   = Math.Max(iconSize.Y, textSize.Y);
 
+        var contentW = textSize.X > 0f
+            ? iconSize.X + style.ItemInnerSpacing.X + textSize.X
+            : iconSize.X;
         return new Vector2(
-            style.FramePadding.X * 2 + iconSize.X + style.ItemInnerSpacing.X + textSize.X,
+            style.FramePadding.X * 2 + contentW,
             style.FramePadding.Y * 2 + height);
     }
 

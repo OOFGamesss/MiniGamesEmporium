@@ -1,5 +1,5 @@
 using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Games.Bar777;
+using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.Bar777.State;
 using MiniGamesEmporium.State;
 using System;

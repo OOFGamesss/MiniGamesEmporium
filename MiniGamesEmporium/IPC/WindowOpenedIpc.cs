@@ -3,6 +3,8 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using MiniGamesEmporium.UI;
 
+/// <summary>Fires an IPC message over the MiniGamesEmporium.WindowOpened gate whenever the main plugin window is opened.</summary>
+
 namespace MiniGamesEmporium.IPC;
 
 public sealed class WindowOpenedIpc : IDisposable

@@ -5,7 +5,9 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using ECommons;
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Events;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.IPC;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.State;
@@ -24,6 +26,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
+    [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
     private const string MainCommandFull = "/minigamesemporium";
     private const string MainCommandShort = "/mge";
     private const string ConfigCommand = "/mgeconfig";
@@ -31,10 +35,14 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly WindowSystem windowSystem = new("MiniGamesEmporium");
     private readonly MainWindow mainWindow;
     private readonly SessionService sessionService;
+    private readonly DeathrollTournamentService deathrollService;
+    private readonly DeathrollDiscordWebhookService deathrollDiscordService;
     private readonly ChatListener chatListener;
     private readonly ChatQueueService chatQueueService;
     private readonly WindowOpenedIpc windowOpenedIpc;
     private readonly Bar777GameInfoIpcProvider bar777IpcProvider;
+    private readonly DeathrollTournamentGameInfoIpcProvider deathrollIpcProvider;
+    private readonly PlayerContextMenuHandler playerContextMenuHandler;
     public MiniGamesEmporium()
     {
         ECommonsMain.Init(PluginInterface, this);
@@ -45,11 +53,25 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         chatQueueService = new ChatQueueService();
         sessionService = new SessionService(Configuration);
         sessionService.PruneOldTransactions();
-        chatListener = new ChatListener(ChatGui, Configuration, sessionService, Log, ObjectTable);
-        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService);
+        deathrollService = new DeathrollTournamentService(Configuration);
+        deathrollDiscordService = new DeathrollDiscordWebhookService(Log, Configuration, PluginInterface.AssemblyLocation.DirectoryName!);
+        deathrollService.SessionUpdated += deathrollDiscordService.TriggerSync;
+        deathrollService.MatchWon       += (_, _, _, _) => deathrollDiscordService.TriggerSync();
+        deathrollService.GameWon        += (_, _, _, _) => deathrollDiscordService.TriggerSync();
+        deathrollService.TournamentWon  += (_, _) => deathrollDiscordService.TriggerSync();
+        playerContextMenuHandler = new PlayerContextMenuHandler(ContextMenu);
+        playerContextMenuHandler.Register(new PlayerContextMenuEntry
+        {
+            Label     = "Add to Deathroll Tournament",
+            IsVisible = () => deathrollService.IsSessionActive() && !deathrollService.HasActiveTournament(),
+            OnSelected = deathrollService.AddPlayer,
+        });
+        chatListener = new ChatListener(ChatGui, Configuration, sessionService, deathrollService, Log, ObjectTable);
+        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, Log);
         windowSystem.AddWindow(mainWindow);
         windowOpenedIpc = new WindowOpenedIpc(PluginInterface, mainWindow);
         bar777IpcProvider = new Bar777GameInfoIpcProvider(PluginInterface, Framework, Configuration, sessionService);
+        deathrollIpcProvider = new DeathrollTournamentGameInfoIpcProvider(PluginInterface, Framework, Configuration, deathrollService);
         CommandManager.AddHandler(MainCommandFull, new CommandInfo(OnCommand)
         {
             HelpMessage = "Opens the Mini Games Emporium window.",
@@ -72,8 +94,12 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
         PluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
+        deathrollService.SessionUpdated -= deathrollDiscordService.TriggerSync;
+        deathrollDiscordService.Dispose();
+        playerContextMenuHandler.Dispose();
         windowOpenedIpc.Dispose();
         bar777IpcProvider.Dispose();
+        deathrollIpcProvider.Dispose();
         chatListener.Dispose();
         chatQueueService.Dispose();
         windowSystem.RemoveAllWindows();

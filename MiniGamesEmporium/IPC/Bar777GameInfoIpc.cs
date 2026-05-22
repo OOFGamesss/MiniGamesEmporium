@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Games.Bar777;
+using MiniGamesEmporium.Games.Bar777.Utility;
+
+/// <summary>Serialisable snapshot of the current BAR 777 session state, exposed via the IPC gate for consumption by external plugins.</summary>
 
 namespace MiniGamesEmporium.IPC;
 

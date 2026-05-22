@@ -22,7 +22,7 @@ public sealed class Bar777ChatSettingsTab
         ImGui.Separator();
         ImGui.Spacing();
         ImGui.TextDisabled("All placeholders work in every message field:");
-        ImGui.TextDisabled("  {player}      = player name; @World included only for /tell messages (e.g. Amari Tempest@Omega)");
+        ImGui.TextDisabled("  {player}      = player name; @World included only for /tell messages (e.g. John Doe@Omega)");
         ImGui.TextDisabled("  {position}    = player's position in the waiting list");
         ImGui.TextDisabled("  {cost}        = cost per roll in Gil");
         ImGui.TextDisabled("  {rolls}       = max rolls allowed per session (from config)");

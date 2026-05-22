@@ -21,13 +21,14 @@ The plugin lives inside FFXIV via the [Dalamud](https://github.com/goatcorp/Dala
 | Game | Status |
 |---|---|
 | **BAR 777** | ✅ Live |
-| Deathroll Tournament | 🔜 Coming Soon |
+| **Deathroll Tournament** | ✅ Live |
 | Minefield Gambit | 🔜 Coming Soon |
 | Gambler Derby | 🔜 Coming Soon |
 | Hot Shots | 🔜 Coming Soon |
 | Beer Pong | 🔜 Coming Soon |
 | Darts | 🔜 Coming Soon |
 | 8 Ball Pool | 🔜 Coming Soon |
+| Russian Roulette | 🔜 Coming Soon |
 
 Each game gets its own tab inside the plugin's **Mini Games** section, styled in its own neon accent colour. The main window also holds a **Transaction History** ledger and a top-level **Settings** tab.
 
@@ -112,6 +113,101 @@ All outbound messages are queued with a one-second gap between each to stay with
 > **Chat Settings Tab**
 >
 > ![Chat Settings Tab](MiniGamesEmporium/Images/chat-settings.png?v=2)
+
+---
+
+## Deathroll Tournament
+
+Deathroll Tournament is a bracket-based elimination game. Each registered player pays an entry fee and competes in head-to-head deathroll matches. In deathroll, each player rolls within the range of the previous roll, starting from an agreed ceiling. The first player to roll a 1 loses the match. The plugin manages registration, seeding, the bracket, and all automated chat, so the host only needs to click to advance.
+
+### How It Works
+
+1. The host opens the Deathroll Tournament door, sets the entry cost, boosted pot, and best-of series lengths for each round, then clicks **Start Session**.
+2. Players register by typing the join keyword in chat; the host marks each as **Paid** in the Registration tab once their Gil comes through.
+3. When all paid players are confirmed, the host clicks **Start Tournament** to seed the bracket automatically (power-of-two seeding; bye slots are auto-resolved).
+4. The plugin announces the first matchup and uses `/random 10` to determine which player rolls first.
+5. Players deathroll in order. The plugin watches for the losing roll (a result of 1) and auto-advances the match.
+6. The winner advances in the bracket; the next match is announced automatically.
+7. The tournament ends when one player remains. A winner announcement fires and the Discord embed updates to show the champion.
+
+### Registration
+
+The Registration tab shows every player who has typed the join keyword. The host ticks each player as **Paid** once their trade clears. Only paid players are seeded into the bracket.
+
+- **Entry Cost** - Gil each paid player owes the host.
+- **Boosted Pot** - Extra Gil added by the venue on top of entry fees.
+- **Registered** - All players who joined, including those not yet marked as paid.
+- **Paid** - Players confirmed for the bracket.
+
+### The Bracket
+
+Once started, the Bracket tab shows the full single-elimination bracket in real time. Matches highlight the current pairing; completed matches show the winner in green. Bye slots are resolved instantly with no announcement.
+
+The bracket is seeded in a standard power-of-two layout. If the paid player count is not a power of two, the plugin fills the smallest number of first-round byes required to reach the next power of two.
+
+### Best-of Series
+
+Each round can be configured with its own best-of count before the tournament starts (for example, Best of 1 in early rounds, Best of 3 in the semi-finals, Best of 5 in the final). The plugin tracks wins per match and only advances a player when they reach the winning threshold.
+
+### Automated Chat
+
+Deathroll Tournament includes fully customisable message templates for every key moment:
+
+| Template | Trigger |
+|---|---|
+| Announce Bracket | When the bracket is generated; posts seeding order |
+| Announce Matchup | At the start of each match |
+| Announce First Player | After `/random 10` determines who rolls first |
+| Announce Reroll | When a `/random 10` result requires a reroll (tie) |
+| Match Win | When a player wins a single deathroll game within a series |
+| Round Win | When a player wins the series and advances |
+| Tournament Winner | When the final match resolves |
+| Announce Pot | Posts the current pot size on demand |
+
+All outbound messages are queued with a one-second gap between each to stay within FFXIV's chat rate limits.
+
+### Discord Webhook
+
+Deathroll Tournament can post and live-update a single Discord embed via a channel webhook throughout the event.
+
+To set it up, go to the **Discord** tab within the Deathroll Tournament panel:
+
+1. In Discord, open channel settings for your tournament announcement channel, go to **Integrations > Webhooks**, and copy the webhook URL.
+2. Paste the URL into the Webhook URL field and tick **Enable**.
+3. The plugin will post the embed immediately and patch it automatically as the tournament progresses.
+
+| Phase | Embed content |
+|---|---|
+| No session active | "No Tournament Active" banner with the Deathroll Tournament logo |
+| Registration open | Player card showing all paid players, entry cost, and current pot |
+| Tournament running | Live bracket image with current match and score highlighted |
+| Tournament complete | Final bracket image with the winner and pot total |
+
+If the Discord message is deleted, toggle **Enable** off then on to create a fresh embed. The same toggle retries a failed delivery.
+
+### Screenshots
+
+> **Session Tab (Pre-Session)**
+>
+> ![Session Tab (Pre-Session)](MiniGamesEmporium/Images/drt-session-tab.png)
+
+---
+
+> **Lobby (Registration)**
+>
+> ![Lobby (Registration)](MiniGamesEmporium/Images/drt-lobby.png)
+
+---
+
+> **Bracket**
+>
+> ![Bracket](MiniGamesEmporium/Images/drt-bracket.png)
+
+---
+
+> **Example: Live Bracket Embed (Discord)**
+>
+> ![Example: Live Bracket Embed (Discord)](MiniGamesEmporium/Images/drt-example-bracket.png)
 
 ---
 

@@ -1,6 +1,7 @@
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -17,16 +18,18 @@ public sealed class TradeHandler
     private static readonly Regex TradeCancelRegex   = new(@"Trade cancel",                      RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private readonly PluginConfiguration config;
     private readonly SessionService sessionService;
+    private readonly DeathrollTournamentService deathrollService;
     private readonly IObjectTable objectTable;
     private readonly IPluginLog log;
     private string? partner;
     private int received;
-    public TradeHandler(PluginConfiguration config, SessionService sessionService, IObjectTable objectTable, IPluginLog log)
+    public TradeHandler(PluginConfiguration config, SessionService sessionService, DeathrollTournamentService deathrollService, IObjectTable objectTable, IPluginLog log)
     {
-        this.config = config;
-        this.sessionService = sessionService;
-        this.objectTable = objectTable;
-        this.log = log;
+        this.config          = config;
+        this.sessionService  = sessionService;
+        this.deathrollService = deathrollService;
+        this.objectTable     = objectTable;
+        this.log             = log;
     }
     public void Process(string text)
     {
@@ -65,6 +68,7 @@ public sealed class TradeHandler
             var world = LookupPlayerWorld(this.partner);
             this.log.Information($"Trade complete: {this.partner} gave {this.received:N0} gil.");
             this.sessionService.VerifyPayment(this.partner, this.received, world);
+            this.deathrollService.TryAutoMarkPaid(this.partner, this.received);
         }
         this.partner  = null;
         this.received = 0;
