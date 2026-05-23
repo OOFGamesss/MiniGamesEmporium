@@ -101,7 +101,8 @@ public static class GameSessionDoorHost
         using var doorBox = ImRaii.Child(
             $"##GameDoorBox_{gameModuleId}_{doorSurfaceId}",
             boxSize,
-            true);
+            true,
+            ImGuiWindowFlags.NoScrollbar);
         if (!doorBox.Success)
             return;
         var layoutTopY = ImGui.GetCursorPosY();

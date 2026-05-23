@@ -193,7 +193,7 @@ public sealed class Bar777Panel : IDisposable
     private void DrawGameInfoDoorCard()
     {
         var containerH = MathF.Max(80f, this.trackedGameInfoCardSpanPx + 14f);
-        using var card = ImRaii.Child("##Bar777GameInfoCard", new Vector2(-1f, containerH), true);
+        using var card = ImRaii.Child("##Bar777GameInfoCard", new Vector2(-1f, containerH), true, ImGuiWindowFlags.NoScrollbar);
         if (!card.Success)
             return;
         var topY = ImGui.GetCursorPosY();

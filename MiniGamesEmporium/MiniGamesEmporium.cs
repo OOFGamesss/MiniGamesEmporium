@@ -40,6 +40,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly DeathrollTournamentService deathrollService;
     private readonly DeathrollDiscordWebhookService deathrollDiscordService;
     private readonly ChatListener chatListener;
+    private readonly TradeListenerService tradeListenerService;
     private readonly ChatQueueService chatQueueService;
     private readonly WindowOpenedIpc windowOpenedIpc;
     private readonly Bar777GameInfoIpcProvider bar777IpcProvider;
@@ -94,7 +95,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
             IsVisible  = () => { var s = sessionService.GetActiveSession(); return s != null && Bar777GameIds.Matches(s.GameName) && Configuration.Bar777.UseQueue; },
             OnSelected = sessionService.TryEnqueuePlayer,
         });
-        chatListener = new ChatListener(ChatGui, Configuration, sessionService, deathrollService, Log, ObjectTable);
+        chatListener          = new ChatListener(ChatGui, Configuration, sessionService, deathrollService, Log);
+        tradeListenerService  = new TradeListenerService(sessionService, deathrollService, Log);
         mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, Log);
         windowSystem.AddWindow(mainWindow);
         windowOpenedIpc = new WindowOpenedIpc(PluginInterface, mainWindow);
@@ -133,6 +135,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         bar777IpcProvider.Dispose();
         deathrollIpcProvider.Dispose();
         chatListener.Dispose();
+        tradeListenerService.Dispose();
         chatQueueService.Dispose();
         windowSystem.RemoveAllWindows();
         mainWindow.Dispose();

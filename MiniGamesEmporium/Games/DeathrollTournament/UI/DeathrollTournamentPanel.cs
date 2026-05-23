@@ -168,7 +168,7 @@ public sealed class DeathrollTournamentPanel : IDisposable
     private void DrawGameInfoCard()
     {
         var containerH = MathF.Max(80f, this.trackedGameInfoCardSpanPx + 14f);
-        using var card = ImRaii.Child("##DRGameInfoCard", new Vector2(-1f, containerH), true);
+        using var card = ImRaii.Child("##DRGameInfoCard", new Vector2(-1f, containerH), true, ImGuiWindowFlags.NoScrollbar);
         if (!card.Success) return;
         var topY = ImGui.GetCursorPosY();
         ImGui.Spacing();
