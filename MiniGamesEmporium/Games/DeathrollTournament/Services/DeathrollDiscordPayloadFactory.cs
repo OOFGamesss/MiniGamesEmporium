@@ -49,8 +49,8 @@ internal static class DeathrollDiscordPayloadFactory
         var pot    = session.EntryCost * paidPlayers.Count + session.BoostedPot;
         var fields = new List<DiscordEmbedFieldDto>
         {
-            new() { Name = "Entry Cost",  Value = $"{session.EntryCost:N0} Gil",                 Inline = true },
-            new() { Name = "Players",     Value = $"{paidPlayers.Count} / {cfg.RegisteredPlayers.Count} paid", Inline = true },
+            new() { Name = "Entry Cost",  Value = session.EntryCost == 0 ? "Free" : $"{session.EntryCost:N0} Gil", Inline = true },
+            new() { Name = "Players",     Value = $"{paidPlayers.Count}",                                       Inline = true },
             new() { Name = "Current Pot", Value = $"{pot:N0} Gil",                               Inline = true },
         };
         if (session.BoostedPot > 0)
@@ -65,7 +65,7 @@ internal static class DeathrollDiscordPayloadFactory
                 new DiscordEmbedDto
                 {
                     Title       = "⚔ Tournament Registration",
-                    Description = "Players are signing up! Mark players as paid to include them in the bracket.",
+                    Description = "Players are signing up!",
                     Color       = ColourActive,
                     Image       = new DiscordMediaDto($"attachment://{imageFileName}"),
                     Footer      = Footer,

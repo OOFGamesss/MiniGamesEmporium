@@ -23,11 +23,12 @@ public sealed class DeathrollDiscordWebhookService : IDisposable
     private const string PlayersFileName = "drplayers.png";
     private const string BracketFileName = "drbracket.png";
 
-    private readonly IPluginLog          _log;
-    private readonly PluginConfiguration _config;
-    private readonly HttpClient          _http;
-    private readonly SemaphoreSlim       _gate = new(1, 1);
-    private readonly string              _imagesDir;
+    private readonly IPluginLog              _log;
+    private readonly PluginConfiguration    _config;
+    private readonly HttpClient             _http;
+    private readonly SemaphoreSlim          _gate = new(1, 1);
+    private readonly string                 _imagesDir;
+    private readonly CancellationTokenSource _cts = new();
 
     private readonly JsonSerializerOptions _jsonOpts = new()
     {
@@ -50,17 +51,22 @@ public sealed class DeathrollDiscordWebhookService : IDisposable
 
     public void Dispose()
     {
+        _cts.Cancel();
         _gate.Dispose();
         _http.Dispose();
+        _cts.Dispose();
     }
 
     public void TriggerSync()
     {
+        if (_cts.IsCancellationRequested) return;
+        var ct = _cts.Token;
         _ = Task.Run(async () =>
         {
-            try   { await SyncCoreAsync(forceEvenIfFailed: false); }
+            try   { await SyncCoreAsync(forceEvenIfFailed: false, ct); }
+            catch (OperationCanceledException) { }
             catch (Exception ex) { _log.Error(ex, "Deathroll Discord background sync failed."); }
-        });
+        }, ct);
     }
 
     public async Task ApplyEntryCommittedAsync(CancellationToken ct = default)

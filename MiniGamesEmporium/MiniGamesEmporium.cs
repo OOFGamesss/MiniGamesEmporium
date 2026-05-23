@@ -7,11 +7,13 @@ using ECommons;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Events;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.IPC;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.State;
 using MiniGamesEmporium.UI;
+using System;
 using System.Collections.Generic;
 
 /// <summary>Plugin entry point that initialises all services, registers the main and config slash commands, and manages the Dalamud window system lifecycle.</summary>
@@ -43,6 +45,10 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly Bar777GameInfoIpcProvider bar777IpcProvider;
     private readonly DeathrollTournamentGameInfoIpcProvider deathrollIpcProvider;
     private readonly PlayerContextMenuHandler playerContextMenuHandler;
+    private readonly ChatPlayerContextMenuHandler chatPlayerContextMenuHandler;
+    private readonly Action<string, string, int, int> _onMatchWon;
+    private readonly Action<string, int, int, int>    _onGameWon;
+    private readonly Action<string, long>             _onTournamentWon;
     public MiniGamesEmporium()
     {
         ECommonsMain.Init(PluginInterface, this);
@@ -56,15 +62,37 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         deathrollService = new DeathrollTournamentService(Configuration);
         deathrollDiscordService = new DeathrollDiscordWebhookService(Log, Configuration, PluginInterface.AssemblyLocation.DirectoryName!);
         deathrollService.SessionUpdated += deathrollDiscordService.TriggerSync;
-        deathrollService.MatchWon       += (_, _, _, _) => deathrollDiscordService.TriggerSync();
-        deathrollService.GameWon        += (_, _, _, _) => deathrollDiscordService.TriggerSync();
-        deathrollService.TournamentWon  += (_, _) => deathrollDiscordService.TriggerSync();
+        _onMatchWon      = (_, _, _, _) => deathrollDiscordService.TriggerSync();
+        _onGameWon       = (_, _, _, _) => deathrollDiscordService.TriggerSync();
+        _onTournamentWon = (_, _)       => deathrollDiscordService.TriggerSync();
+        deathrollService.MatchWon      += _onMatchWon;
+        deathrollService.GameWon       += _onGameWon;
+        deathrollService.TournamentWon += _onTournamentWon;
         playerContextMenuHandler = new PlayerContextMenuHandler(ContextMenu);
         playerContextMenuHandler.Register(new PlayerContextMenuEntry
         {
-            Label     = "Add to Deathroll Tournament",
-            IsVisible = () => deathrollService.IsSessionActive() && !deathrollService.HasActiveTournament(),
+            Label      = "Add to Deathroll Tournament",
+            IsVisible  = () => deathrollService.IsSessionActive() && !deathrollService.HasActiveTournament(),
             OnSelected = deathrollService.AddPlayer,
+        });
+        playerContextMenuHandler.Register(new PlayerContextMenuEntry
+        {
+            Label      = "Add to BAR 777 Queue",
+            IsVisible  = () => { var s = sessionService.GetActiveSession(); return s != null && Bar777GameIds.Matches(s.GameName) && Configuration.Bar777.UseQueue; },
+            OnSelected = sessionService.TryEnqueuePlayer,
+        });
+        chatPlayerContextMenuHandler = new ChatPlayerContextMenuHandler(ContextMenu);
+        chatPlayerContextMenuHandler.Register(new PlayerContextMenuEntry
+        {
+            Label      = "Add to Deathroll Tournament",
+            IsVisible  = () => deathrollService.IsSessionActive() && !deathrollService.HasActiveTournament(),
+            OnSelected = deathrollService.AddPlayer,
+        });
+        chatPlayerContextMenuHandler.Register(new PlayerContextMenuEntry
+        {
+            Label      = "Add to BAR 777 Queue",
+            IsVisible  = () => { var s = sessionService.GetActiveSession(); return s != null && Bar777GameIds.Matches(s.GameName) && Configuration.Bar777.UseQueue; },
+            OnSelected = sessionService.TryEnqueuePlayer,
         });
         chatListener = new ChatListener(ChatGui, Configuration, sessionService, deathrollService, Log, ObjectTable);
         mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, Log);
@@ -95,8 +123,12 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
         PluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
         deathrollService.SessionUpdated -= deathrollDiscordService.TriggerSync;
+        deathrollService.MatchWon      -= _onMatchWon;
+        deathrollService.GameWon       -= _onGameWon;
+        deathrollService.TournamentWon -= _onTournamentWon;
         deathrollDiscordService.Dispose();
         playerContextMenuHandler.Dispose();
+        chatPlayerContextMenuHandler.Dispose();
         windowOpenedIpc.Dispose();
         bar777IpcProvider.Dispose();
         deathrollIpcProvider.Dispose();

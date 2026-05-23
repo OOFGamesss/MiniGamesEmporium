@@ -1,4 +1,3 @@
-using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
@@ -6,15 +5,15 @@ using Dalamud.Plugin.Services;
 using System;
 using System.Collections.Generic;
 
-/// <summary>Subscribes to the Dalamud context menu and adds custom items for each registered entry when the target is a player character.</summary>
+/// <summary>Subscribes to the Dalamud context menu and adds custom items for each registered entry when the target is a player named in the chat log.</summary>
 
 namespace MiniGamesEmporium.Events;
-public sealed class PlayerContextMenuHandler : IDisposable
+public sealed class ChatPlayerContextMenuHandler : IDisposable
 {
     private readonly IContextMenu contextMenu;
     private readonly List<PlayerContextMenuEntry> entries = new();
 
-    public PlayerContextMenuHandler(IContextMenu contextMenu)
+    public ChatPlayerContextMenuHandler(IContextMenu contextMenu)
     {
         this.contextMenu = contextMenu;
         this.contextMenu.OnMenuOpened += OnMenuOpened;
@@ -34,7 +33,9 @@ public sealed class PlayerContextMenuHandler : IDisposable
     {
         if (args.MenuType != ContextMenuType.Default) return;
         if (args.Target is not MenuTargetDefault target) return;
-        if (target.TargetObject?.ObjectKind != ObjectKind.Pc) return;
+        if (args.AddonName != "ChatLog") return;
+        if (target.TargetContentId == 0) return;
+        if (string.IsNullOrEmpty(target.TargetName)) return;
 
         var name        = target.TargetName;
         var worldRef    = target.TargetHomeWorld;

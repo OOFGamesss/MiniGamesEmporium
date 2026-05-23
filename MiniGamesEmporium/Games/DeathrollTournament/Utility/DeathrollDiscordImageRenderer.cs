@@ -42,8 +42,8 @@ public static class DeathrollDiscordImageRenderer
     private const int BracketLPad   = 30;
     private const int BracketHdrH   = 70;
     private const int MatchBoxW     = 196;
-    private const int MatchBoxH     = 76;
-    private const int MatchSlotH    = 88;
+    private const int MatchBoxH     = 60;
+    private const int MatchSlotH    = 70;
 
     /// <summary>Renders the registration-phase player list card. Only paid players are listed.</summary>
     public static byte[] RenderPlayerList(
@@ -52,7 +52,9 @@ public static class DeathrollDiscordImageRenderer
         long boostedPot,
         int registeredCount)
     {
-        var playerArea = Math.Max(100, paidPlayers.Count * RowHeight);
+        var twoCol     = paidPlayers.Count > 10;
+        var rowsDrawn  = twoCol ? (int)Math.Ceiling(paidPlayers.Count / 2.0) : paidPlayers.Count;
+        var playerArea = Math.Max(100, rowsDrawn * RowHeight);
         var height     = HeaderHeight + StatsHeight + 2 + playerArea + FooterHeight;
 
         using var img = new Image<Rgba32>(CanvasWidth, height);
@@ -116,11 +118,11 @@ public static class DeathrollDiscordImageRenderer
         var pot       = entryCost * paidCount + boostedPot;
 
         float[] xs  = { CanvasWidth * 0.17f, CanvasWidth * 0.50f, CanvasWidth * 0.83f };
-        string[] labels = { "Entry Cost", "Registered", "Current Pot" };
+        string[] labels = { "Entry Cost", "Players", "Current Pot" };
         string[] values =
         {
-            $"{entryCost:N0} Gil",
-            $"{paidCount} / {registeredCount} paid",
+            entryCost == 0 ? "Free" : $"{entryCost:N0} Gil",
+            $"{paidCount}",
             $"{pot:N0} Gil",
         };
         Color[] valueColors = { AccentCyan, AccentPink, AccentGold };
@@ -166,13 +168,6 @@ public static class DeathrollDiscordImageRenderer
 
             var nameX = x + 42f;
             DrawLeft(ctx, players[i], nameFont, TextPrimary, nameX, y + (RowHeight - 16f) / 2f);
-
-            var badgeX = x + colWidth - 68f;
-            var badgeY = y + (RowHeight - 22f) / 2f;
-            ctx.Fill(Color.FromRgb(8, 40, 12), new RectangleF(badgeX, badgeY, 60f, 22f));
-            ctx.Draw(new SolidPen(TextGreen, 1f), new RectangleF(badgeX, badgeY, 60f, 22f));
-            DrawCentred(ctx, "PAID", GetFont(11, FontStyle.Bold), TextGreen,
-                badgeX + 30f, badgeY + 3f);
         }
     }
 
@@ -317,8 +312,8 @@ public static class DeathrollDiscordImageRenderer
     private static Color GetBracketNameColor(BracketMatch match, bool isP1, bool isCurrent, DeathrollTournamentState state)
     {
         var player = isP1 ? match.Player1 : match.Player2;
-        if (string.IsNullOrEmpty(player)) return Color.FromRgb(50, 45, 70);
-        if (DeathrollGameIds.IsBye(player)) return Color.FromRgb(80, 75, 95);
+        if (string.IsNullOrEmpty(player)) return TextPrimary;
+        if (DeathrollGameIds.IsBye(player)) return TextPrimary;
         if (match.IsResolved && string.Equals(match.Winner, player, StringComparison.OrdinalIgnoreCase))
             return TextGreen;
         if (match.IsResolved) return TextMuted;

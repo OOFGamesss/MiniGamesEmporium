@@ -4,7 +4,7 @@
   "InternalName": "MiniGamesEmporium",
   "Punchline": "Host BAR 777 and other mini games with automated queue management.",
   "Description": "A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.",
-  "Changelog": "- Deathroll Tournament out on Beta! Announcement post coming soon to announce features.",
+  "Changelog": "- Fixed missing dispose calls for Deathroll Tournament events.\n Updated deathroll tournanment webhook with better info and image fixes.\n- Added option to add players to tournament through chat messages.\n- Added option to add players to BAR 777 queue for players context menu and chat context menu.",
   "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
   "ApplicableVersion": "any",
   "Tags": [

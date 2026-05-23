@@ -36,6 +36,7 @@ public sealed class MiniGamesTab : IDisposable
     private string winAlertPlayer = string.Empty;
     private int winAlertRoll = 0;
     private readonly DeathrollTournamentService deathrollService;
+    private readonly SessionService sessionService;
     public MiniGamesTab(
         PluginConfiguration config,
         SessionService sessionService,
@@ -45,6 +46,7 @@ public sealed class MiniGamesTab : IDisposable
         IPluginLog log)
     {
         this.deathrollService         = deathrollService;
+        this.sessionService           = sessionService;
         this.bar777Panel              = new Bar777Panel(config, sessionService, chatQueue, deathrollService);
         this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log);
         this.minefieldGambitPanel = new MinefieldGambitPanel();
@@ -64,6 +66,7 @@ public sealed class MiniGamesTab : IDisposable
     }
     public void Dispose()
     {
+        this.sessionService.WinDetected -= OnWinDetected;
         this.bar777Panel.Dispose();
         this.deathrollTournamentPanel.Dispose();
     }

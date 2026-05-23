@@ -130,7 +130,14 @@ public sealed class DeathrollTournamentService
         if (gilReceived < entryCost) return;
         var registered = this.config.DeathrollTournament.RegisteredPlayers;
         var match = registered.FirstOrDefault(p => NamesMatch(p, tradePartner));
-        if (match == null) return;
+        if (match == null || IsPaid(match)) return;
+        this.config.Transactions.Add(new TransactionRecord
+        {
+            PlayerName = ParseName(match),
+            Amount     = (int)entryCost,
+            Timestamp  = DateTime.UtcNow,
+            GameName   = DeathrollGameIds.DisplayName,
+        });
         MarkAsPaid(match);
     }
 
