@@ -46,8 +46,9 @@ public sealed class PlayerContextMenuHandler : IDisposable
             if (!entry.IsVisible()) continue;
             args.AddMenuItem(new MenuItem
             {
-                Name      = new SeString(new TextPayload(entry.Label)),
-                OnClicked = _ => entry.OnSelected(playerEntry),
+                Name             = new SeString(new TextPayload(entry.Label)),
+                UseDefaultPrefix = true,
+                OnClicked        = _ => entry.OnSelected(playerEntry),
             });
         }
     }

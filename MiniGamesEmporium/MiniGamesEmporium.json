@@ -4,7 +4,7 @@
   "InternalName": "MiniGamesEmporium",
   "Punchline": "Host BAR 777 and other mini games with automated queue management.",
   "Description": "A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.",
-  "Changelog": "- Changed ctrade/roll listener to account for non english clients.",
+  "Changelog": "- Fixed roll parsing for non-English clients. Tested with English, French, and German with Lexie and Saeko.\n- Fixed warning on context menu default icon.",
   "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
   "ApplicableVersion": "any",
   "Tags": [

@@ -29,10 +29,12 @@ public sealed class ChatListener : IDisposable
         this.log              = log;
         this.chatGui.ChatMessage += OnChatMessage;
     }
+    
     public void Dispose()
     {
         this.chatGui.ChatMessage -= OnChatMessage;
     }
+
     private void OnChatMessage(IHandleableChatMessage message)
     {
         if (this.sessionService.IsPaused) return;
@@ -54,6 +56,7 @@ public sealed class ChatListener : IDisposable
         if (!IsEnqueueChatKind(kind, listen)) return;
         TryHandleQueueKeyword(message.Sender, messageText);
     }
+
     private static bool IsEnqueueChatKind(XivChatType kind, QueueJoinChannelsConfig listen)
     {
         return kind switch
@@ -65,6 +68,7 @@ public sealed class ChatListener : IDisposable
             _ => false,
         };
     }
+
     private void TryHandleBar777Roll(SeString seString)
     {
         var session = this.config.ActiveSession;
@@ -74,13 +78,12 @@ public sealed class ChatListener : IDisposable
         if (string.IsNullOrEmpty(playerName)) return;
         if (!playerName.Equals(session.PlayerName, StringComparison.OrdinalIgnoreCase)) return;
         this.sessionService.RecordRoll(rollValue);
-        this.log.Information($"[MGE] Roll recorded: {rollValue} for {session.PlayerName}");
     }
+
     private void TryHandleDeathrollRoll(SeString seString)
     {
         if (!this.deathrollService.HasActiveTournament()) return;
         if (!TryParseRoll(seString, out var playerName, out var rollValue, out var rollMax)) return;
-        if (rollMax == 0) return;
         if (string.IsNullOrEmpty(playerName))
         {
             var localName = MiniGamesEmporium.ObjectTable.LocalPlayer?.Name.TextValue;
@@ -91,20 +94,54 @@ public sealed class ChatListener : IDisposable
             !this.deathrollService.TryCatchNextGameOrderRoll(playerName, rollValue, rollMax))
             this.deathrollService.TryRecordRoll(playerName, rollValue, rollMax);
     }
-    // Extracts the roller's name and the roll numbers from a RandomNumber SeString using payloads,
-    // so detection is independent of the client's display language.
-    private static bool TryParseRoll(SeString seString, out string playerName, out int rollValue, out int rollMax)
+
+    private bool TryParseRoll(SeString seString, out string playerName, out int rollValue, out int rollMax)
     {
         playerName = string.Empty;
         rollValue  = 0;
         rollMax    = 0;
+
         var playerPayload = seString.Payloads.OfType<PlayerPayload>().FirstOrDefault();
         if (playerPayload != null)
             playerName = playerPayload.PlayerName;
-        var lastText = seString.Payloads.OfType<TextPayload>().LastOrDefault();
-        if (lastText?.Text == null) return false;
-        return TryExtractNumbers(lastText.Text, out rollValue, out rollMax);
+
+        int n1 = 0, n2 = 0, found = 0;
+        foreach (var tp in seString.Payloads.OfType<TextPayload>())
+        {
+            var text = tp.Text ?? string.Empty;
+            var idx  = 0;
+            while (idx < text.Length && found < 2)
+            {
+                while (idx < text.Length && !char.IsDigit(text[idx])) idx++;
+                if (idx >= text.Length) break;
+                var start = idx;
+                while (idx < text.Length && char.IsDigit(text[idx])) idx++;
+                if (int.TryParse(text.AsSpan(start, idx - start), out var num))
+                {
+                    if (found == 0) n1 = num;
+                    else            n2 = num;
+                    found++;
+                }
+            }
+            if (found >= 2) break;
+        }
+
+        if (found == 0) return false;
+
+        if (found == 1)
+        {
+            rollValue = n1;
+        }
+        else
+        {
+            if (n1 <= n2) { rollValue = n1; rollMax = n2; }
+            else          { rollValue = n2; rollMax = n1; }
+        }
+
+        this.log.Information($"[MGE] Roll: {playerName} rolled {rollValue} (max: {rollMax})");
+        return true;
     }
+
     private static bool TryExtractNumbers(string text, out int first, out int second)
     {
         first  = 0;
@@ -126,6 +163,7 @@ public sealed class ChatListener : IDisposable
         }
         return found > 0;
     }
+
     private void TryHandleQueueKeyword(SeString? sender, string message)
     {
         var session = this.config.ActiveSession;
@@ -146,6 +184,7 @@ public sealed class ChatListener : IDisposable
         }
         this.sessionService.TryEnqueuePlayer(queueName);
     }
+
     private static string BuildQueueName(SeString sender)
     {
         foreach (var payload in sender.Payloads)
