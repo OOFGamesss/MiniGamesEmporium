@@ -1,4 +1,5 @@
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Interface;
 using MiniGamesEmporium.Actions;
 using Dalamud.Interface.Utility.Raii;
@@ -143,7 +144,8 @@ public sealed class DeathrollBracketTab
                         + UIHelper.CalcButtonSize(FontAwesomeIcon.Coins,       "Trade").X
                         + UIHelper.CalcButtonSize(FontAwesomeIcon.Times,       "Mark as Unpaid").X
                         + UIHelper.CalcButtonSize(FontAwesomeIcon.Trash,       "Remove Player").X
-                        + spacing * 3f;
+                        + UIHelper.CalcButtonSize(FontAwesomeIcon.Gift,        "").X
+                        + spacing * 4f;
         int removeIdx = -1, togglePaidIdx = -1, targetIdx = -1, moveUpIdx = -1, moveDownIdx = -1;
         using var table = ImRaii.Table("##DRPlayerTable", 4,
             ImGuiTableFlags.BordersOuter | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY,
@@ -286,6 +288,76 @@ public sealed class DeathrollBracketTab
             removeIdx = idx;
         ImGui.PopStyleColor(3);
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("Hold Ctrl and click to remove player");
+        ImGui.SameLine();
+        var hasBuyer = !string.IsNullOrEmpty(this.deathrollService.GetPlayerBuyer(entry));
+        if (hasBuyer)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button,        EmporiumNeonTheme.SuccessMint with { W = 0.8f });
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, EmporiumNeonTheme.SuccessMint);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  EmporiumNeonTheme.SuccessMint with { W = 0.6f });
+        }
+        else
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button,        EmporiumNeonTheme.DeathrollTournamentPink);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1f, 0.45f, 0.75f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(0.72f, 0.10f, 0.40f, 1f));
+        }
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Gift, "", $"##DRBuyerBtn{idx}"))
+            ImGui.OpenPopup($"##DRBuyerPopup{idx}");
+        ImGui.PopStyleColor(3);
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(hasBuyer ? $"Buyer: {this.deathrollService.GetPlayerBuyer(entry)}" : "Set a buyer to pay for this player");
+        using var popup = ImRaii.Popup($"##DRBuyerPopup{idx}");
+        if (popup.Success)
+        {
+            var buyer = this.deathrollService.GetPlayerBuyer(entry);
+            ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, $"Buyer for {ParseName(entry)}");
+            ImGui.Separator();
+            ImGui.Spacing();
+            if (!string.IsNullOrEmpty(buyer))
+            {
+                ImGui.TextDisabled("Buyer:");
+                ImGui.SameLine();
+                ImGui.TextColored(EmporiumNeonTheme.SuccessMint, buyer);
+                ImGui.SameLine();
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Clear", $"##DRClearBuyer{idx}"))
+                {
+                    this.deathrollService.ClearPlayerBuyer(entry);
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.Spacing();
+                if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", $"##DRBuyerTell{idx}"))
+                {
+                    RequestGilBuyer.Execute(buyer, entry, this.config, this.chatQueue);
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.SameLine();
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade (Buyer)", $"##DRBuyerTrade{idx}"))
+                {
+                    SendTradeRequest.Execute(buyer, this.chatQueue);
+                    ImGui.CloseCurrentPopup();
+                }
+            }
+            else
+            {
+                var (charName, charWorld) = GetCurrentTarget();
+                if (!string.IsNullOrEmpty(charName))
+                {
+                    ImGui.TextDisabled("Targeted:");
+                    ImGui.SameLine();
+                    ImGui.TextUnformatted(charName);
+                    ImGui.Spacing();
+                    if (UIHelper.IconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", $"##DRSetBuyer{idx}"))
+                    {
+                        var fullBuyerName = string.IsNullOrEmpty(charWorld) ? charName : $"{charName}@{charWorld}";
+                        this.deathrollService.SetPlayerBuyer(entry, fullBuyerName);
+                    }
+                }
+                else
+                {
+                    ImGui.TextDisabled("Target a player in-game to set them as the buyer.");
+                }
+            }
+        }
     }
 
     private bool IsAlreadyRegistered(string nearbyEntry)
@@ -313,8 +385,11 @@ public sealed class DeathrollBracketTab
         }
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Best-of per Round");
         ImGui.Spacing();
-        var list = this.config.DeathrollTournament.BestOfPerRound;
+        var list     = this.config.DeathrollTournament.BestOfPerRound;
+        var prevSize = list.Count;
         while (list.Count < roundCount) list.Add(1);
+        while (list.Count > roundCount) list.RemoveAt(list.Count - 1);
+        if (list.Count != prevSize) this.config.Save();
         for (var i = 0; i < roundCount; i++)
         {
             var val   = list[i];
@@ -780,5 +855,11 @@ public sealed class DeathrollBracketTab
         while (trimmed.Length > 0 && ImGui.CalcTextSize(trimmed).X > budget)
             trimmed = trimmed[..^1];
         return trimmed + ellipsis;
+    }
+    private static (string CharName, string WorldName) GetCurrentTarget()
+    {
+        var playerChar = MiniGamesEmporium.TargetManager.Target as IPlayerCharacter;
+        if (playerChar == null) return (string.Empty, string.Empty);
+        return (playerChar.Name.TextValue, playerChar.HomeWorld.Value.Name.ToString());
     }
 }

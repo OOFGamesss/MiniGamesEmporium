@@ -18,4 +18,5 @@ public class ActiveSessionState
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public int AmountTraded { get; set; } = 0;
     public List<int> RollLog { get; set; } = [];
+    public string PaidByPlayerName { get; set; } = string.Empty;
 }

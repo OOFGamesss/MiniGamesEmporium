@@ -10,6 +10,8 @@ public class Bar777ChatConfig
         "/say {player}, you may now begin your {boughtrolls} rolls!";
     public string TellAmountRequestMessage { get; set; } =
         "/tell {player} Please trade, it is {cost} gil per roll, you can buy max {rolls} rolls.";
+    public string TellBuyerRequestMessage { get; set; } =
+        "/tell {buyername} Please trade, it is {cost} gil per roll, you can buy max {rolls} rolls for {player}.";
     public string HalfwayMessage { get; set; } =
         "/say {player} You have {remaining} rolls left!";
     public bool AutoSendHalfway { get; set; } = false;
@@ -31,4 +33,6 @@ public class Bar777ChatConfig
     public int ReminderQueueThreshold { get; set; } = 5;
     public string AnnounceKeywordMessage { get; set; } =
         "/yell Shout {keyword} to join the BAR 777 Queue!";
+    public string NextPlayerUpMessage { get; set; } =
+        "/say Next player up is {player}";
 }

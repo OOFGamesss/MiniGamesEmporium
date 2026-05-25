@@ -104,7 +104,31 @@ internal static class UIHelper
 
     internal static ImRaii.ColorDisposable PushRedButtonColours() =>
         new ImRaii.ColorDisposable()
-            .Push(ImGuiCol.Button,        new Vector4(0.6f, 0.1f,  0.1f,  1f))
-            .Push(ImGuiCol.ButtonHovered, new Vector4(0.8f, 0.2f,  0.2f,  1f))
-            .Push(ImGuiCol.ButtonActive,  new Vector4(0.4f, 0.05f, 0.05f, 1f));
+            .Push(ImGuiCol.Button,        new Vector4(0.6f,  0.1f,  0.1f,  1f))
+            .Push(ImGuiCol.ButtonHovered, new Vector4(0.8f,  0.2f,  0.2f,  1f))
+            .Push(ImGuiCol.ButtonActive,  new Vector4(0.4f,  0.05f, 0.05f, 1f));
+
+    internal static ImRaii.ColorDisposable PushYellowButtonColours() =>
+        new ImRaii.ColorDisposable()
+            .Push(ImGuiCol.Button,        new Vector4(0.62f, 0.56f, 0.03f, 1f))
+            .Push(ImGuiCol.ButtonHovered, new Vector4(0.78f, 0.72f, 0.04f, 1f))
+            .Push(ImGuiCol.ButtonActive,  new Vector4(0.48f, 0.44f, 0.02f, 1f));
+
+    internal static ImRaii.ColorDisposable PushBlueButtonColours() =>
+        new ImRaii.ColorDisposable()
+            .Push(ImGuiCol.Button,        new Vector4(0.10f, 0.36f, 0.72f, 1f))
+            .Push(ImGuiCol.ButtonHovered, new Vector4(0.15f, 0.50f, 0.90f, 1f))
+            .Push(ImGuiCol.ButtonActive,  new Vector4(0.08f, 0.28f, 0.55f, 1f));
+
+    internal static ImRaii.ColorDisposable PushAmberButtonColours() =>
+        new ImRaii.ColorDisposable()
+            .Push(ImGuiCol.Button,        new Vector4(0.52f, 0.40f, 0.02f, 1f))
+            .Push(ImGuiCol.ButtonHovered, new Vector4(0.72f, 0.58f, 0.03f, 1f))
+            .Push(ImGuiCol.ButtonActive,  new Vector4(0.38f, 0.28f, 0.01f, 1f));
+
+    internal static ImRaii.ColorDisposable PushOrangeButtonColours() =>
+        new ImRaii.ColorDisposable()
+            .Push(ImGuiCol.Button,        new Vector4(0.60f, 0.25f, 0.02f, 1f))
+            .Push(ImGuiCol.ButtonHovered, new Vector4(0.80f, 0.35f, 0.03f, 1f))
+            .Push(ImGuiCol.ButtonActive,  new Vector4(0.45f, 0.18f, 0.01f, 1f));
 }

@@ -35,6 +35,7 @@ public sealed class DeathrollChatSettingsTab
     {
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Available Placeholders");
         ImGui.Spacing();
+        DrawPlaceholderRow("{buyername}",   "Buyer's full name always including @World (e.g. Jane Doe@Omega) - buyer request message only");
         DrawPlaceholderRow("{player1}",     "First player in the current match");
         DrawPlaceholderRow("{player2}",     "Second player in the current match");
         DrawPlaceholderRow("{winner}",      "Tournament winner name");
@@ -69,6 +70,13 @@ public sealed class DeathrollChatSettingsTab
             "##DRRequestGilMsg",
             () => this.config.DeathrollTournament.Chat.RequestGilMessage,
             v  => { this.config.DeathrollTournament.Chat.RequestGilMessage = v; this.config.Save(); });
+        ImGui.Spacing();
+        DrawMessageField(
+            "Request Gil (Buyer)",
+            "Button: 'Request Gil (Buyer)' in the buyer popup per player.\nUse {buyername} for the buyer (always includes @World) and {player} for the registered player being paid for.",
+            "##DRRequestGilBuyerMsg",
+            () => this.config.DeathrollTournament.Chat.RequestGilBuyerMessage,
+            v  => { this.config.DeathrollTournament.Chat.RequestGilBuyerMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Bracket",

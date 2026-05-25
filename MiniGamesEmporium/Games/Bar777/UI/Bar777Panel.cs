@@ -137,7 +137,15 @@ public sealed class Bar777Panel : IDisposable
             currentForSidebar,
             hasBeenReminded: showReminders ? this.chatAutomation.HasBeenReminded : null,
             onManualReminder: showReminders ? this.chatAutomation.SendManualReminder : null,
-            onAnnounceKeyword: () => AnnounceKeyword.Execute(this.config, this.chatQueue));
+            onAnnounceKeyword: () => AnnounceKeyword.Execute(this.config, this.chatQueue),
+            onToBackQueue: () => this.sessionService.SendCurrentBar777ToBackOfWaitlistAndStartNext(),
+            onRemoveFromQueue: () => this.sessionService.RemoveCurrentBar777FromWaitlistAndStartNext(),
+            isQueuePaused: this.sessionService.IsQueuePaused,
+            onToggleQueuePause: () =>
+            {
+                if (this.sessionService.IsQueuePaused) this.sessionService.ResumeQueue();
+                else this.sessionService.PauseQueue();
+            });
     }
     private void DrawBar777ChatSettingsTab()
     {

@@ -37,6 +37,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly WindowSystem windowSystem = new("MiniGamesEmporium");
     private readonly MainWindow mainWindow;
     private readonly SessionService sessionService;
+    private readonly PresetService presetService;
     private readonly DeathrollTournamentService deathrollService;
     private readonly DeathrollDiscordWebhookService deathrollDiscordService;
     private readonly ChatListener chatListener;
@@ -59,6 +60,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         Configuration.SessionHistory ??= new List<SessionRecord>();
         chatQueueService = new ChatQueueService();
         sessionService = new SessionService(Configuration);
+        presetService = new PresetService(Configuration);
         sessionService.PruneOldTransactions();
         deathrollService = new DeathrollTournamentService(Configuration);
         deathrollDiscordService = new DeathrollDiscordWebhookService(Log, Configuration, PluginInterface.AssemblyLocation.DirectoryName!);
@@ -97,7 +99,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         });
         chatListener          = new ChatListener(ChatGui, Configuration, sessionService, deathrollService, Log);
         tradeListenerService  = new TradeListenerService(sessionService, deathrollService, Log);
-        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, Log);
+        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log);
         windowSystem.AddWindow(mainWindow);
         windowOpenedIpc = new WindowOpenedIpc(PluginInterface, mainWindow);
         bar777IpcProvider = new Bar777GameInfoIpcProvider(PluginInterface, Framework, Configuration, sessionService);

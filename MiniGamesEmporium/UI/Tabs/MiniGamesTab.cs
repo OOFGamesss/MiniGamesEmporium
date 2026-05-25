@@ -23,6 +23,7 @@ using System.Numerics;
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class MiniGamesTab : IDisposable
 {
+    private readonly PluginConfiguration config;
     private readonly Bar777Panel bar777Panel;
     private readonly DeathrollTournamentPanel deathrollTournamentPanel;
     private readonly MinefieldGambitPanel minefieldGambitPanel;
@@ -45,6 +46,7 @@ public sealed class MiniGamesTab : IDisposable
         DeathrollDiscordWebhookService deathrollDiscordService,
         IPluginLog log)
     {
+        this.config                   = config;
         this.deathrollService         = deathrollService;
         this.sessionService           = sessionService;
         this.bar777Panel              = new Bar777Panel(config, sessionService, chatQueue, deathrollService);
@@ -89,7 +91,7 @@ public sealed class MiniGamesTab : IDisposable
     private void DrawBar777Tab()
     {
         using var chrome = new EmporiumNeonTheme.Bar777TabItemScope();
-        using var tab = ImRaii.TabItem("BAR 777");
+        using var tab = ImRaii.TabItem(this.config.Bar777.CustomName);
         if (!tab.Success) return;
         this.bar777Panel.Draw();
     }

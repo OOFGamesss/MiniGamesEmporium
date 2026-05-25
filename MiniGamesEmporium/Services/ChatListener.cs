@@ -72,10 +72,15 @@ public sealed class ChatListener : IDisposable
     private void TryHandleBar777Roll(SeString seString)
     {
         var session = this.config.ActiveSession;
-        if (session == null || !Bar777GameIds.Matches(session.GameName) || !session.PaymentVerified) return;
+        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
         if (!TryParseRoll(seString, out var playerName, out var rollValue, out var rollMax)) return;
         if (rollMax > 0) return;
         if (string.IsNullOrEmpty(playerName)) return;
+        if (!session.PaymentVerified)
+        {
+            this.sessionService.TryCatchPaymentRoll(playerName, rollValue);
+            return;
+        }
         if (!playerName.Equals(session.PlayerName, StringComparison.OrdinalIgnoreCase)) return;
         this.sessionService.RecordRoll(rollValue);
     }
@@ -169,6 +174,7 @@ public sealed class ChatListener : IDisposable
         var session = this.config.ActiveSession;
         if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
         if (!this.config.Bar777.UseQueue) return;
+        if (this.sessionService.IsQueuePaused) return;
         if (string.IsNullOrWhiteSpace(this.config.QueueKeyword)) return;
         if (!message.Contains(this.config.QueueKeyword, StringComparison.OrdinalIgnoreCase)) return;
         if (sender == null) return;

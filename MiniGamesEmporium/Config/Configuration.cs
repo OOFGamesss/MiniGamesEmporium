@@ -24,6 +24,8 @@ public class PluginConfiguration : IPluginConfiguration
     public List<SessionRecord> SessionHistory { get; set; } = new();
     public ActiveSessionState? ActiveSession { get; set; } = null;
     public List<string> QueuedPlayers { get; set; } = new();
+    public List<PluginPreset> Presets { get; set; } = new();
+    public int ActivePresetIndex { get; set; } = -1;
     public void Save()
     {
         MiniGamesEmporium.PluginInterface.SavePluginConfig(this);

@@ -55,6 +55,7 @@ public sealed class SessionService
         session.PaymentVerified = false;
         session.WinTriggered = false;
         session.AmountTraded = 0;
+        session.PaidByPlayerName = string.Empty;
         session.StartedAt = DateTime.UtcNow;
         this.config.Save();
         SessionUpdated?.Invoke();
@@ -81,6 +82,7 @@ public sealed class SessionService
         if (string.IsNullOrWhiteSpace(playerName)) return;
         var (name, world) = ParseQueuedName(playerName.Trim());
         IsPaused = false;
+        IsQueuePaused = false;
         this.config.ActiveSession = new ActiveSessionState
         {
             GameName = gameName,
@@ -105,9 +107,13 @@ public sealed class SessionService
         if (session.PaymentVerified)
             return;
         var isPlaceholder = !this.config.Bar777.UseQueue && Bar777GameIds.IsAnyPlaceholder(session.PlayerName);
-        if (!isPlaceholder && !TradeNameMatchesSession(session, playerName))
+        var buyerAt = session.PaidByPlayerName.IndexOf('@');
+        var buyerBaseName = buyerAt >= 0 ? session.PaidByPlayerName[..buyerAt].Trim() : session.PaidByPlayerName;
+        var isBuyerTrade = !string.IsNullOrEmpty(session.PaidByPlayerName)
+            && buyerBaseName.Equals(playerName, StringComparison.OrdinalIgnoreCase);
+        if (!isPlaceholder && !isBuyerTrade && !TradeNameMatchesSession(session, playerName))
             return;
-        if (isPlaceholder)
+        if (isPlaceholder && !isBuyerTrade)
         {
             session.PlayerName = playerName;
             session.PlayerWorld = string.IsNullOrEmpty(playerWorld) ? session.PlayerWorld : playerWorld;
@@ -127,17 +133,38 @@ public sealed class SessionService
         session.PaymentVerified = true;
         this.config.Bar777.PlayersPlayed++;
         this.config.Bar777.SessionTradedTotal += session.AmountTraded;
+        var transactionName = !string.IsNullOrEmpty(session.PaidByPlayerName)
+            ? $"{session.PlayerName} (Paid by {session.PaidByPlayerName})"
+            : session.PlayerName;
         this.config.Transactions.Add(new TransactionRecord
         {
-            PlayerName = session.PlayerName,
+            PlayerName = transactionName,
             Amount = session.AmountTraded,
             Timestamp = DateTime.UtcNow,
-            GameName = session.GameName,
+            GameName = this.config.Bar777.CustomName,
         });
         this.config.Save();
         PaymentVerified?.Invoke(session.PlayerName);
         SessionUpdated?.Invoke();
     }
+    public bool TryCatchPaymentRoll(string senderName, int rollValue)
+    {
+        if (!this.config.Bar777.AutoCatchRoll) return false;
+        var session = this.config.ActiveSession;
+        if (session == null || !Bar777GameIds.Matches(session.GameName)) return false;
+        if (session.PaymentVerified) return false;
+        if (session.AmountTraded <= 0) return false;
+        if (string.IsNullOrEmpty(senderName)) return false;
+        if (!senderName.Equals(session.PlayerName, StringComparison.OrdinalIgnoreCase)) return false;
+        var costPerRoll = this.config.Bar777.CostPerRoll;
+        if (costPerRoll <= 0) return false;
+        var rollCount = session.AmountTraded / costPerRoll;
+        if (rollCount < 1) return false;
+        StartGameWithRolls(rollCount);
+        RecordRoll(rollValue);
+        return true;
+    }
+
     public void RecordRoll(int rollValue)
     {
         var session = this.config.ActiveSession;
@@ -182,6 +209,7 @@ public sealed class SessionService
         SessionUpdated?.Invoke();
     }
     public bool IsPaused { get; private set; }
+    public bool IsQueuePaused { get; private set; }
 
     public void PauseSession()
     {
@@ -195,7 +223,40 @@ public sealed class SessionService
         SessionUpdated?.Invoke();
     }
 
+    public void PauseQueue()
+    {
+        IsQueuePaused = true;
+        SessionUpdated?.Invoke();
+    }
+
+    public void ResumeQueue()
+    {
+        IsQueuePaused = false;
+        SessionUpdated?.Invoke();
+    }
+
     public ActiveSessionState? GetActiveSession() => this.config.ActiveSession;
+    public string GetBuyer()
+    {
+        return this.config.ActiveSession?.PaidByPlayerName ?? string.Empty;
+    }
+    public void SetBuyer(string buyerName)
+    {
+        var session = this.config.ActiveSession;
+        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
+        if (string.IsNullOrWhiteSpace(buyerName)) return;
+        session.PaidByPlayerName = buyerName.Trim();
+        this.config.Save();
+        SessionUpdated?.Invoke();
+    }
+    public void ClearBuyer()
+    {
+        var session = this.config.ActiveSession;
+        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
+        session.PaidByPlayerName = string.Empty;
+        this.config.Save();
+        SessionUpdated?.Invoke();
+    }
     public void LockWalkInPlayer(string charName, string worldName)
     {
         var session = this.config.ActiveSession;
@@ -224,6 +285,7 @@ public sealed class SessionService
     public void CancelSession()
     {
         IsPaused = false;
+        IsQueuePaused = false;
         RecordSessionHistory();
         ClearGameStats();
         this.config.QueuedPlayers.Clear();

@@ -8,7 +8,7 @@ using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using System.Numerics;
 
-/// <summary>Renders an inline stats panel at the bottom of the Deathroll Tournament game view, showing the total pot with a yell button, boosted pot, entry cost, and player/round counts.</summary>
+/// <summary>Renders an inline stats panel at the bottom of the Deathroll Tournament game view, showing the total pot with a yell button, boosted pot, entry cost, player/round counts, and a donation input row.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollStatsTab
@@ -16,6 +16,7 @@ public sealed class DeathrollStatsTab
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
     private readonly ChatQueueService chatQueue;
+    private int _donationInput = 0;
     private static readonly Vector4 YellButtonColour        = new(0.72f, 0.55f, 0.00f, 1f);
     private static readonly Vector4 YellButtonColourHovered = new(0.88f, 0.68f, 0.00f, 1f);
     private static readonly Vector4 YellButtonColourActive  = new(0.58f, 0.44f, 0.00f, 1f);
@@ -29,8 +30,9 @@ public sealed class DeathrollStatsTab
 
     public static float GetInlineHeight()
     {
-        var rowH = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
-        return 5 * rowH + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
+        var rowH   = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
+        var inputH = ImGui.GetFrameHeight()    + ImGui.GetStyle().CellPadding.Y * 2f;
+        return 5 * rowH + inputH + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
     }
 
     public void DrawInline()
@@ -57,6 +59,7 @@ public sealed class DeathrollStatsTab
             ? $"Round {tournament.CurrentRoundIndex + 1} of {tournament.Rounds.Count}"
             : "Not started";
         DrawRow("Round",       roundLabel,                          EmporiumNeonTheme.NeonMagenta);
+        DrawDonationRow();
     }
 
     private void DrawPotRow(long totalPot)
@@ -76,6 +79,34 @@ public sealed class DeathrollStatsTab
         if (clicked) AnnouncePot.Execute(this.config, this.chatQueue, totalPot);
         ImGui.TableSetColumnIndex(2);
         ImGui.TextColored(EmporiumNeonTheme.WinGold, $"{totalPot:N0} Gil");
+    }
+
+    private void DrawDonationRow()
+    {
+        ImGui.TableNextRow();
+        ImGui.TableSetColumnIndex(0);
+        ImGui.TextDisabled("Adjust Pot (Gil)");
+        ImGui.TableSetColumnIndex(1);
+        ImGui.SetNextItemWidth(-1f);
+        ImGui.InputInt("##DRDonation", ref this._donationInput, 0, 0);
+        ImGui.TableSetColumnIndex(2);
+        {
+            using var green = UIHelper.PushGreenButtonColours();
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Plus, "Add", "##DRAddDonation") && this._donationInput > 0)
+            {
+                AddDonation.Execute(this.config, this._donationInput);
+                this._donationInput = 0;
+            }
+        }
+        ImGui.SameLine();
+        {
+            using var red = UIHelper.PushRedButtonColours();
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Minus, "Remove", "##DRRemoveDonation") && this._donationInput > 0)
+            {
+                RemoveDonation.Execute(this.config, this._donationInput);
+                this._donationInput = 0;
+            }
+        }
     }
 
     private static void DrawRow(string label, string value, Vector4 colour)

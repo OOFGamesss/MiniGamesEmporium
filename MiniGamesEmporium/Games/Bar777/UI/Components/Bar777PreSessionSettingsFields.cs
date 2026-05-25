@@ -4,7 +4,7 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.UI.Components;
 using System;
 
-/// <summary>Renders the entry cost, boosted pot, roll count, winning number, and entry type fields shared between the pre-session door and the settings tab.</summary>
+/// <summary>Renders the game name, entry cost, boosted pot, roll count, winning number, and entry type fields shared between the pre-session door and the settings tab.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI.Components;
 public static class Bar777PreSessionSettingsFields
@@ -22,6 +22,17 @@ public static class Bar777PreSessionSettingsFields
         var w = ImGui.GetContentRegionAvail().X;
         if (w <= 48f) return EmporiumNeonTheme.StartDoorPanelWidth;
         return MathF.Max(80f, w - ImGui.GetFrameHeight() * 2f - 2f);
+    }
+    public static void DrawGameNameSetting(PluginConfiguration config)
+    {
+        var name = config.Bar777.CustomName;
+        ImGui.TextDisabled("Game Name");
+        ImGui.SetNextItemWidth(200f);
+        if (ImGui.InputText("##Bar777GameName", ref name, 30))
+        {
+            config.Bar777.CustomName = name;
+            config.Save();
+        }
     }
     private static void DrawCostSetting(PluginConfiguration config)
     {

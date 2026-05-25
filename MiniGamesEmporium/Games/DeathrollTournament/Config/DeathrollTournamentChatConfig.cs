@@ -18,6 +18,8 @@ public class DeathrollTournamentChatConfig
         "/yell Deathroll Tournament Pot: {totalpot} Gil! ({playercount} players x {entrycost} Gil + {boostedpot} Gil boosted)";
     public string RequestGilMessage { get; set; } =
         "/tell {player} Please pay {entrycost} Gil to enter the Deathroll Tournament!";
+    public string RequestGilBuyerMessage { get; set; } =
+        "/tell {buyername} Please pay {entrycost} Gil to enter the Deathroll Tournament for {player}!";
     public string RerollRandom10Message { get; set; } =
         "/yell Uh-oh! You both rolled a {random10}! Please roll /random 10 again!";
     public bool AutoAnnounceRerollRandom10 { get; set; } = false;

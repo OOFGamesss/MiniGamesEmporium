@@ -55,6 +55,7 @@ public sealed class DeathrollTournamentService
         this.config.DeathrollSession           = null;
         this.config.DeathrollTournament.RegisteredPlayers.Clear();
         this.config.DeathrollTournament.PaidPlayers.Clear();
+        this.config.DeathrollTournament.PlayerBuyers.Clear();
         Save();
         SessionUpdated?.Invoke();
     }
@@ -130,10 +131,28 @@ public sealed class DeathrollTournamentService
         if (gilReceived < entryCost) return;
         var registered = this.config.DeathrollTournament.RegisteredPlayers;
         var match = registered.FirstOrDefault(p => NamesMatch(p, tradePartner));
+        var buyerName = string.Empty;
+        if (match == null)
+        {
+            foreach (var kv in this.config.DeathrollTournament.PlayerBuyers)
+            {
+                var buyerAt = kv.Value.IndexOf('@');
+                var buyerBase = buyerAt >= 0 ? kv.Value[..buyerAt].Trim() : kv.Value;
+                if (!buyerBase.Equals(tradePartner, StringComparison.OrdinalIgnoreCase)) continue;
+                var candidate = registered.FirstOrDefault(p => ParseName(p).Equals(kv.Key, StringComparison.OrdinalIgnoreCase));
+                if (candidate == null) continue;
+                match = candidate;
+                buyerName = tradePartner;
+                break;
+            }
+        }
         if (match == null || IsPaid(match)) return;
+        var transactionName = string.IsNullOrEmpty(buyerName)
+            ? ParseName(match)
+            : $"{ParseName(match)} (Paid by {buyerName})";
         this.config.Transactions.Add(new TransactionRecord
         {
-            PlayerName = ParseName(match),
+            PlayerName = transactionName,
             Amount     = (int)entryCost,
             Timestamp  = DateTime.UtcNow,
             GameName   = DeathrollGameIds.DisplayName,
@@ -155,13 +174,15 @@ public sealed class DeathrollTournamentService
     {
         var tournament = this.config.DeathrollTournamentSession;
         if (tournament != null)
-            return tournament.EntryCostAtStart * tournament.PlayerCountAtStart + tournament.BoostedPotAtStart;
+            return tournament.EntryCostAtStart * tournament.PlayerCountAtStart + tournament.BoostedPotAtStart + tournament.PotAdjustment;
         var activeSession = this.config.DeathrollSession;
         var cfg        = this.config.DeathrollTournament;
         var entryCost  = activeSession?.EntryCost  ?? cfg.EntryCost;
         var boostedPot = activeSession?.BoostedPot ?? cfg.BoostedPot;
-        return entryCost * cfg.PaidPlayers.Count + boostedPot;
+        var adjustment = activeSession?.PotAdjustment ?? 0L;
+        return entryCost * cfg.PaidPlayers.Count + boostedPot + adjustment;
     }
+
 
     public List<string> GetUnpaidRegisteredPlayers()
     {
@@ -185,8 +206,30 @@ public sealed class DeathrollTournamentService
     {
         var list = this.config.DeathrollTournament.RegisteredPlayers;
         if (index < 0 || index >= list.Count) return;
+        var name = ParseName(list[index]);
+        this.config.DeathrollTournament.PlayerBuyers.Remove(name);
         list.RemoveAt(index);
         Save();
+    }
+    public void SetPlayerBuyer(string playerEntry, string buyerName)
+    {
+        if (string.IsNullOrWhiteSpace(buyerName)) return;
+        var name = ParseName(playerEntry);
+        this.config.DeathrollTournament.PlayerBuyers[name] = buyerName.Trim();
+        Save();
+        SessionUpdated?.Invoke();
+    }
+    public string GetPlayerBuyer(string playerEntry)
+    {
+        var name = ParseName(playerEntry);
+        return this.config.DeathrollTournament.PlayerBuyers.TryGetValue(name, out var buyer) ? buyer : string.Empty;
+    }
+    public void ClearPlayerBuyer(string playerEntry)
+    {
+        var name = ParseName(playerEntry);
+        if (!this.config.DeathrollTournament.PlayerBuyers.Remove(name)) return;
+        Save();
+        SessionUpdated?.Invoke();
     }
 
     public void MovePlayerUp(int index)

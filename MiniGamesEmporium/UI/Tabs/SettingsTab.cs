@@ -1,15 +1,17 @@
 using Dalamud.Bindings.ImGui;
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.UI.Components;
 
-/// <summary>Draws the global plugin Settings tab, currently displaying informational text directing users to the per-game settings panels within the Mini Games tab.</summary>
+/// <summary>Draws the global plugin Settings tab, exposing per-game display name options and directing users to the per-game settings panels within the Mini Games tab.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class SettingsTab
 {
+    private readonly PluginConfiguration config;
     public SettingsTab(PluginConfiguration config)
     {
-        _ = config;
+        this.config = config;
     }
     public void Draw()
     {
@@ -17,7 +19,9 @@ public sealed class SettingsTab
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Plugin Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.TextDisabled(
-            "BAR 777 rules, queue keyword, and session controls live under Mini Games.");
+        ImGui.TextColored(EmporiumNeonTheme.Bar777Red, "BAR 777");
+        ImGui.SameLine(0, 4);
+        ImGui.TextUnformatted("Display Name");
+        Bar777PreSessionSettingsFields.DrawGameNameSetting(this.config);
     }
 }

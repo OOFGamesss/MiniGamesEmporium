@@ -22,6 +22,7 @@ public sealed class MainWindow : Window, IDisposable
     private readonly TransactionHistoryTab transactionHistoryTab;
     private readonly SessionHistoryTab sessionHistoryTab;
     private readonly MiniGamesTab miniGamesTab;
+    private readonly PresetManagerTab presetManagerTab;
     private readonly SettingsTab settingsTab;
     private readonly SessionService sessionService;
     private readonly DeathrollTournamentService deathrollService;
@@ -45,6 +46,7 @@ public sealed class MainWindow : Window, IDisposable
         ChatQueueService chatQueue,
         DeathrollTournamentService deathrollService,
         DeathrollDiscordWebhookService deathrollDiscordService,
+        PresetService presetService,
         IPluginLog log)
         : base("Mini Games Emporium##MGE_Main_v2")
     {
@@ -57,6 +59,7 @@ public sealed class MainWindow : Window, IDisposable
         this.transactionHistoryTab = new TransactionHistoryTab(config);
         this.sessionHistoryTab     = new SessionHistoryTab(config);
         this.miniGamesTab          = new MiniGamesTab(config, sessionService, chatQueue, deathrollService, deathrollDiscordService, log);
+        this.presetManagerTab      = new PresetManagerTab(config, presetService);
         this.settingsTab           = new SettingsTab(config);
         this.sessionService        = sessionService;
         this.deathrollService      = deathrollService;
@@ -89,36 +92,38 @@ public sealed class MainWindow : Window, IDisposable
     {
         using var theme = new EmporiumNeonTheme.Scope();
         using var mainTabChrome = new EmporiumNeonTheme.MainWindowTabChromeScope();
-        float tabBarRowScreenY = 0f;
+        var tabBarRowScreenY  = ImGui.GetCursorScreenPos().Y;
+        var tabBarContentY    = tabBarRowScreenY;
         {
             using var tabBar = ImRaii.TabBar("##MGE_TabBar_v4");
             if (!tabBar.Success)
                 return;
-            tabBarRowScreenY = ImGui.GetCursorScreenPos().Y;
+            tabBarContentY = ImGui.GetCursorScreenPos().Y;
             DrawMiniGamesTab();
             DrawSessionHistoryTab();
             DrawTransactionHistoryTab();
+            DrawPresetManagerTab();
             DrawSettingsTab();
         }
-        DrawBar777StopSessionMainTabRowButton(tabBarRowScreenY);
-        DrawDeathrollStopButton(tabBarRowScreenY);
+        DrawBar777StopSessionMainTabRowButton(tabBarRowScreenY, tabBarContentY);
+        DrawDeathrollStopButton(tabBarRowScreenY, tabBarContentY);
         DrawStopSessionConfirmPopup();
         DrawDeathrollStopConfirmPopup();
     }
-    private void DrawBar777StopSessionMainTabRowButton(float tabBarRowScreenY)
+    private void DrawBar777StopSessionMainTabRowButton(float tabBarRowScreenY, float tabBarContentY)
     {
         var session = this.sessionService.GetActiveSession();
         if (session == null || !Bar777GameIds.Matches(session.GameName))
             return;
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8f, 3f));
+        var tabBarHeight = tabBarContentY - tabBarRowScreenY - ImGui.GetStyle().ItemSpacing.Y;
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8f, 1f));
         try
         {
-            var fp = ImGui.GetStyle().FramePadding;
-            var yBtn = tabBarRowScreenY + MathF.Max(0f, (ImGui.GetFrameHeight() - UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, "Stop Session").Y) * 0.5f);
-            var xRight = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
             const string stopLabel = "Stop Session";
             var stopBtnSize = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, stopLabel);
+            var xRight = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
             var xStop = xRight - stopBtnSize.X;
+            var yBtn = tabBarRowScreenY + MathF.Max(0f, (tabBarHeight - 1f - stopBtnSize.Y) * 0.5f);
             var isPaused = this.sessionService.IsPaused;
             var pauseLabel = isPaused ? "Continue Session" : "Pause Session";
             var pauseIcon = isPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
@@ -209,15 +214,16 @@ public sealed class MainWindow : Window, IDisposable
         if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Cancel", "##CancelStop"))
             ImGui.CloseCurrentPopup();
     }
-    private void DrawDeathrollStopButton(float tabBarRowScreenY)
+    private void DrawDeathrollStopButton(float tabBarRowScreenY, float tabBarContentY)
     {
         if (!this.deathrollService.IsSessionActive()) return;
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8f, 3f));
+        var tabBarHeight = tabBarContentY - tabBarRowScreenY - ImGui.GetStyle().ItemSpacing.Y;
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8f, 1f));
         try
         {
             const string stopLabel = "Stop Tournament";
             var stopBtnSize  = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, stopLabel);
-            var yBtn         = tabBarRowScreenY + MathF.Max(0f, (ImGui.GetFrameHeight() - stopBtnSize.Y) * 0.5f);
+            var yBtn         = tabBarRowScreenY + MathF.Max(0f, (tabBarHeight - 1f - stopBtnSize.Y) * 0.5f);
             var xRight       = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
             var isPaused     = this.sessionService.IsPaused;
             var pauseLabel   = isPaused ? "Continue Tournament" : "Pause Tournament";
@@ -325,6 +331,11 @@ public sealed class MainWindow : Window, IDisposable
         using var tab = ImRaii.TabItem("Mini Games");
         this.miniGamesTabActive = tab.Success;
         if (tab.Success) this.miniGamesTab.Draw();
+    }
+    private void DrawPresetManagerTab()
+    {
+        using var tab = ImRaii.TabItem("Preset Manager");
+        if (tab.Success) this.presetManagerTab.Draw();
     }
     private void DrawSettingsTab()
     {

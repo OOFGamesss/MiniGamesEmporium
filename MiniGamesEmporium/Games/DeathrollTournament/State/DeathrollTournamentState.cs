@@ -21,6 +21,7 @@ public class DeathrollTournamentState
     public long EntryCostAtStart { get; set; } = 0;
     public long BoostedPotAtStart { get; set; } = 0;
     public int PlayerCountAtStart { get; set; } = 0;
+    public long PotAdjustment { get; set; } = 0L;
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
 
     public List<List<BracketMatch>> Rounds { get; set; } = new();

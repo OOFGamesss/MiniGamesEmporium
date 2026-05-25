@@ -24,18 +24,27 @@ public sealed class QueuePanel
     private static readonly Vector4 AnnounceButton        = new(0.55f, 0.50f, 0.04f, 1f);
     private static readonly Vector4 AnnounceButtonHovered = new(0.72f, 0.65f, 0.05f, 1f);
     private static readonly Vector4 AnnounceButtonActive  = new(0.90f, 0.82f, 0.06f, 1f);
+    private static readonly Vector4 PauseButton        = new(0.62f, 0.35f, 0.00f, 1f);
+    private static readonly Vector4 PauseButtonHovered = new(0.78f, 0.45f, 0.02f, 1f);
+    private static readonly Vector4 PauseButtonActive  = new(0.92f, 0.56f, 0.04f, 1f);
+    private static readonly Vector4 ContinueButton        = new(0.04f, 0.42f, 0.16f, 1f);
+    private static readonly Vector4 ContinueButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
+    private static readonly Vector4 ContinueButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
     public void Draw(
         IReadOnlyList<string> nearbyPlayers,
         bool fillColumnHeight = false,
         string? currentSessionPlayerName = null,
         Func<string, bool>? hasBeenReminded = null,
         Action<string, int>? onManualReminder = null,
-        Action? onAnnounceKeyword = null)
+        Action? onAnnounceKeyword = null,
+        Action? onToBackQueue = null,
+        Action? onRemoveFromQueue = null,
+        bool isQueuePaused = false,
+        Action? onToggleQueuePause = null)
     {
         ImGui.TextColored(EmporiumNeonTheme.NeonMagenta, "Player queue");
         if (onAnnounceKeyword != null)
         {
-            ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Button,        AnnounceButton);
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, AnnounceButtonHovered);
             ImGui.PushStyleColor(ImGuiCol.ButtonActive,  AnnounceButtonActive);
@@ -43,12 +52,33 @@ public sealed class QueuePanel
                 onAnnounceKeyword.Invoke();
             ImGui.PopStyleColor(3);
         }
+        if (onToggleQueuePause != null)
+        {
+            if (isQueuePaused)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button,        ContinueButton);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, ContinueButtonHovered);
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive,  ContinueButtonActive);
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Play, "Continue Queue", "##ToggleQueuePause"))
+                    onToggleQueuePause.Invoke();
+                ImGui.PopStyleColor(3);
+            }
+            else
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button,        PauseButton);
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, PauseButtonHovered);
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive,  PauseButtonActive);
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Pause, "Pause Queue", "##ToggleQueuePause"))
+                    onToggleQueuePause.Invoke();
+                ImGui.PopStyleColor(3);
+            }
+        }
         ImGui.Separator();
         ImGui.Spacing();
         var currentName = string.IsNullOrWhiteSpace(currentSessionPlayerName)
             ? null
             : currentSessionPlayerName.Trim();
-        DrawCurrentHostingRow(currentName, hasBeenReminded, onManualReminder);
+        DrawCurrentHostingRow(currentName, hasBeenReminded, onManualReminder, onToBackQueue, onRemoveFromQueue);
         var style = ImGui.GetStyle();
         var footerReserve =
             style.ItemSpacing.Y * 2f
@@ -61,7 +91,12 @@ public sealed class QueuePanel
         ImGui.Spacing();
         DrawManualAddRow(nearbyPlayers);
     }
-    private void DrawCurrentHostingRow(string? currentSessionPlayerName, Func<string, bool>? hasBeenReminded, Action<string, int>? onManualReminder)
+    private void DrawCurrentHostingRow(
+        string? currentSessionPlayerName,
+        Func<string, bool>? hasBeenReminded,
+        Action<string, int>? onManualReminder,
+        Action? onToBackQueue,
+        Action? onRemoveFromQueue)
     {
         if (currentSessionPlayerName == null)
             return;
@@ -77,6 +112,23 @@ public sealed class QueuePanel
             if (UIHelper.IconTextButton(FontAwesomeIcon.Bell, "Remind", "##RemindCurrent"))
                 onManualReminder.Invoke(currentSessionPlayerName, 0);
             ImGui.PopStyleColor(3);
+        }
+        if (onToBackQueue != null)
+        {
+            using (UIHelper.PushOrangeButtonColours())
+            {
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Redo, "To Back Q", "##QueueToBack"))
+                    onToBackQueue();
+            }
+            ImGui.SameLine();
+        }
+        if (onRemoveFromQueue != null)
+        {
+            using (UIHelper.PushRedButtonColours())
+            {
+                if (UIHelper.IconTextButton(FontAwesomeIcon.UserMinus, "Remove from Q", "##QueueRemove"))
+                    onRemoveFromQueue();
+            }
         }
         ImGui.Spacing();
         ImGui.Separator();

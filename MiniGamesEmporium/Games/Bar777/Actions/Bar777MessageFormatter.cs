@@ -1,7 +1,7 @@
 using MiniGamesEmporium.Config;
 using System;
 
-/// <summary>Formats BAR 777 chat message templates by substituting placeholders such as {player}, {cost}, {rolls}, {remaining}, {totalpot}, and {keyword} with live session and configuration values.</summary>
+/// <summary>Formats BAR 777 chat message templates by substituting placeholders such as {player}, {cost}, {maxcost}, {rolls}, {remaining}, {totalpot}, and {keyword} with live session and configuration values.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Actions;
 public static class Bar777MessageFormatter
@@ -13,7 +13,8 @@ public static class Bar777MessageFormatter
         int queuePosition = 0,
         long? totalPotOverride = null,
         string? remainingOverride = null,
-        string? keywordOverride = null)
+        string? keywordOverride = null,
+        string buyerName = "")
     {
         var session = config.ActiveSession;
         var rollsAllowed = session?.RollsAllowed ?? config.Bar777.MaxRolls;
@@ -26,14 +27,16 @@ public static class Bar777MessageFormatter
         var isTell = template.TrimStart().StartsWith("/tell", StringComparison.OrdinalIgnoreCase);
         var displayPlayer = isTell ? playerName : StripWorld(playerName);
         return template
-            .Replace("{player}",     displayPlayer)
-            .Replace("{position}",   queuePosition.ToString())
-            .Replace("{cost}",       config.Bar777.CostPerRoll.ToString("N0"))
-            .Replace("{rolls}",      rollsAllowed.ToString())
+            .Replace("{buyername}",   buyerName)
+            .Replace("{player}",      displayPlayer)
+            .Replace("{position}",    queuePosition.ToString())
+            .Replace("{cost}",        config.Bar777.CostPerRoll.ToString("N0"))
+            .Replace("{maxcost}",    (config.Bar777.CostPerRoll * config.Bar777.MaxRolls).ToString("N0"))
+            .Replace("{rolls}",       rollsAllowed.ToString())
             .Replace("{boughtrolls}", boughtRolls.ToString())
-            .Replace("{remaining}",  remaining)
-            .Replace("{totalpot}",   totalPot.ToString("N0"))
-            .Replace("{keyword}",    keywordOverride ?? config.QueueKeyword);
+            .Replace("{remaining}",   remaining)
+            .Replace("{totalpot}",    totalPot.ToString("N0"))
+            .Replace("{keyword}",     keywordOverride ?? config.QueueKeyword);
     }
 
     private static string StripWorld(string name)

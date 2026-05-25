@@ -8,5 +8,6 @@ public class DeathrollSessionInfo
 {
     public long EntryCost { get; set; }
     public long BoostedPot { get; set; }
+    public long PotAdjustment { get; set; } = 0L;
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
 }
