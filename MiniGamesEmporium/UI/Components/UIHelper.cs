@@ -131,4 +131,22 @@ internal static class UIHelper
             .Push(ImGuiCol.Button,        new Vector4(0.60f, 0.25f, 0.02f, 1f))
             .Push(ImGuiCol.ButtonHovered, new Vector4(0.80f, 0.35f, 0.03f, 1f))
             .Push(ImGuiCol.ButtonActive,  new Vector4(0.45f, 0.18f, 0.01f, 1f));
+
+    internal static int DrawPagination(int currentPage, int totalPages, string id)
+    {
+        using (ImRaii.Disabled(currentPage == 0))
+        {
+            if (IconTextButton(FontAwesomeIcon.ChevronLeft, string.Empty, $"##Prev{id}"))
+                return Math.Max(0, currentPage - 1);
+        }
+        ImGui.SameLine();
+        ImGui.TextUnformatted($"Page {currentPage + 1} of {totalPages}");
+        ImGui.SameLine();
+        using (ImRaii.Disabled(currentPage >= totalPages - 1))
+        {
+            if (IconTextButton(FontAwesomeIcon.ChevronRight, string.Empty, $"##Next{id}"))
+                return Math.Min(totalPages - 1, currentPage + 1);
+        }
+        return currentPage;
+    }
 }

@@ -1,4 +1,5 @@
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Services;
 using MiniGamesEmporium.State;
 using System;
 
@@ -7,13 +8,13 @@ using System;
 namespace MiniGamesEmporium.Games.Bar777.Actions;
 public static class RemoveDonation
 {
-    public static void Execute(PluginConfiguration config, int amount)
+    public static void Execute(PluginConfiguration config, HistoryService historyService, int amount)
     {
         if (amount <= 0) return;
         var actualRemoved = (int)Math.Min(amount, config.Bar777.BoostedPot);
         if (actualRemoved <= 0) return;
         config.Bar777.BoostedPot -= actualRemoved;
-        config.Transactions.Add(new TransactionRecord
+        historyService.AddTransaction(new TransactionRecord
         {
             PlayerName = "Manual Pot Adjustment",
             Amount     = -actualRemoved,

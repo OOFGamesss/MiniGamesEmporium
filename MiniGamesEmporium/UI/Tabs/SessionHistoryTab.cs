@@ -1,22 +1,25 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Services;
 using MiniGamesEmporium.State;
 using MiniGamesEmporium.UI.Components;
+using System;
 using System.Numerics;
 
-/// <summary>Draws the Session History tab, listing completed sessions as collapsible entries with pot breakdown, winner, players played, and timestamp, with options to delete individual sessions or clear all history.</summary>
+/// <summary>Draws the Session History tab, listing completed sessions as collapsible entries with pot breakdown, winner, players played, and timestamp, with options to delete individual sessions or clear all history. Results are paginated at 100 per page.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class SessionHistoryTab
 {
-    private readonly PluginConfiguration config;
-    private int? pendingDeleteIndex;
+    private const int PageSize = 100;
+    private readonly HistoryService historyService;
+    private Guid? pendingDeleteId;
+    private int currentPage;
 
-    public SessionHistoryTab(PluginConfiguration config)
+    public SessionHistoryTab(HistoryService historyService)
     {
-        this.config = config;
+        this.historyService = historyService;
     }
 
     public void Draw()
@@ -24,12 +27,14 @@ public sealed class SessionHistoryTab
         ImGui.Spacing();
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Session History");
         ImGui.Spacing();
-        var history = this.config.SessionHistory;
+        var history = this.historyService.CachedSessions;
         if (history.Count == 0)
         {
             ImGui.TextDisabled("No sessions recorded yet. Sessions are saved when you stop or end a session.");
             return;
         }
+        var totalPages = Math.Max(1, (history.Count + PageSize - 1) / PageSize);
+        if (this.currentPage >= totalPages) this.currentPage = totalPages - 1;
         ImGui.TextDisabled($"{history.Count} session(s) recorded.");
         ImGui.SameLine();
         var clearClicked = false;
@@ -40,23 +45,29 @@ public sealed class SessionHistoryTab
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
+        var startIndex     = history.Count - 1 - this.currentPage * PageSize;
+        var endIndex       = Math.Max(0, history.Count - (this.currentPage + 1) * PageSize);
+        var showPagination = totalPages > 1;
+        var childHeight    = ImGui.GetContentRegionAvail().Y - (showPagination ? ImGui.GetFrameHeightWithSpacing() : 0f);
         var deleteRequested = false;
-        using (var child = ImRaii.Child("##SessionHistoryScroll", new Vector2(-1, -1), false))
+        using (var child = ImRaii.Child("##SessionHistoryScroll", new Vector2(-1, childHeight), false))
         {
             if (child.Success)
             {
-                for (var i = history.Count - 1; i >= 0; i--)
+                for (var i = startIndex; i >= endIndex; i--)
                 {
-                    if (i == history.Count - 1)
+                    if (i == startIndex)
                         ImGui.SetNextItemOpen(true, ImGuiCond.Appearing);
                     if (DrawSessionEntry(history[i], i))
                     {
-                        this.pendingDeleteIndex = i;
+                        this.pendingDeleteId = history[i].SessionId;
                         deleteRequested = true;
                     }
                 }
             }
         }
+        if (showPagination)
+            this.currentPage = UIHelper.DrawPagination(this.currentPage, totalPages, "Session");
         if (clearClicked)
             ImGui.OpenPopup("##ConfirmClearAll");
         if (deleteRequested)
@@ -109,18 +120,17 @@ public sealed class SessionHistoryTab
         ImGui.Spacing();
         using (UIHelper.PushRedButtonColours())
         {
-            if (ImGui.Button("Delete", new Vector2(100, 0)) && this.pendingDeleteIndex.HasValue)
+            if (ImGui.Button("Delete", new Vector2(100, 0)) && this.pendingDeleteId.HasValue)
             {
-                this.config.SessionHistory.RemoveAt(this.pendingDeleteIndex.Value);
-                this.config.Save();
-                this.pendingDeleteIndex = null;
+                this.historyService.DeleteSession(this.pendingDeleteId.Value);
+                this.pendingDeleteId = null;
                 ImGui.CloseCurrentPopup();
             }
         }
         ImGui.SameLine();
         if (ImGui.Button("Cancel", new Vector2(100, 0)))
         {
-            this.pendingDeleteIndex = null;
+            this.pendingDeleteId = null;
             ImGui.CloseCurrentPopup();
         }
     }
@@ -136,8 +146,7 @@ public sealed class SessionHistoryTab
         {
             if (ImGui.Button("Clear All", new Vector2(100, 0)))
             {
-                this.config.SessionHistory.Clear();
-                this.config.Save();
+                this.historyService.ClearSessions();
                 ImGui.CloseCurrentPopup();
             }
         }

@@ -6,6 +6,7 @@ namespace MiniGamesEmporium.State;
 [Serializable]
 public class SessionRecord
 {
+    public Guid SessionId { get; set; } = Guid.NewGuid();
     public string GameName { get; set; } = string.Empty;
     public string Winner { get; set; } = string.Empty;
     public long BoostedPot { get; set; }

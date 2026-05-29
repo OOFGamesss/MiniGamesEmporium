@@ -10,6 +10,7 @@ using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.UI.Components;
 using MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 using MiniGamesEmporium.Services;
+
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
@@ -43,7 +44,8 @@ public sealed class DeathrollTournamentPanel : IDisposable
         DeathrollDiscordWebhookService discordService,
         ChatQueueService chatQueue,
         SessionService sessionService,
-        IPluginLog log)
+        IPluginLog log,
+        HistoryService historyService)
     {
         this.config              = config;
         this.deathrollService    = deathrollService;
@@ -51,7 +53,7 @@ public sealed class DeathrollTournamentPanel : IDisposable
         this.bracketTab          = new DeathrollBracketTab(config, deathrollService, chatQueue);
         this.chatSettingsTab     = new DeathrollChatSettingsTab(config);
         this.settingsTab         = new DeathrollSettingsTab(config);
-        this.statsTab            = new DeathrollStatsTab(config, deathrollService, chatQueue);
+        this.statsTab            = new DeathrollStatsTab(config, deathrollService, chatQueue, historyService);
         this.discordTab          = new DeathrollDiscordWebhookTab(config, discordService, log);
         this.chatAutomation      = new DeathrollChatAutomation(config, deathrollService, chatQueue);
         this.nextMatchAutomation = new DeathrollNextMatchAutomation(config, deathrollService);

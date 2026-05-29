@@ -15,14 +15,16 @@ public sealed class Bar777StatsTab
 {
     private readonly PluginConfiguration config;
     private readonly ChatQueueService chatQueue;
+    private readonly HistoryService historyService;
     private int _donationInput = 0;
     private static readonly Vector4 YellButtonColour        = new(0.72f, 0.55f, 0.00f, 1f);
     private static readonly Vector4 YellButtonColourHovered = new(0.88f, 0.68f, 0.00f, 1f);
     private static readonly Vector4 YellButtonColourActive  = new(0.58f, 0.44f, 0.00f, 1f);
-    public Bar777StatsTab(PluginConfiguration config, ChatQueueService chatQueue)
+    public Bar777StatsTab(PluginConfiguration config, ChatQueueService chatQueue, HistoryService historyService)
     {
         this.config = config;
         this.chatQueue = chatQueue;
+        this.historyService = historyService;
     }
     public static float GetInlineHeight(bool showQueue)
     {
@@ -82,7 +84,7 @@ public sealed class Bar777StatsTab
             using var green = UIHelper.PushGreenButtonColours();
             if (UIHelper.IconTextButton(FontAwesomeIcon.Plus, "Add", "##Bar777AddDonation") && this._donationInput > 0)
             {
-                AddDonation.Execute(this.config, this._donationInput);
+                AddDonation.Execute(this.config, this.historyService, this._donationInput);
                 this._donationInput = 0;
             }
         }
@@ -91,7 +93,7 @@ public sealed class Bar777StatsTab
             using var red = UIHelper.PushRedButtonColours();
             if (UIHelper.IconTextButton(FontAwesomeIcon.Minus, "Remove", "##Bar777RemoveDonation") && this._donationInput > 0)
             {
-                RemoveDonation.Execute(this.config, this._donationInput);
+                RemoveDonation.Execute(this.config, this.historyService, this._donationInput);
                 this._donationInput = 0;
             }
         }

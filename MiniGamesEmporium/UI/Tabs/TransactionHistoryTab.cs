@@ -1,47 +1,62 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
-using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Services;
 using MiniGamesEmporium.State;
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Draws the Transaction History tab, displaying a scrollable, resizable ledger of all recorded Gil trades with columns for player name, game, amount, and local date and time.</summary>
+/// <summary>Draws the Transaction History tab, displaying a scrollable, resizable ledger of all recorded Gil trades with columns for player name, game, amount, and local date and time. Results are paginated at 100 per page.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class TransactionHistoryTab
 {
-    private readonly PluginConfiguration config;
-    public TransactionHistoryTab(PluginConfiguration config)
+    private const int PageSize = 100;
+    private readonly HistoryService historyService;
+    private int currentPage;
+
+    public TransactionHistoryTab(HistoryService historyService)
     {
-        this.config = config;
+        this.historyService = historyService;
     }
+
     public void Draw()
     {
         ImGui.Spacing();
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Transaction ledger");
         ImGui.Spacing();
-        ImGui.TextDisabled($"Total transactions: {this.config.Transactions.Count}");
+        var cached = this.historyService.CachedTransactions;
+        ImGui.TextDisabled($"Total transactions: {cached.Count}");
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.GamblerDerbyYellow, "Transactions older than 30 days are automatically removed when the plugin loads.");
-        ImGui.Spacing();
-        using var table = ImRaii.Table(
+        var totalPages     = Math.Max(1, (cached.Count + PageSize - 1) / PageSize);
+        if (this.currentPage >= totalPages) this.currentPage = totalPages - 1;
+        var startIndex     = cached.Count - 1 - this.currentPage * PageSize;
+        var endIndex       = Math.Max(0, cached.Count - (this.currentPage + 1) * PageSize);
+        var showPagination = totalPages > 1;
+        var tableHeight    = ImGui.GetContentRegionAvail().Y - (showPagination ? ImGui.GetFrameHeightWithSpacing() : 0f);
+        var tableRendered  = false;
+        using (var table = ImRaii.Table(
             "##TransactionTable",
             4,
             ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY | ImGuiTableFlags.Resizable,
-            new Vector2(0, -1));
-        if (!table.Success) return;
-        ImGui.TableSetupScrollFreeze(0, 1);
-        ImGui.TableSetupColumn("Player", ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("Game", ImGuiTableColumnFlags.WidthFixed, 100f);
-        ImGui.TableSetupColumn("Amount (Gil)", ImGuiTableColumnFlags.WidthFixed, 130f);
-        ImGui.TableSetupColumn("Date / Time (Local)", ImGuiTableColumnFlags.WidthFixed, 160f);
-        ImGui.TableHeadersRow();
-        for (var i = this.config.Transactions.Count - 1; i >= 0; i--)
+            new Vector2(0, tableHeight)))
         {
-            DrawTransactionRow(this.config.Transactions[i]);
+            tableRendered = table.Success;
+            if (table.Success)
+            {
+                ImGui.TableSetupScrollFreeze(0, 1);
+                ImGui.TableSetupColumn("Player", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("Game", ImGuiTableColumnFlags.WidthFixed, 100f);
+                ImGui.TableSetupColumn("Amount (Gil)", ImGuiTableColumnFlags.WidthFixed, 130f);
+                ImGui.TableSetupColumn("Date / Time (Local)", ImGuiTableColumnFlags.WidthFixed, 160f);
+                ImGui.TableHeadersRow();
+                for (var i = startIndex; i >= endIndex; i--)
+                    DrawTransactionRow(cached[i]);
+            }
         }
+        if (showPagination && tableRendered)
+            this.currentPage = UIHelper.DrawPagination(this.currentPage, totalPages, "Transaction");
     }
     private static void DrawTransactionRow(TransactionRecord record)
     {

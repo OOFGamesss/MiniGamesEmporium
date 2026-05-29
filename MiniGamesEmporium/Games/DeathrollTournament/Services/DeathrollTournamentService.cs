@@ -1,6 +1,7 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.State;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
+using MiniGamesEmporium.Services;
 using MiniGamesEmporium.State;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,7 @@ namespace MiniGamesEmporium.Games.DeathrollTournament.Services;
 public sealed class DeathrollTournamentService
 {
     private readonly PluginConfiguration config;
+    private readonly HistoryService historyService;
     public event Action? SessionUpdated;
     public event Action<string, string>? MatchStarted;
     public event Action? MatchCompleted;
@@ -23,9 +25,10 @@ public sealed class DeathrollTournamentService
     public event Action<string, int, int, int>? GameWon;
     public event Action<string, string, int, int>? MatchWon;
 
-    public DeathrollTournamentService(PluginConfiguration config)
+    public DeathrollTournamentService(PluginConfiguration config, HistoryService historyService)
     {
         this.config = config;
+        this.historyService = historyService;
     }
 
     public bool IsSessionActive() => this.config.DeathrollSession != null;
@@ -55,6 +58,7 @@ public sealed class DeathrollTournamentService
         this.config.DeathrollSession           = null;
         this.config.DeathrollTournament.RegisteredPlayers.Clear();
         this.config.DeathrollTournament.PaidPlayers.Clear();
+        this.config.DeathrollTournament.UnverifiedPlayers.Clear();
         this.config.DeathrollTournament.PlayerBuyers.Clear();
         Save();
         SessionUpdated?.Invoke();
@@ -80,7 +84,7 @@ public sealed class DeathrollTournamentService
             if (roundsPlayed == 0)  roundsPlayed  = null;
             if (matchesPlayed == 0) matchesPlayed = null;
         }
-        this.config.SessionHistory.Add(new SessionRecord
+        this.historyService.AddSession(new SessionRecord
         {
             GameName       = DeathrollGameIds.DisplayName,
             Winner         = winner,
@@ -150,7 +154,7 @@ public sealed class DeathrollTournamentService
         var transactionName = string.IsNullOrEmpty(buyerName)
             ? ParseName(match)
             : $"{ParseName(match)} (Paid by {buyerName})";
-        this.config.Transactions.Add(new TransactionRecord
+        this.historyService.AddTransaction(new TransactionRecord
         {
             PlayerName = transactionName,
             Amount     = (int)entryCost,
@@ -183,6 +187,16 @@ public sealed class DeathrollTournamentService
         return entryCost * cfg.PaidPlayers.Count + boostedPot + adjustment;
     }
 
+
+    public void TryRecordWinnerPayout(string partnerName, long amountSent)
+    {
+        var state = this.config.DeathrollTournamentSession;
+        if (state?.TournamentWinner == null) return;
+        if (!ParseName(state.TournamentWinner).Equals(partnerName, StringComparison.OrdinalIgnoreCase)) return;
+        state.WinnerPayoutGil += amountSent;
+        Save();
+        SessionUpdated?.Invoke();
+    }
 
     public List<string> GetUnpaidRegisteredPlayers()
     {
@@ -230,6 +244,57 @@ public sealed class DeathrollTournamentService
         if (!this.config.DeathrollTournament.PlayerBuyers.Remove(name)) return;
         Save();
         SessionUpdated?.Invoke();
+    }
+
+    public bool IsPlayerVerified(string playerEntry)
+    {
+        var name = ParseName(playerEntry);
+        return !this.config.DeathrollTournament.UnverifiedPlayers
+            .Any(u => u.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void AddPreSignupPlayer(string name)
+    {
+        var trimmed = name.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) return;
+        var list = this.config.DeathrollTournament.RegisteredPlayers;
+        if (list.Any(p => ParseName(p).Equals(trimmed, StringComparison.OrdinalIgnoreCase))) return;
+        list.Add(trimmed);
+        this.config.DeathrollTournament.UnverifiedPlayers.Add(trimmed);
+        Save();
+    }
+
+    public void LinkPlayer(int index, string nearbyEntry)
+    {
+        var list = this.config.DeathrollTournament.RegisteredPlayers;
+        if (index < 0 || index >= list.Count) return;
+        var oldName = ParseName(list[index]);
+        var newName = ParseName(nearbyEntry.Trim());
+        list[index] = nearbyEntry.Trim();
+        var paid    = this.config.DeathrollTournament.PaidPlayers;
+        var paidIdx = paid.FindIndex(p => ParseName(p).Equals(oldName, StringComparison.OrdinalIgnoreCase));
+        if (paidIdx >= 0) paid[paidIdx] = newName;
+        var buyers = this.config.DeathrollTournament.PlayerBuyers;
+        if (buyers.TryGetValue(oldName, out var buyer))
+        {
+            buyers.Remove(oldName);
+            buyers[newName] = buyer;
+        }
+        this.config.DeathrollTournament.UnverifiedPlayers
+            .RemoveAll(u => u.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+        Save();
+        SessionUpdated?.Invoke();
+    }
+
+    public int GetUnverifiedCount()
+        => this.config.DeathrollTournament.UnverifiedPlayers.Count;
+
+    public List<string> GetUnverifiedRegisteredPlayers()
+    {
+        return this.config.DeathrollTournament.RegisteredPlayers
+            .Where(p => !IsPlayerVerified(p))
+            .Select(ParseName)
+            .ToList();
     }
 
     public void MovePlayerUp(int index)
@@ -339,6 +404,35 @@ public sealed class DeathrollTournamentService
         SetMatchWinner(state, match, playerEntry);
         Save();
         SessionUpdated?.Invoke();
+    }
+
+    public void SwapPlayerInBracket(int roundIdx, int matchIdx, bool isPlayer1, string newPlayer)
+    {
+        var state = this.config.DeathrollTournamentSession;
+        if (state == null) return;
+        if (roundIdx >= state.Rounds.Count || matchIdx >= state.Rounds[roundIdx].Count) return;
+        var match     = state.Rounds[roundIdx][matchIdx];
+        var oldPlayer = isPlayer1 ? match.Player1 : match.Player2;
+        if (string.IsNullOrEmpty(oldPlayer) || NamesMatch(oldPlayer, newPlayer)) return;
+        if (isPlayer1) match.Player1 = newPlayer;
+        else           match.Player2 = newPlayer;
+        if (!string.IsNullOrEmpty(match.Winner) && NamesMatch(match.Winner, oldPlayer))
+            match.Winner = newPlayer;
+        for (var r = roundIdx + 1; r < state.Rounds.Count; r++)
+            foreach (var m in state.Rounds[r])
+                ReplaceInMatch(m, oldPlayer, newPlayer);
+        if (!string.IsNullOrEmpty(state.CurrentTurnPlayerName) && NamesMatch(state.CurrentTurnPlayerName, oldPlayer))
+            state.CurrentTurnPlayerName = newPlayer;
+        Save();
+        SessionUpdated?.Invoke();
+    }
+
+    private static void ReplaceInMatch(BracketMatch match, string oldPlayer, string newPlayer)
+    {
+        if (NamesMatch(match.Player1, oldPlayer)) match.Player1 = newPlayer;
+        if (NamesMatch(match.Player2, oldPlayer)) match.Player2 = newPlayer;
+        if (!string.IsNullOrEmpty(match.Winner) && NamesMatch(match.Winner, oldPlayer))
+            match.Winner = newPlayer;
     }
 
     public void ManuallyAddRoundWin(string playerEntry)

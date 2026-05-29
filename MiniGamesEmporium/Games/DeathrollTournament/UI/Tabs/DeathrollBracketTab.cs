@@ -1,6 +1,8 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Interface;
+using Dalamud.Interface.Textures;
+using Dalamud.Interface.Utility;
 using MiniGamesEmporium.Actions;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
@@ -13,6 +15,7 @@ using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.Utility;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 
@@ -35,19 +38,32 @@ public sealed class DeathrollBracketTab
     private static readonly Vector4 OrangeButtonActive  = new(0.45f, 0.18f, 0.01f, 1f);
     private static readonly Vector4 CurrentMatchBg    = new(0.28f, 0.22f, 0.02f, 1f);
     private static readonly Vector4 ResolvedMatchBg   = new(0.06f, 0.10f, 0.06f, 1f);
-    private const float RightPaneW = 300f;
+    private static readonly Vector4 GoldColour        = new(1f, 0.84f, 0f, 1f);
+    private const float RightPaneW  = 300f;
+    private const float TrophySide  = 140f;
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
     private readonly ChatQueueService chatQueue;
+    private readonly ISharedImmediateTexture? _trophyTexture;
     private static string comboFilter = string.Empty;
+    private string swapFilter = string.Empty;
+    private string preSignUpInput = string.Empty;
+    private string linkFilter = string.Empty;
     private bool openUnpaidModal = false;
     private List<string> unpaidModalPlayers = new();
+    private bool openUnlinkedModal = false;
+    private List<string> unlinkedModalPlayers = new();
 
     public DeathrollBracketTab(PluginConfiguration config, DeathrollTournamentService deathrollService, ChatQueueService chatQueue)
     {
         this.config           = config;
         this.deathrollService = deathrollService;
         this.chatQueue        = chatQueue;
+        var path = Path.Combine(
+            MiniGamesEmporium.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty,
+            "Images", "trophy.png");
+        if (File.Exists(path))
+            _trophyTexture = MiniGamesEmporium.TextureProvider.GetFromFile(path);
     }
 
     public void Draw(bool skipLeadingSpacing = false, float reserveBottom = 0f, Action? drawStatsInline = null)
@@ -57,6 +73,7 @@ public sealed class DeathrollBracketTab
         {
             DrawPreTournamentSetup(reserveBottom, drawStatsInline);
             DrawUnpaidPlayersModal();
+            DrawUnlinkedPlayersModal();
             return;
         }
         var state = this.config.DeathrollTournamentSession!;
@@ -105,7 +122,7 @@ public sealed class DeathrollBracketTab
         {
             if (!boPane.Success) return;
             DrawBestOfSettings();
-            var footerH   = 1f + ImGui.GetStyle().ItemSpacing.Y * 4f + ImGui.GetFrameHeight() + ImGui.GetTextLineHeightWithSpacing();
+            var footerH   = 1f + ImGui.GetStyle().ItemSpacing.Y * 4f + ImGui.GetFrameHeight() + ImGui.GetTextLineHeightWithSpacing() * 3f;
             var remaining = ImGui.GetContentRegionAvail().Y - footerH;
             if (remaining > 0f)
                 ImGui.Dummy(new Vector2(0f, remaining));
@@ -117,11 +134,17 @@ public sealed class DeathrollBracketTab
 
     private void DrawPlayerList()
     {
-        var list      = this.config.DeathrollTournament.RegisteredPlayers;
-        var paidCount = this.config.DeathrollTournament.PaidPlayers.Count;
-        var availH    = ImGui.GetContentRegionAvail().Y;
-        var startY    = ImGui.GetCursorPosY();
+        var list           = this.config.DeathrollTournament.RegisteredPlayers;
+        var paidCount      = this.config.DeathrollTournament.PaidPlayers.Count;
+        var unverifiedCount = this.deathrollService.GetUnverifiedCount();
+        var availH         = ImGui.GetContentRegionAvail().Y;
+        var startY         = ImGui.GetCursorPosY();
         ImGui.TextColored(new Vector4(1f, 0.20f, 0.60f, 1f), $"Players ({paidCount} / {list.Count} paid)");
+        if (unverifiedCount > 0)
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(EmporiumNeonTheme.WarnAmber, $"-- {unverifiedCount} unlinked");
+        }
         ImGui.Spacing();
         DrawAddPlayerCombo();
         ImGui.SameLine();
@@ -131,6 +154,7 @@ public sealed class DeathrollBracketTab
         if (UIHelper.IconTextButton(FontAwesomeIcon.Random, "Shuffle", "##DRShuffle"))
             this.deathrollService.ShufflePlayers();
         ImGui.PopStyleColor(3);
+        DrawPreSignUpInput();
         ImGui.Spacing();
         var tableH = MathF.Max(24f, availH - (ImGui.GetCursorPosY() - startY));
         if (list.Count == 0)
@@ -207,6 +231,7 @@ public sealed class DeathrollBracketTab
     {
         var displayName = ParseName(entry);
         var isPaid      = this.deathrollService.IsPaid(entry);
+        var isVerified  = this.deathrollService.IsPlayerVerified(entry);
         var green       = new Vector4(0.22f, 0.82f, 0.32f, 1f);
         if (isPaid)
             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(new Vector4(0.05f, 0.25f, 0.10f, 1f)));
@@ -223,10 +248,32 @@ public sealed class DeathrollBracketTab
         ImGui.TableSetColumnIndex(1);
         ImGui.TextDisabled($"{idx + 1}");
         ImGui.TableSetColumnIndex(2);
-        ImGui.TextColored(isPaid ? green : new Vector4(0.94f, 0.92f, 0.98f, 1f), displayName);
+        var nameColour = !isVerified ? EmporiumNeonTheme.WarnAmber
+                       : isPaid      ? green
+                       :               new Vector4(0.94f, 0.92f, 0.98f, 1f);
+        ImGui.TextColored(nameColour, displayName);
+        if (!isVerified)
+        {
+            ImGui.SameLine(0f, 4f);
+            ImGui.TextDisabled("[unlinked]");
+        }
         ImGui.TableSetColumnIndex(3);
-        var reqGilW = UIHelper.CalcButtonSize(FontAwesomeIcon.CommentDots, "Request Gil").X;
-        if (!isPaid)
+        var reqGilW  = UIHelper.CalcButtonSize(FontAwesomeIcon.CommentDots, "Request Gil").X;
+        var tradeW   = UIHelper.CalcButtonSize(FontAwesomeIcon.Coins, "Trade").X;
+        if (!isVerified)
+        {
+            var linkNaturalW = UIHelper.CalcButtonSize(FontAwesomeIcon.Link, "Link Player").X;
+            var padW         = MathF.Max(0f, reqGilW + tradeW - linkNaturalW);
+            if (padW > 0f) { ImGui.Dummy(new Vector2(padW, ImGui.GetFrameHeight())); ImGui.SameLine(); }
+            ImGui.PushStyleColor(ImGuiCol.Button,        YellowButton);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, YellowButtonHovered);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  YellowButtonActive);
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Link, "Link Player", $"##DRLink{idx}"))
+                ImGui.OpenPopup($"##DRLinkPopup{idx}");
+            ImGui.PopStyleColor(3);
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Link to a nearby player so rolls can be tracked");
+        }
+        else if (!isPaid)
         {
             ImGui.PushStyleColor(ImGuiCol.Button,        new Vector4(0.10f, 0.36f, 0.72f, 1f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.15f, 0.50f, 0.90f, 1f));
@@ -235,15 +282,7 @@ public sealed class DeathrollBracketTab
                 RequestGil.Execute(entry, this.config, this.chatQueue);
             ImGui.PopStyleColor(3);
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Send a /tell requesting the entry fee");
-        }
-        else
-        {
-            ImGui.Dummy(new Vector2(reqGilW, ImGui.GetFrameHeight()));
-        }
-        ImGui.SameLine();
-        var tradeW = UIHelper.CalcButtonSize(FontAwesomeIcon.Coins, "Trade").X;
-        if (!isPaid)
-        {
+            ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Button,        new Vector4(0.52f, 0.40f, 0.02f, 1f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.72f, 0.58f, 0.03f, 1f));
             ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(0.38f, 0.28f, 0.01f, 1f));
@@ -254,6 +293,8 @@ public sealed class DeathrollBracketTab
         }
         else
         {
+            ImGui.Dummy(new Vector2(reqGilW, ImGui.GetFrameHeight()));
+            ImGui.SameLine();
             ImGui.Dummy(new Vector2(tradeW, ImGui.GetFrameHeight()));
         }
         ImGui.SameLine();
@@ -306,6 +347,7 @@ public sealed class DeathrollBracketTab
             ImGui.OpenPopup($"##DRBuyerPopup{idx}");
         ImGui.PopStyleColor(3);
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(hasBuyer ? $"Buyer: {this.deathrollService.GetPlayerBuyer(entry)}" : "Set a buyer to pay for this player");
+        DrawLinkPlayerPopup(idx, entry);
         using var popup = ImRaii.Popup($"##DRBuyerPopup{idx}");
         if (popup.Success)
         {
@@ -407,9 +449,10 @@ public sealed class DeathrollBracketTab
 
     private void DrawStartTournamentButton()
     {
-        var paidCount = this.config.DeathrollTournament.PaidPlayers.Count;
-        var canStart  = paidCount >= 2;
-        var btnW      = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Tournament").X;
+        var paidCount      = this.config.DeathrollTournament.PaidPlayers.Count;
+        var unverifiedCount = this.deathrollService.GetUnverifiedCount();
+        var canStart       = paidCount >= 2;
+        var btnW           = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Tournament").X;
         ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - btnW) * 0.5f);
         ImGui.PushStyleColor(ImGuiCol.Button,        GreenButton);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, GreenButtonHovered);
@@ -419,23 +462,45 @@ public sealed class DeathrollBracketTab
         ImGui.PopStyleColor(3);
         if (clicked)
         {
-            var unpaid = this.deathrollService.GetUnpaidRegisteredPlayers();
-            if (unpaid.Count > 0)
+            var unlinked = this.deathrollService.GetUnverifiedRegisteredPlayers();
+            if (unlinked.Count > 0)
             {
-                this.unpaidModalPlayers = unpaid;
-                this.openUnpaidModal    = true;
+                this.unlinkedModalPlayers = unlinked;
+                this.openUnlinkedModal    = true;
             }
             else
             {
-                this.deathrollService.StartTournament();
+                var unpaid = this.deathrollService.GetUnpaidRegisteredPlayers();
+                if (unpaid.Count > 0)
+                {
+                    this.unpaidModalPlayers = unpaid;
+                    this.openUnpaidModal    = true;
+                }
+                else
+                {
+                    this.deathrollService.StartTournament();
+                }
             }
         }
-        if (!canStart)
+        if (!canStart || unverifiedCount > 0)
         {
             ImGui.Spacing();
-            const string hint = "Mark at least 2 players as paid to start.";
-            ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize(hint).X) * 0.5f);
-            ImGui.TextDisabled(hint);
+            if (!canStart)
+            {
+                const string hintPaid = "Mark at least 2 players as paid to start.";
+                ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize(hintPaid).X) * 0.5f);
+                ImGui.TextDisabled(hintPaid);
+            }
+            if (unverifiedCount > 0)
+            {
+                var avail     = ImGui.GetContentRegionAvail().X;
+                var line1     = $"{unverifiedCount} player(s) must be linked";
+                const string line2 = "before the tournament can start.";
+                ImGui.SetCursorPosX(MathF.Max(0f, (avail - ImGui.CalcTextSize(line1).X) * 0.5f));
+                ImGui.TextColored(EmporiumNeonTheme.WarnAmber, line1);
+                ImGui.SetCursorPosX(MathF.Max(0f, (avail - ImGui.CalcTextSize(line2).X) * 0.5f));
+                ImGui.TextColored(EmporiumNeonTheme.WarnAmber, line2);
+            }
         }
     }
 
@@ -459,6 +524,96 @@ public sealed class DeathrollBracketTab
         ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - closeW) * 0.5f);
         if (ImGui.Button("Close##DRUnpaidClose", new Vector2(closeW, 0f)))
             ImGui.CloseCurrentPopup();
+    }
+
+    private void DrawUnlinkedPlayersModal()
+    {
+        if (this.openUnlinkedModal)
+        {
+            ImGui.OpenPopup("Unlinked Players##DRUnlinkedModal");
+            this.openUnlinkedModal = false;
+        }
+        using var modal = ImRaii.PopupModal("Unlinked Players##DRUnlinkedModal", ImGuiWindowFlags.AlwaysAutoResize);
+        if (!modal.Success) return;
+        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "The following players have not been linked to a character:");
+        ImGui.Spacing();
+        foreach (var name in this.unlinkedModalPlayers)
+            ImGui.BulletText(name);
+        ImGui.Spacing();
+        ImGui.TextDisabled("Use the Link Player button on each entry to connect");
+        ImGui.TextDisabled("them to a nearby character before starting.");
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        const float closeW = 80f;
+        ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - closeW) * 0.5f);
+        if (ImGui.Button("Close##DRUnlinkedClose", new Vector2(closeW, 0f)))
+            ImGui.CloseCurrentPopup();
+    }
+
+    private void DrawPreSignUpInput()
+    {
+        var addBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.UserPlus, "Add").X;
+        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - addBtnW - ImGui.GetStyle().ItemSpacing.X);
+        var submitted = ImGui.InputText("##DRPreSignUp", ref this.preSignUpInput, 64, ImGuiInputTextFlags.EnterReturnsTrue);
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Enter a name to pre-sign-up a player who is not currently nearby");
+        ImGui.SameLine();
+        using (ImRaii.Disabled(string.IsNullOrWhiteSpace(this.preSignUpInput)))
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button,        new Vector4(0.45f, 0.35f, 0.02f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.62f, 0.50f, 0.03f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(0.32f, 0.25f, 0.01f, 1f));
+            var clicked = UIHelper.IconTextButton(FontAwesomeIcon.UserPlus, "Add", "##DRAddPreSignUp");
+            ImGui.PopStyleColor(3);
+            if ((clicked || submitted) && !string.IsNullOrWhiteSpace(this.preSignUpInput))
+            {
+                this.deathrollService.AddPreSignupPlayer(this.preSignUpInput);
+                this.preSignUpInput = string.Empty;
+            }
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Pre-sign-up a player who is not currently nearby");
+    }
+
+    private void DrawLinkPlayerPopup(int idx, string entry)
+    {
+        using var popup = ImRaii.Popup($"##DRLinkPopup{idx}");
+        if (!popup.Success) return;
+        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, $"Link: {ParseName(entry)}");
+        ImGui.Separator();
+        ImGui.Spacing();
+        if (ImGui.IsWindowAppearing()) { this.linkFilter = string.Empty; ImGui.SetKeyboardFocusHere(); }
+        ImGui.SetNextItemWidth(200f);
+        ImGui.InputText("##DRLinkFilter", ref this.linkFilter, 64);
+        ImGui.Spacing();
+        var nearby = NearbyPlayerList.GetSorted();
+        if (nearby.Count == 0) { ImGui.TextDisabled("No players nearby."); return; }
+        var any = false;
+        foreach (var player in nearby)
+        {
+            if (!player.Contains(this.linkFilter, StringComparison.OrdinalIgnoreCase)) continue;
+            if (IsAlreadyVerifiedRegistered(player, entry)) continue;
+            any = true;
+            if (!ImGui.Selectable(player)) continue;
+            this.deathrollService.LinkPlayer(idx, player);
+            this.linkFilter = string.Empty;
+            ImGui.CloseCurrentPopup();
+        }
+        if (!any) ImGui.TextDisabled("No matches.");
+    }
+
+    private bool IsAlreadyVerifiedRegistered(string nearbyEntry, string excludeEntry)
+    {
+        var at         = nearbyEntry.IndexOf('@');
+        var nearbyName = at < 0 ? nearbyEntry : nearbyEntry[..at];
+        var excludeName = ParseName(excludeEntry);
+        foreach (var p in this.config.DeathrollTournament.RegisteredPlayers)
+        {
+            var pName = ParseName(p);
+            if (pName.Equals(excludeName, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!this.deathrollService.IsPlayerVerified(p)) continue;
+            if (pName.Equals(nearbyName, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
     }
 
     private void DrawBracketPane(DeathrollTournamentState state, float height)
@@ -539,10 +694,10 @@ public sealed class DeathrollBracketTab
         using var box = ImRaii.Child($"##DRMatch_{roundIdx}_{matchIdx}", new Vector2(matchBoxW, matchBoxH), true, ImGuiWindowFlags.NoScrollbar);
         ImGui.PopStyleColor();
         if (!box.Success) return;
-        DrawMatchContent(state, match, isCurrent, matchBoxW, matchBoxH);
+        DrawMatchContent(state, match, isCurrent, matchBoxW, matchBoxH, roundIdx, matchIdx);
     }
 
-    private static void DrawMatchContent(DeathrollTournamentState state, BracketMatch match, bool isCurrent, float boxW, float boxH)
+    private void DrawMatchContent(DeathrollTournamentState state, BracketMatch match, bool isCurrent, float boxW, float boxH, int roundIdx, int matchIdx)
     {
         var padX     = ImGui.GetStyle().WindowPadding.X;
         var padY     = ImGui.GetStyle().WindowPadding.Y;
@@ -558,12 +713,17 @@ public sealed class DeathrollBracketTab
         var startY   = padY + MathF.Max(0f, (boxH - padY * 2f - contentH) * 0.5f);
         ImGui.SetCursorPosY(startY);
 
-        var p1Wins = isCurrent && !match.IsResolved ? state.ActiveMatchPlayer1Wins : match.Player1Wins;
-        var p2Wins = isCurrent && !match.IsResolved ? state.ActiveMatchPlayer2Wins : match.Player2Wins;
+        var p1Wins      = isCurrent && !match.IsResolved ? state.ActiveMatchPlayer1Wins : match.Player1Wins;
+        var p2Wins      = isCurrent && !match.IsResolved ? state.ActiveMatchPlayer2Wins : match.Player2Wins;
+        var p1Swappable = !string.IsNullOrEmpty(match.Player1);
+        var p2Swappable = !string.IsNullOrEmpty(match.Player2);
 
         ImGui.SetCursorPosX(padX + MathF.Max(0f, (innerW - ImGui.CalcTextSize(p1Label).X) * 0.5f));
         ImGui.TextColored(p1Colour, p1Label);
+        if (p1Swappable && ImGui.IsItemClicked()) ImGui.OpenPopup($"##DRSwapP1_{roundIdx}_{matchIdx}");
+        if (p1Swappable && ImGui.IsItemHovered()) ImGui.SetTooltip("Click to swap player");
         if (p1Wins > 0 || p2Wins > 0) { ImGui.SameLine(); ImGui.TextDisabled($" {p1Wins}"); }
+        DrawSwapPopup(state, match, roundIdx, matchIdx, true);
 
         var vsW = ImGui.CalcTextSize("vs").X;
         ImGui.SetCursorPosX(padX + MathF.Max(0f, (innerW - vsW) * 0.5f));
@@ -571,7 +731,10 @@ public sealed class DeathrollBracketTab
 
         ImGui.SetCursorPosX(padX + MathF.Max(0f, (innerW - ImGui.CalcTextSize(p2Label).X) * 0.5f));
         ImGui.TextColored(p2Colour, p2Label);
+        if (p2Swappable && ImGui.IsItemClicked()) ImGui.OpenPopup($"##DRSwapP2_{roundIdx}_{matchIdx}");
+        if (p2Swappable && ImGui.IsItemHovered()) ImGui.SetTooltip("Click to swap player");
         if (p1Wins > 0 || p2Wins > 0) { ImGui.SameLine(); ImGui.TextDisabled($" {p2Wins}"); }
+        DrawSwapPopup(state, match, roundIdx, matchIdx, false);
     }
 
     private static Vector4 GetPlayerColour(BracketMatch match, bool isP1, bool isCurrent, DeathrollTournamentState state)
@@ -801,26 +964,147 @@ public sealed class DeathrollBracketTab
         }
     }
 
+    private void DrawSwapPopup(DeathrollTournamentState state, BracketMatch match, int roundIdx, int matchIdx, bool isPlayer1)
+    {
+        var popupId = isPlayer1 ? $"##DRSwapP1_{roundIdx}_{matchIdx}" : $"##DRSwapP2_{roundIdx}_{matchIdx}";
+        using var popup = ImRaii.Popup(popupId);
+        if (!popup.Success) return;
+        var currentSlot = isPlayer1 ? match.Player1 : match.Player2;
+        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, $"Swap: {FormatSlot(currentSlot)}");
+        ImGui.Separator();
+        ImGui.Spacing();
+        if (ImGui.IsWindowAppearing()) { this.swapFilter = string.Empty; ImGui.SetKeyboardFocusHere(); }
+        ImGui.SetNextItemWidth(200f);
+        ImGui.InputText("##DRSwapFilter", ref this.swapFilter, 64);
+        ImGui.Spacing();
+        var nearby = NearbyPlayerList.GetSorted();
+        if (nearby.Count == 0) { ImGui.TextDisabled("No players nearby."); return; }
+        var any = false;
+        foreach (var player in nearby)
+        {
+            if (!player.Contains(this.swapFilter, StringComparison.OrdinalIgnoreCase)) continue;
+            if (IsAlreadyInBracket(player, state)) continue;
+            any = true;
+            if (!ImGui.Selectable(player)) continue;
+            this.deathrollService.SwapPlayerInBracket(roundIdx, matchIdx, isPlayer1, player);
+            this.swapFilter = string.Empty;
+            ImGui.CloseCurrentPopup();
+        }
+        if (!any) ImGui.TextDisabled("No matches.");
+    }
+
+    private static bool IsAlreadyInBracket(string nearbyEntry, DeathrollTournamentState state)
+    {
+        var at         = nearbyEntry.IndexOf('@');
+        var nearbyName = at < 0 ? nearbyEntry : nearbyEntry[..at];
+        foreach (var round in state.Rounds)
+            foreach (var match in round)
+            {
+                if (NameMatchesSlot(nearbyName, match.Player1)) return true;
+                if (NameMatchesSlot(nearbyName, match.Player2)) return true;
+            }
+        return false;
+    }
+
+    private static bool NameMatchesSlot(string name, string slot)
+    {
+        if (string.IsNullOrEmpty(slot) || DeathrollGameIds.IsBye(slot)) return false;
+        var at       = slot.IndexOf('@');
+        var slotName = at < 0 ? slot : slot[..at];
+        return slotName.Equals(name, StringComparison.OrdinalIgnoreCase);
+    }
+
     private void DrawTournamentComplete(DeathrollTournamentState state)
     {
         ImGui.Spacing();
-        ImGui.SetWindowFontScale(1.5f);
+        var avail  = ImGui.GetContentRegionAvail().X;
+        var startX = ImGui.GetCursorPosX();
         var winnerName = ParseName(state.TournamentWinner ?? string.Empty);
-        ImGui.TextColored(EmporiumNeonTheme.WinGold, $"Tournament Winner: {winnerName}!");
+
+        ImGui.SetWindowFontScale(1.6f);
+        var nameW = ImGui.CalcTextSize(winnerName).X;
         ImGui.SetWindowFontScale(1.0f);
+        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - nameW) * 0.5f));
+        ImGui.SetWindowFontScale(1.6f);
+        ImGui.TextColored(GoldColour, winnerName);
+        ImGui.SetWindowFontScale(1.0f);
+
+        const string subtitle = "TOURNAMENT WINNER!";
+        var subtitleW = ImGui.CalcTextSize(subtitle).X;
+        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - subtitleW) * 0.5f));
+        ImGui.TextColored(GoldColour, subtitle);
+
         ImGui.Spacing();
-        var pot = this.deathrollService.ComputeTotalPot();
-        ImGui.TextColored(EmporiumNeonTheme.WinGold, $"Pot: {pot:N0} Gil");
+
+        var trophySide = TrophySide * ImGuiHelpers.GlobalScale;
+        var tex = _trophyTexture?.GetWrapOrDefault();
+        if (tex != null)
+        {
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - trophySide) * 0.5f));
+            ImGui.Image(tex.Handle, new Vector2(trophySide, trophySide));
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        var pot       = this.deathrollService.ComputeTotalPot();
+        var paid      = state.WinnerPayoutGil;
+        var remaining = Math.Max(0L, pot - paid);
+
+        var labelColW  = MathF.Max(ImGui.CalcTextSize("Pot:").X, MathF.Max(ImGui.CalcTextSize("Traded:").X, ImGui.CalcTextSize("Remaining:").X));
+        var valueColW  = MathF.Max(ImGui.CalcTextSize($"{pot:N0} Gil").X, MathF.Max(ImGui.CalcTextSize($"{paid:N0} Gil").X, ImGui.CalcTextSize($"{remaining:N0} Gil").X));
+        var spacing    = ImGui.GetStyle().ItemSpacing.X;
+        var blockW     = labelColW + spacing + valueColW;
+        var rowX       = startX + MathF.Max(0f, (avail - blockW) * 0.5f);
+        var valueX     = rowX + labelColW + spacing;
+
+        ImGui.SetCursorPosX(rowX);
+        ImGui.TextColored(GoldColour, "Pot:");
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(GoldColour, $"{pot:N0} Gil");
+
+        ImGui.SetCursorPosX(rowX);
+        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, "Traded:");
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, $"{paid:N0} Gil");
+
+        ImGui.SetCursorPosX(rowX);
+        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Remaining:");
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, $"{remaining:N0} Gil");
+
+        ImGui.Spacing();
+
         if (!this.config.DeathrollTournament.Chat.AutoAnnounceWinner)
         {
-            ImGui.Spacing();
+            var annBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Bullhorn, "Announce Winner").X;
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - annBtnW) * 0.5f));
             ImGui.PushStyleColor(ImGuiCol.Button,        YellowButton);
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, YellowButtonHovered);
             ImGui.PushStyleColor(ImGuiCol.ButtonActive,  YellowButtonActive);
             if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Winner", "##DRAnnWinner"))
                 AnnounceTournamentWinner.Execute(state.TournamentWinner ?? string.Empty, pot, this.config, this.chatQueue);
             ImGui.PopStyleColor(3);
+            ImGui.Spacing();
         }
+
+        var tradeBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Coins, "Trade Winner").X;
+        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - tradeBtnW) * 0.5f));
+        using (UIHelper.PushAmberButtonColours())
+        {
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade Winner", "##DRWinnerTrade"))
+                SendTradeRequest.Execute(winnerName, this.chatQueue);
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        var progress   = pot > 0 ? MathF.Min(1f, (float)paid / pot) : 1f;
+        var pctOverlay = $"{progress * 100f:F0}% paid out";
+        ImGui.SetCursorPosX(startX);
+        ImGui.ProgressBar(progress, new Vector2(avail, ImGui.GetFrameHeight()), pctOverlay);
     }
 
     private static int ComputeRoundCount(int playerCount)

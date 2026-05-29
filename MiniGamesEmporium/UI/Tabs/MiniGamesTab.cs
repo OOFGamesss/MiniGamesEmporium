@@ -14,11 +14,14 @@ using MiniGamesEmporium.Games.BeerPong.UI;
 using MiniGamesEmporium.Games.Darts.UI;
 using MiniGamesEmporium.Games.EightBallPool.UI;
 using MiniGamesEmporium.Games.RussianRoulette.UI;
+using MiniGamesEmporium.Games.RaidBoss.UI;
+using MiniGamesEmporium.Games.DealOrNoDeal.UI;
+using MiniGamesEmporium.Games.VotingMadness.UI;
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Draws the Mini Games tab with themed sub-tabs for BAR 777, Deathroll Tournament, Minefield Gambit, Gambler Derby, Hot Shots, Beer Pong, Darts, 8 Ball Pool, and Russian Roulette, and displays a centred win alert popup when a winning roll is detected.</summary>
+/// <summary>Draws the Mini Games tab with themed sub-tabs for BAR 777, Deathroll Tournament, Minefield Gambit, Gambler Derby, Hot Shots, Beer Pong, Darts, 8 Ball Pool, Russian Roulette, Raid Boss, Deal or No Deal, and Voting Madness, and displays a centred win alert popup when a winning roll is detected.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class MiniGamesTab : IDisposable
@@ -33,6 +36,9 @@ public sealed class MiniGamesTab : IDisposable
     private readonly DartsPanel dartsPanel;
     private readonly EightBallPoolPanel eightBallPoolPanel;
     private readonly RussianRoulettePanel russianRoulettePanel;
+    private readonly RaidBossPanel raidBossPanel;
+    private readonly DealOrNoDealPanel dealOrNoDealPanel;
+    private readonly VotingMadnessPanel votingMadnessPanel;
     private bool showWinAlert = false;
     private string winAlertPlayer = string.Empty;
     private int winAlertRoll = 0;
@@ -44,20 +50,24 @@ public sealed class MiniGamesTab : IDisposable
         ChatQueueService chatQueue,
         DeathrollTournamentService deathrollService,
         DeathrollDiscordWebhookService deathrollDiscordService,
-        IPluginLog log)
+        IPluginLog log,
+        HistoryService historyService)
     {
         this.config                   = config;
         this.deathrollService         = deathrollService;
         this.sessionService           = sessionService;
-        this.bar777Panel              = new Bar777Panel(config, sessionService, chatQueue, deathrollService);
-        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log);
+        this.bar777Panel              = new Bar777Panel(config, sessionService, chatQueue, deathrollService, historyService);
+        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log, historyService);
         this.minefieldGambitPanel = new MinefieldGambitPanel();
         this.gamblerDerbyPanel = new GamblerDerbyPanel();
         this.hotShotsPanel = new HotShotsPanel();
         this.beerPongPanel = new BeerPongPanel();
         this.dartsPanel = new DartsPanel();
         this.eightBallPoolPanel = new EightBallPoolPanel();
-        this.russianRoulettePanel = new RussianRoulettePanel();
+        this.russianRoulettePanel  = new RussianRoulettePanel();
+        this.raidBossPanel         = new RaidBossPanel();
+        this.dealOrNoDealPanel     = new DealOrNoDealPanel();
+        this.votingMadnessPanel    = new VotingMadnessPanel();
         sessionService.WinDetected += OnWinDetected;
     }
     private void OnWinDetected(string playerName, int roll)
@@ -87,6 +97,9 @@ public sealed class MiniGamesTab : IDisposable
         DrawDartsTab();
         DrawEightBallPoolTab();
         DrawRussianRouletteTab();
+        DrawRaidBossTab();
+        DrawDealOrNoDealTab();
+        DrawVotingMadnessTab();
     }
     private void DrawBar777Tab()
     {
@@ -150,6 +163,27 @@ public sealed class MiniGamesTab : IDisposable
         using var tab = ImRaii.TabItem("Russian Roulette");
         if (!tab.Success) return;
         this.russianRoulettePanel.Draw();
+    }
+    private void DrawRaidBossTab()
+    {
+        using var chrome = new EmporiumNeonTheme.RaidBossTabItemScope();
+        using var tab = ImRaii.TabItem("Raid Boss");
+        if (!tab.Success) return;
+        this.raidBossPanel.Draw();
+    }
+    private void DrawDealOrNoDealTab()
+    {
+        using var chrome = new EmporiumNeonTheme.DealOrNoDealTabItemScope();
+        using var tab = ImRaii.TabItem("Deal or No Deal");
+        if (!tab.Success) return;
+        this.dealOrNoDealPanel.Draw();
+    }
+    private void DrawVotingMadnessTab()
+    {
+        using var chrome = new EmporiumNeonTheme.VotingMadnessTabItemScope();
+        using var tab = ImRaii.TabItem("Voting Madness");
+        if (!tab.Success) return;
+        this.votingMadnessPanel.Draw();
     }
     private void DrawWinAlertPopup()
     {

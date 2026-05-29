@@ -1,5 +1,6 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
+using MiniGamesEmporium.Services;
 using MiniGamesEmporium.State;
 using System;
 
@@ -8,7 +9,7 @@ using System;
 namespace MiniGamesEmporium.Games.DeathrollTournament.Actions;
 public static class RemoveDonation
 {
-    public static void Execute(PluginConfiguration config, long amount)
+    public static void Execute(PluginConfiguration config, HistoryService historyService, long amount)
     {
         if (amount <= 0) return;
         long actualRemoved;
@@ -29,7 +30,7 @@ public static class RemoveDonation
             activeSession.PotAdjustment -= actualRemoved;
         }
         if (actualRemoved <= 0) return;
-        config.Transactions.Add(new TransactionRecord
+        historyService.AddTransaction(new TransactionRecord
         {
             PlayerName = "Manual Pot Adjustment",
             Amount     = (int)-actualRemoved,

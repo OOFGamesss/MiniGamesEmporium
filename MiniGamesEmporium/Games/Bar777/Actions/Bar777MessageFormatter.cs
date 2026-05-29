@@ -29,7 +29,7 @@ public static class Bar777MessageFormatter
         return template
             .Replace("{buyername}",   buyerName)
             .Replace("{player}",      displayPlayer)
-            .Replace("{position}",    queuePosition.ToString())
+            .Replace("{position}",    queuePosition == 0 ? "next" : $"#{queuePosition}")
             .Replace("{cost}",        config.Bar777.CostPerRoll.ToString("N0"))
             .Replace("{maxcost}",    (config.Bar777.CostPerRoll * config.Bar777.MaxRolls).ToString("N0"))
             .Replace("{rolls}",       rollsAllowed.ToString())

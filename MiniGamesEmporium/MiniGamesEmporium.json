@@ -4,7 +4,7 @@
   "InternalName": "MiniGamesEmporium",
   "Punchline": "Host BAR 777 and other mini games with automated queue management.",
   "Description": "A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.",
-  "Changelog": "- Too many changes to list here. Check announcement channel for full list.",
+  "Changelog": "- Session and transaction history now stored in a LiteDB database for persistence and improved performance.\n- Removed 30 day transaction reset.\n- Added max 100 sessions/transactions per page.\n- You can now click a player on the deathroll tournament bracket and swap them for someone else nearby.\n- You can add players manually now but need to link them to a real player upon tournament start.\n- Added new games tabs.\n- Updated winner UI for both BAR 777 and Deathroll.\n- Changed queue number from 0 to next on auto queue tells.",
   "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
   "ApplicableVersion": "any",
   "Tags": [

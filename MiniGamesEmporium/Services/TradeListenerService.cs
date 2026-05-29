@@ -28,12 +28,22 @@ public sealed class TradeListenerService : IDisposable
 
     private void OnTradeEnd(IPlayerCharacter? counterparty, TradeDetectionManager.TradeDescriptor? result)
     {
-        if (this.sessionService.IsPaused) return;
-        if (result == null || result.ReceivedGil <= 0 || counterparty == null) return;
+        if (result == null || counterparty == null) return;
         var name  = counterparty.Name.TextValue;
         var world = counterparty.HomeWorld.Value.Name.ToString();
-        this.log.Information($"[MGE] Trade complete: {name}@{world} gave {result.ReceivedGil:N0} gil.");
-        this.sessionService.VerifyPayment(name, result.ReceivedGil, world);
-        this.deathrollService.TryAutoMarkPaid(name, result.ReceivedGil);
+        if (result.ReceivedGil > 0)
+        {
+            if (this.sessionService.IsPaused) return;
+            this.log.Information($"[MGE] Trade complete: {name}@{world} gave {result.ReceivedGil:N0} gil.");
+            this.sessionService.VerifyPayment(name, result.ReceivedGil, world);
+            this.deathrollService.TryAutoMarkPaid(name, result.ReceivedGil);
+        }
+        else if (result.ReceivedGil < 0)
+        {
+            var amountSent = (long)(-result.ReceivedGil);
+            this.log.Information($"[MGE] Payout trade: sent {amountSent:N0} gil to {name}@{world}.");
+            this.sessionService.TryRecordWinnerPayout(name, amountSent);
+            this.deathrollService.TryRecordWinnerPayout(name, amountSent);
+        }
     }
 }

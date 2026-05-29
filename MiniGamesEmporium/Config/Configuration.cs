@@ -20,6 +20,7 @@ public class PluginConfiguration : IPluginConfiguration
     public DeathrollTournamentState? DeathrollTournamentSession { get; set; } = null;
     public string QueueKeyword { get; set; } = "!join";
     public QueueJoinChannelsConfig QueueJoinChannels { get; set; } = new();
+    public bool HasMigratedHistoryToLiteDb { get; set; } = false;
     public List<TransactionRecord> Transactions { get; set; } = new();
     public List<SessionRecord> SessionHistory { get; set; } = new();
     public ActiveSessionState? ActiveSession { get; set; } = null;

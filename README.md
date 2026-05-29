@@ -29,6 +29,9 @@ The plugin lives inside FFXIV via the [Dalamud](https://github.com/goatcorp/Dala
 | Darts | 🔜 Coming Soon |
 | 8 Ball Pool | 🔜 Coming Soon |
 | Russian Roulette | 🔜 Coming Soon |
+| Raid Boss | 🔜 Coming Soon |
+| Deal or No Deal | 🔜 Coming Soon |
+| Voting Madness | 🔜 Coming Soon |
 
 Each game gets its own tab inside the plugin's **Mini Games** section, styled in its own neon accent colour. The main window also holds a **Transaction History** ledger and a top-level **Settings** tab.
 

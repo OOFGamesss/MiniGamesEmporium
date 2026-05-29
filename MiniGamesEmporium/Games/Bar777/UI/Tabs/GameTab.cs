@@ -1,6 +1,8 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Interface;
+using Dalamud.Interface.Textures;
+using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Utility;
@@ -10,6 +12,7 @@ using MiniGamesEmporium.Games.Bar777.State;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using System;
+using System.IO;
 using System.Numerics;
 
 /// <summary>Draws the active game view for BAR 777, handling the player header display, take-bet phase controls (two-column: collect payment left, buyer right), roll progress tracking, roll log, and session end or queue advance buttons.</summary>
@@ -17,9 +20,12 @@ using System.Numerics;
 namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
 public sealed class GameTab
 {
+    private static readonly Vector4 GoldColour = new(1f, 0.84f, 0f, 1f);
+    private const float TrophySide = 140f;
     private readonly PluginConfiguration config;
     private readonly SessionService sessionService;
     private readonly ChatQueueService chatQueue;
+    private readonly ISharedImmediateTexture? _trophyTexture;
     private int _pendingRollCount;
     private int _lastKnownAmountTraded = -1;
     private DateTime _lastKnownSessionStart;
@@ -29,6 +35,11 @@ public sealed class GameTab
         this.config         = config;
         this.sessionService = sessionService;
         this.chatQueue      = chatQueue;
+        var path = Path.Combine(
+            MiniGamesEmporium.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty,
+            "Images", "trophy.png");
+        if (File.Exists(path))
+            _trophyTexture = MiniGamesEmporium.TextureProvider.GetFromFile(path);
     }
 
     public void Draw(bool skipLeadingSpacing = false)
@@ -50,11 +61,115 @@ public sealed class GameTab
             ImGui.TextWrapped("Nobody in the queue right now. Players can keyword-join, or add them manually in the queue column.");
             return;
         }
+        if (session.WinTriggered)
+        {
+            DrawWinnerScreen(session);
+            return;
+        }
         DrawPlayerHeader(session);
         ImGui.Spacing();
         DrawTakeBetPhase(session);
         DrawRollsPhase(session);
         DrawSessionControls(session);
+    }
+
+    private void DrawWinnerScreen(ActiveSessionState session)
+    {
+        var avail  = ImGui.GetContentRegionAvail().X;
+        var startX = ImGui.GetCursorPosX();
+
+        var winnerDisplay = BuildLockedDisplayName(session);
+        ImGui.SetWindowFontScale(1.6f);
+        var nameW = ImGui.CalcTextSize(winnerDisplay).X;
+        ImGui.SetWindowFontScale(1.0f);
+        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - nameW) * 0.5f));
+        ImGui.SetWindowFontScale(1.6f);
+        ImGui.TextColored(GoldColour, winnerDisplay);
+        ImGui.SetWindowFontScale(1.0f);
+
+        const string subtitle = "WIN DETECTED!";
+        var subtitleW = ImGui.CalcTextSize(subtitle).X;
+        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - subtitleW) * 0.5f));
+        ImGui.TextColored(GoldColour, subtitle);
+
+        ImGui.Spacing();
+
+        var trophySide = TrophySide * ImGuiHelpers.GlobalScale;
+        var tex = _trophyTexture?.GetWrapOrDefault();
+        if (tex != null)
+        {
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - trophySide) * 0.5f));
+            ImGui.Image(tex.Handle, new Vector2(trophySide, trophySide));
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        var pot       = this.config.Bar777.BoostedPot + this.config.Bar777.SessionTradedTotal;
+        var paid      = session.WinnerPayoutGil;
+        var remaining = Math.Max(0L, pot - paid);
+
+        var labelColW  = MathF.Max(ImGui.CalcTextSize("Pot:").X, MathF.Max(ImGui.CalcTextSize("Traded:").X, ImGui.CalcTextSize("Remaining:").X));
+        var valueColW  = MathF.Max(ImGui.CalcTextSize($"{pot:N0} Gil").X, MathF.Max(ImGui.CalcTextSize($"{paid:N0} Gil").X, ImGui.CalcTextSize($"{remaining:N0} Gil").X));
+        var spacing    = ImGui.GetStyle().ItemSpacing.X;
+        var blockW     = labelColW + spacing + valueColW;
+        var rowX       = startX + MathF.Max(0f, (avail - blockW) * 0.5f);
+        var valueX     = rowX + labelColW + spacing;
+
+        ImGui.SetCursorPosX(rowX);
+        ImGui.TextColored(GoldColour, "Pot:");
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(GoldColour, $"{pot:N0} Gil");
+
+        ImGui.SetCursorPosX(rowX);
+        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, "Traded:");
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, $"{paid:N0} Gil");
+
+        ImGui.SetCursorPosX(rowX);
+        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Remaining:");
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, $"{remaining:N0} Gil");
+
+        ImGui.Spacing();
+
+        var tradeBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Coins, "Trade Winner").X;
+        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - tradeBtnW) * 0.5f));
+        using (UIHelper.PushAmberButtonColours())
+        {
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade Winner", "##WinnerTrade"))
+                SendTradeRequest.Execute(session.PlayerName, this.chatQueue);
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        DrawPayoutProgressBar(pot, paid, avail, startX);
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        var endBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.FlagCheckered, "End Game").X;
+        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - endBtnW) * 0.5f));
+        using var green = UIHelper.PushGreenButtonColours();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##WinnerEndGame"))
+        {
+            if (this.config.Bar777.UseQueue)
+                this.sessionService.EndQueuePlayerAndProcessNext();
+            else
+                this.sessionService.EndWalkInAndReset();
+        }
+    }
+
+    private static void DrawPayoutProgressBar(long pot, long paid, float avail, float startX)
+    {
+        var progress   = pot > 0 ? MathF.Min(1f, (float)paid / pot) : 1f;
+        var pctOverlay = $"{progress * 100f:F0}% paid out";
+        ImGui.SetCursorPosX(startX);
+        ImGui.ProgressBar(progress, new Vector2(avail, ImGui.GetFrameHeight()), pctOverlay);
     }
 
     private void DrawPlayerHeader(ActiveSessionState session)

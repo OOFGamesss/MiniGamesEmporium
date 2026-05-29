@@ -36,6 +36,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     public PluginConfiguration Configuration { get; init; }
     private readonly WindowSystem windowSystem = new("MiniGamesEmporium");
     private readonly MainWindow mainWindow;
+    private readonly HistoryService historyService;
     private readonly SessionService sessionService;
     private readonly PresetService presetService;
     private readonly DeathrollTournamentService deathrollService;
@@ -57,14 +58,14 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         Configuration = PluginInterface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
         Configuration.QueueJoinChannels ??= new QueueJoinChannelsConfig();
         Configuration.Bar777.Chat ??= new Bar777ChatConfig();
-        Configuration.SessionHistory ??= new List<SessionRecord>();
+        Configuration.SessionHistory ??= new();
+        Configuration.Transactions ??= new();
+        historyService = new HistoryService(PluginInterface, Configuration);
         chatQueueService = new ChatQueueService();
-        sessionService = new SessionService(Configuration);
+        sessionService = new SessionService(Configuration, historyService);
         presetService = new PresetService(Configuration);
-        sessionService.PruneOldTransactions();
-        deathrollService = new DeathrollTournamentService(Configuration);
+        deathrollService = new DeathrollTournamentService(Configuration, historyService);
         deathrollDiscordService = new DeathrollDiscordWebhookService(Log, Configuration, PluginInterface.AssemblyLocation.DirectoryName!);
-        deathrollService.SessionUpdated += deathrollDiscordService.TriggerSync;
         _onMatchWon      = (_, _, _, _) => deathrollDiscordService.TriggerSync();
         _onGameWon       = (_, _, _, _) => deathrollDiscordService.TriggerSync();
         _onTournamentWon = (_, _)       => deathrollDiscordService.TriggerSync();
@@ -99,7 +100,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         });
         chatListener          = new ChatListener(ChatGui, Configuration, sessionService, deathrollService, Log);
         tradeListenerService  = new TradeListenerService(sessionService, deathrollService, Log);
-        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log);
+        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log, historyService);
         windowSystem.AddWindow(mainWindow);
         windowOpenedIpc = new WindowOpenedIpc(PluginInterface, mainWindow);
         bar777IpcProvider = new Bar777GameInfoIpcProvider(PluginInterface, Framework, Configuration, sessionService);
@@ -126,7 +127,6 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
         PluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
-        deathrollService.SessionUpdated -= deathrollDiscordService.TriggerSync;
         deathrollService.MatchWon      -= _onMatchWon;
         deathrollService.GameWon       -= _onGameWon;
         deathrollService.TournamentWon -= _onTournamentWon;
@@ -139,6 +139,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         chatListener.Dispose();
         tradeListenerService.Dispose();
         chatQueueService.Dispose();
+        historyService.Dispose();
         windowSystem.RemoveAllWindows();
         mainWindow.Dispose();
         CommandManager.RemoveHandler(MainCommandFull);

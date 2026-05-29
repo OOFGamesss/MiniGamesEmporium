@@ -25,6 +25,12 @@ public static class EmporiumNeonTheme
     public static readonly Vector4 RussianRouletteCyanDim = new(0.10f, 0.55f, 0.52f, 1f);
     public static readonly Vector4 DeathrollTournamentPink = new(1f, 0.20f, 0.60f, 1f);
     public static readonly Vector4 DeathrollTournamentPinkDim = new(0.55f, 0.10f, 0.32f, 1f);
+    public static readonly Vector4 RaidBossFuchsia = new(0.95f, 0.05f, 0.78f, 1f);
+    public static readonly Vector4 RaidBossFuchsiaDim = new(0.52f, 0.03f, 0.42f, 1f);
+    public static readonly Vector4 DealOrNoDealGold = new(1f, 0.72f, 0.06f, 1f);
+    public static readonly Vector4 DealOrNoDealGoldDim = new(0.55f, 0.40f, 0.03f, 1f);
+    public static readonly Vector4 VotingMadnessLime = new(0.72f, 1f, 0.08f, 1f);
+    public static readonly Vector4 VotingMadnessLimeDim = new(0.40f, 0.55f, 0.04f, 1f);
     public static readonly Vector4 NeonCyan = new(0.2f, 0.98f, 0.95f, 1f);
     public static readonly Vector4 NeonMagenta = new(0.95f, 0.25f, 0.85f, 1f);
     public static readonly Vector4 WinGold = new(1f, 0.92f, 0.2f, 1f);
@@ -86,6 +92,21 @@ public static class EmporiumNeonTheme
     private static readonly Vector4 DeathrollTournamentTabActive = new(0.42f, 0.06f, 0.22f, 1f);
     private static readonly Vector4 DeathrollTournamentTabUnfocused = new(0.06f, 0.02f, 0.04f, 1f);
     private static readonly Vector4 DeathrollTournamentTabUnfocusedActive = new(0.32f, 0.05f, 0.18f, 1f);
+    private static readonly Vector4 RaidBossTabBase = new(0.09f, 0.02f, 0.08f, 1f);
+    private static readonly Vector4 RaidBossTabHovered = new(0.28f, 0.04f, 0.24f, 1f);
+    private static readonly Vector4 RaidBossTabActive = new(0.42f, 0.04f, 0.38f, 1f);
+    private static readonly Vector4 RaidBossTabUnfocused = new(0.06f, 0.02f, 0.06f, 1f);
+    private static readonly Vector4 RaidBossTabUnfocusedActive = new(0.32f, 0.04f, 0.28f, 1f);
+    private static readonly Vector4 DealOrNoDealTabBase = new(0.08f, 0.07f, 0.01f, 1f);
+    private static readonly Vector4 DealOrNoDealTabHovered = new(0.28f, 0.22f, 0.03f, 1f);
+    private static readonly Vector4 DealOrNoDealTabActive = new(0.42f, 0.34f, 0.04f, 1f);
+    private static readonly Vector4 DealOrNoDealTabUnfocused = new(0.06f, 0.05f, 0.01f, 1f);
+    private static readonly Vector4 DealOrNoDealTabUnfocusedActive = new(0.32f, 0.26f, 0.03f, 1f);
+    private static readonly Vector4 VotingMadnessTabBase = new(0.05f, 0.08f, 0.01f, 1f);
+    private static readonly Vector4 VotingMadnessTabHovered = new(0.16f, 0.28f, 0.03f, 1f);
+    private static readonly Vector4 VotingMadnessTabActive = new(0.22f, 0.42f, 0.04f, 1f);
+    private static readonly Vector4 VotingMadnessTabUnfocused = new(0.03f, 0.06f, 0.01f, 1f);
+    private static readonly Vector4 VotingMadnessTabUnfocusedActive = new(0.16f, 0.32f, 0.03f, 1f);
     public readonly struct Scope : IDisposable
     {
         private readonly int colours;
@@ -283,6 +304,45 @@ public static class EmporiumNeonTheme
             ImGui.PushStyleColor(ImGuiCol.TabActive, DeathrollTournamentTabActive);
             ImGui.PushStyleColor(ImGuiCol.TabUnfocused, DeathrollTournamentTabUnfocused);
             ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, DeathrollTournamentTabUnfocusedActive);
+        }
+        public void Dispose() => ImGui.PopStyleColor(ColourCount);
+    }
+    public readonly struct RaidBossTabItemScope : IDisposable
+    {
+        private const int ColourCount = 5;
+        public RaidBossTabItemScope()
+        {
+            ImGui.PushStyleColor(ImGuiCol.Tab, RaidBossTabBase);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered, RaidBossTabHovered);
+            ImGui.PushStyleColor(ImGuiCol.TabActive, RaidBossTabActive);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocused, RaidBossTabUnfocused);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, RaidBossTabUnfocusedActive);
+        }
+        public void Dispose() => ImGui.PopStyleColor(ColourCount);
+    }
+    public readonly struct DealOrNoDealTabItemScope : IDisposable
+    {
+        private const int ColourCount = 5;
+        public DealOrNoDealTabItemScope()
+        {
+            ImGui.PushStyleColor(ImGuiCol.Tab, DealOrNoDealTabBase);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered, DealOrNoDealTabHovered);
+            ImGui.PushStyleColor(ImGuiCol.TabActive, DealOrNoDealTabActive);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocused, DealOrNoDealTabUnfocused);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, DealOrNoDealTabUnfocusedActive);
+        }
+        public void Dispose() => ImGui.PopStyleColor(ColourCount);
+    }
+    public readonly struct VotingMadnessTabItemScope : IDisposable
+    {
+        private const int ColourCount = 5;
+        public VotingMadnessTabItemScope()
+        {
+            ImGui.PushStyleColor(ImGuiCol.Tab, VotingMadnessTabBase);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered, VotingMadnessTabHovered);
+            ImGui.PushStyleColor(ImGuiCol.TabActive, VotingMadnessTabActive);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocused, VotingMadnessTabUnfocused);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, VotingMadnessTabUnfocusedActive);
         }
         public void Dispose() => ImGui.PopStyleColor(ColourCount);
     }

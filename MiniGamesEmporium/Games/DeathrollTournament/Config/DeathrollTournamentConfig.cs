@@ -12,6 +12,7 @@ public class DeathrollTournamentConfig
     public List<int> BestOfPerRound { get; set; } = new() { 1, 3, 5, 7, 9 };
     public List<string> RegisteredPlayers { get; set; } = new();
     public List<string> PaidPlayers { get; set; } = new();
+    public List<string> UnverifiedPlayers { get; set; } = new();
     public Dictionary<string, string> PlayerBuyers { get; set; } = new();
     public bool AutoNextMatch { get; set; } = false;
     public int AutoNextMatchDelaySeconds { get; set; } = 5;

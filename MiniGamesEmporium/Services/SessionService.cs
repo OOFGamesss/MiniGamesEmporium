@@ -12,15 +12,17 @@ namespace MiniGamesEmporium.Services;
 public sealed class SessionService
 {
     private readonly PluginConfiguration config;
+    private readonly HistoryService historyService;
     public event Action? SessionUpdated;
     public event Action<string, int>? WinDetected;
     public event Action<string, int>? HalfwayReached;
     public event Action<string>? SessionLost;
     public event Action<string>? PaymentVerified;
     public event Action<string>? PlayerEnqueued;
-    public SessionService(PluginConfiguration config)
+    public SessionService(PluginConfiguration config, HistoryService historyService)
     {
         this.config = config;
+        this.historyService = historyService;
     }
     public IReadOnlyList<string> Queue => this.config.QueuedPlayers;
     public void TryEnqueuePlayer(string playerName)
@@ -136,7 +138,7 @@ public sealed class SessionService
         var transactionName = !string.IsNullOrEmpty(session.PaidByPlayerName)
             ? $"{session.PlayerName} (Paid by {session.PaidByPlayerName})"
             : session.PlayerName;
-        this.config.Transactions.Add(new TransactionRecord
+        this.historyService.AddTransaction(new TransactionRecord
         {
             PlayerName = transactionName,
             Amount = session.AmountTraded,
@@ -235,6 +237,17 @@ public sealed class SessionService
         SessionUpdated?.Invoke();
     }
 
+    public void TryRecordWinnerPayout(string partnerName, long amountSent)
+    {
+        var session = this.config.ActiveSession;
+        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
+        if (!session.WinTriggered) return;
+        if (!session.PlayerName.Equals(partnerName, StringComparison.OrdinalIgnoreCase)) return;
+        session.WinnerPayoutGil += amountSent;
+        this.config.Save();
+        SessionUpdated?.Invoke();
+    }
+
     public ActiveSessionState? GetActiveSession() => this.config.ActiveSession;
     public string GetBuyer()
     {
@@ -300,12 +313,6 @@ public sealed class SessionService
         this.config.Bar777.SessionTradedTotal = 0;
     }
 
-    public void PruneOldTransactions()
-    {
-        var cutoff = DateTime.UtcNow.AddDays(-30);
-        this.config.Transactions.RemoveAll(t => t.Timestamp < cutoff);
-        this.config.Save();
-    }
     public void EndWalkInAndReset()
     {
         IsPaused = false;
@@ -343,7 +350,7 @@ public sealed class SessionService
         if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
         var amountInTrades = this.config.Bar777.SessionTradedTotal;
         var totalPot = this.config.Bar777.BoostedPot + amountInTrades;
-        this.config.SessionHistory.Add(new SessionRecord
+        this.historyService.AddSession(new SessionRecord
         {
             GameName = session.GameName,
             Winner = session.WinTriggered && !Bar777GameIds.IsAnyPlaceholder(session.PlayerName) ? session.PlayerName : string.Empty,

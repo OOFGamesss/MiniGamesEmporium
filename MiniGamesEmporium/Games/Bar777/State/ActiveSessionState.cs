@@ -19,4 +19,5 @@ public class ActiveSessionState
     public int AmountTraded { get; set; } = 0;
     public List<int> RollLog { get; set; } = [];
     public string PaidByPlayerName { get; set; } = string.Empty;
+    public long WinnerPayoutGil { get; set; } = 0;
 }

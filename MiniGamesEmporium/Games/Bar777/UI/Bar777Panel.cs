@@ -10,6 +10,7 @@ using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.Games.Bar777.UI.Tabs;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Services;
+
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.Utility;
 using System;
@@ -40,7 +41,7 @@ public sealed class Bar777Panel : IDisposable
     private readonly Bar777StatsTab bar777StatsTab;
     private readonly ChatQueueService chatQueue;
     private readonly Bar777ChatAutomation chatAutomation;
-    public Bar777Panel(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, DeathrollTournamentService deathrollService)
+    public Bar777Panel(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, DeathrollTournamentService deathrollService, HistoryService historyService)
     {
         this.config = config;
         this.sessionService = sessionService;
@@ -50,7 +51,7 @@ public sealed class Bar777Panel : IDisposable
         this.queuePanel = new QueuePanel(sessionService);
         this.bar777SettingsTab = new Bar777SettingsTab(config);
         this.bar777ChatSettingsTab = new Bar777ChatSettingsTab(config);
-        this.bar777StatsTab = new Bar777StatsTab(config, chatQueue);
+        this.bar777StatsTab = new Bar777StatsTab(config, chatQueue, historyService);
         this.chatAutomation = new Bar777ChatAutomation(config, sessionService, chatQueue);
     }
     public void Dispose()

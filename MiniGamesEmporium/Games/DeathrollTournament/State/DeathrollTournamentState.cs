@@ -43,4 +43,5 @@ public class DeathrollTournamentState
     public MatchPhase ActiveMatchPhase { get; set; } = MatchPhase.NotStarted;
 
     public string? TournamentWinner { get; set; } = null;
+    public long WinnerPayoutGil { get; set; } = 0;
 }

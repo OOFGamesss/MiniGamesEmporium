@@ -12,6 +12,7 @@ using MiniGamesEmporium.UI.Tabs;
 using System;
 using System.Numerics;
 
+
 /// <summary>The main plugin window, hosting the top-level tab bar for Mini Games, Session History, Transaction History, and Settings, plus a floating Stop Session button overlaid on the tab band during active BAR 777 sessions.</summary>
 
 namespace MiniGamesEmporium.UI;
@@ -24,6 +25,7 @@ public sealed class MainWindow : Window, IDisposable
     private readonly MiniGamesTab miniGamesTab;
     private readonly PresetManagerTab presetManagerTab;
     private readonly SettingsTab settingsTab;
+    private readonly SupportTab supportTab;
     private readonly SessionService sessionService;
     private readonly DeathrollTournamentService deathrollService;
     private readonly PluginConfiguration config;
@@ -47,7 +49,8 @@ public sealed class MainWindow : Window, IDisposable
         DeathrollTournamentService deathrollService,
         DeathrollDiscordWebhookService deathrollDiscordService,
         PresetService presetService,
-        IPluginLog log)
+        IPluginLog log,
+        HistoryService historyService)
         : base("Mini Games Emporium##MGE_Main_v2")
     {
         SizeConstraints = new WindowSizeConstraints
@@ -56,11 +59,12 @@ public sealed class MainWindow : Window, IDisposable
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
         };
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
-        this.transactionHistoryTab = new TransactionHistoryTab(config);
-        this.sessionHistoryTab     = new SessionHistoryTab(config);
-        this.miniGamesTab          = new MiniGamesTab(config, sessionService, chatQueue, deathrollService, deathrollDiscordService, log);
+        this.transactionHistoryTab = new TransactionHistoryTab(historyService);
+        this.sessionHistoryTab     = new SessionHistoryTab(historyService);
+        this.miniGamesTab          = new MiniGamesTab(config, sessionService, chatQueue, deathrollService, deathrollDiscordService, log, historyService);
         this.presetManagerTab      = new PresetManagerTab(config, presetService);
         this.settingsTab           = new SettingsTab(config);
+        this.supportTab            = new SupportTab();
         this.sessionService        = sessionService;
         this.deathrollService      = deathrollService;
         this.config                = config;
@@ -104,6 +108,7 @@ public sealed class MainWindow : Window, IDisposable
             DrawTransactionHistoryTab();
             DrawPresetManagerTab();
             DrawSettingsTab();
+            DrawSupportTab();
         }
         DrawBar777StopSessionMainTabRowButton(tabBarRowScreenY, tabBarContentY);
         DrawDeathrollStopButton(tabBarRowScreenY, tabBarContentY);
@@ -343,5 +348,10 @@ public sealed class MainWindow : Window, IDisposable
         using var tab = ImRaii.TabItem("Settings", flags);
         if (tab.Success) this.settingsTab.Draw();
         focusSettingsTab = false;
+    }
+    private void DrawSupportTab()
+    {
+        using var tab = ImRaii.TabItem("Support");
+        if (tab.Success) this.supportTab.Draw();
     }
 }

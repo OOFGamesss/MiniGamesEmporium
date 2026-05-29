@@ -16,16 +16,18 @@ public sealed class DeathrollStatsTab
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
     private readonly ChatQueueService chatQueue;
+    private readonly HistoryService historyService;
     private int _donationInput = 0;
     private static readonly Vector4 YellButtonColour        = new(0.72f, 0.55f, 0.00f, 1f);
     private static readonly Vector4 YellButtonColourHovered = new(0.88f, 0.68f, 0.00f, 1f);
     private static readonly Vector4 YellButtonColourActive  = new(0.58f, 0.44f, 0.00f, 1f);
 
-    public DeathrollStatsTab(PluginConfiguration config, DeathrollTournamentService deathrollService, ChatQueueService chatQueue)
+    public DeathrollStatsTab(PluginConfiguration config, DeathrollTournamentService deathrollService, ChatQueueService chatQueue, HistoryService historyService)
     {
         this.config           = config;
         this.deathrollService = deathrollService;
         this.chatQueue        = chatQueue;
+        this.historyService   = historyService;
     }
 
     public static float GetInlineHeight()
@@ -94,7 +96,7 @@ public sealed class DeathrollStatsTab
             using var green = UIHelper.PushGreenButtonColours();
             if (UIHelper.IconTextButton(FontAwesomeIcon.Plus, "Add", "##DRAddDonation") && this._donationInput > 0)
             {
-                AddDonation.Execute(this.config, this._donationInput);
+                AddDonation.Execute(this.config, this.historyService, this._donationInput);
                 this._donationInput = 0;
             }
         }
@@ -103,7 +105,7 @@ public sealed class DeathrollStatsTab
             using var red = UIHelper.PushRedButtonColours();
             if (UIHelper.IconTextButton(FontAwesomeIcon.Minus, "Remove", "##DRRemoveDonation") && this._donationInput > 0)
             {
-                RemoveDonation.Execute(this.config, this._donationInput);
+                RemoveDonation.Execute(this.config, this.historyService, this._donationInput);
                 this._donationInput = 0;
             }
         }

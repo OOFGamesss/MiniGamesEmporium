@@ -6,6 +6,7 @@ namespace MiniGamesEmporium.State;
 [Serializable]
 public class TransactionRecord
 {
+    public Guid TransactionId { get; set; } = Guid.NewGuid();
     public string PlayerName { get; set; } = string.Empty;
     public int Amount { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
