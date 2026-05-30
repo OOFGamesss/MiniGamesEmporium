@@ -18,7 +18,8 @@ using MiniGamesEmporium.UI.Components;
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollDiscordWebhookTab
 {
-    private const int UrlBufferLength = 1536;
+    private const int UrlBufferLength      = 1536;
+    private const int UsernameBufferLength = 128;
 
     private static readonly Vector4 MutedText  = new(0.60f, 0.57f, 0.68f, 1f);
     private static readonly Vector4 ErrorText  = new(1f,    0.45f, 0.42f, 1f);
@@ -30,9 +31,13 @@ public sealed class DeathrollDiscordWebhookTab
     private readonly ISharedImmediateTexture        _lobbyTexture;
     private readonly ISharedImmediateTexture        _bracketTexture;
 
-    private string _urlDraft         = string.Empty;
-    private string _lastCommittedUrl = string.Empty;
-    private bool   _draftInitialised = false;
+    private string _urlDraft              = string.Empty;
+    private string _lastCommittedUrl      = string.Empty;
+    private string _usernameDraft         = string.Empty;
+    private string _lastCommittedUsername = string.Empty;
+    private string _avatarUrlDraft        = string.Empty;
+    private string _lastCommittedAvatarUrl = string.Empty;
+    private bool   _draftInitialised      = false;
 
     public DeathrollDiscordWebhookTab(
         PluginConfiguration config,
@@ -73,6 +78,10 @@ public sealed class DeathrollDiscordWebhookTab
 
         DrawSectionHeader("Webhook URL");
         DrawWebhookRow();
+
+        ImGuiHelpers.ScaledDummy(6f);
+        DrawSectionHeader("Webhook appearance (Delete original webhook to reset)");
+        DrawAppearanceRows();
 
         ImGuiHelpers.ScaledDummy(10f);
         DrawSectionHeader("What this posts");
@@ -196,12 +205,45 @@ public sealed class DeathrollDiscordWebhookTab
         ImGuiHelpers.ScaledDummy(6f);
     }
 
+    private void DrawAppearanceRows()
+    {
+        var availW      = ImGui.GetContentRegionAvail().X;
+        var labelW      = ImGui.CalcTextSize("Image URL").X + ImGuiHelpers.GlobalScale * 8f;
+        var inputW      = availW - labelW - ImGui.GetStyle().ItemSpacing.X;
+
+        using (ImRaii.PushColor(ImGuiCol.Text, MutedText))
+            ImGui.TextUnformatted("Name");
+        ImGui.SameLine(labelW);
+        ImGui.SetNextItemWidth(inputW);
+        ImGui.InputText("##DRWebhookName", ref _usernameDraft, UsernameBufferLength);
+        if (ImGui.IsItemDeactivatedAfterEdit()) CommitUsername();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Display name shown on the Discord webhook message.");
+
+        ImGuiHelpers.ScaledDummy(4f);
+
+        using (ImRaii.PushColor(ImGuiCol.Text, MutedText))
+            ImGui.TextUnformatted("Image URL");
+        ImGui.SameLine(labelW);
+        ImGui.SetNextItemWidth(inputW);
+        ImGui.InputText("##DRWebhookAvatar", ref _avatarUrlDraft, UrlBufferLength);
+        if (ImGui.IsItemDeactivatedAfterEdit()) CommitAvatarUrl();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("URL of the image used as the webhook avatar and the idle embed image.");
+
+        ImGuiHelpers.ScaledDummy(6f);
+    }
+
     private void EnsureDraftInitialised()
     {
         if (_draftInitialised) return;
-        _urlDraft         = Entry.Url;
-        _lastCommittedUrl = Entry.Url;
-        _draftInitialised = true;
+        _urlDraft               = Entry.Url;
+        _lastCommittedUrl       = Entry.Url;
+        _usernameDraft          = Entry.WebhookUsername;
+        _lastCommittedUsername  = Entry.WebhookUsername;
+        _avatarUrlDraft         = Entry.WebhookAvatarUrl;
+        _lastCommittedAvatarUrl = Entry.WebhookAvatarUrl;
+        _draftInitialised       = true;
     }
 
     private void CommitUrl()
@@ -216,6 +258,30 @@ public sealed class DeathrollDiscordWebhookTab
         _lastCommittedUrl = trimmed;
         _config.Save();
 
+        KickApply();
+    }
+
+    private void CommitUsername()
+    {
+        var trimmed = _usernameDraft.Trim();
+        _usernameDraft = trimmed;
+        if (trimmed == _lastCommittedUsername) return;
+
+        Entry.WebhookUsername  = trimmed;
+        _lastCommittedUsername = trimmed;
+        _config.Save();
+        KickApply();
+    }
+
+    private void CommitAvatarUrl()
+    {
+        var trimmed = _avatarUrlDraft.Trim();
+        _avatarUrlDraft = trimmed;
+        if (trimmed == _lastCommittedAvatarUrl) return;
+
+        Entry.WebhookAvatarUrl   = trimmed;
+        _lastCommittedAvatarUrl  = trimmed;
+        _config.Save();
         KickApply();
     }
 

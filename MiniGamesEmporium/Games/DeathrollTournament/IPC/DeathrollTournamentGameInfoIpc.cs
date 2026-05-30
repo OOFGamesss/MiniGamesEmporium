@@ -1,10 +1,10 @@
-using System;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
+using System;
 
 /// <summary>Serialisable snapshot of the current Deathroll Tournament session state, exposed via the IPC gate for consumption by external plugins.</summary>
 
-namespace MiniGamesEmporium.IPC;
+namespace MiniGamesEmporium.Games.DeathrollTournament.IPC;
 
 [Serializable]
 public sealed class DeathrollTournamentGameInfoIpc

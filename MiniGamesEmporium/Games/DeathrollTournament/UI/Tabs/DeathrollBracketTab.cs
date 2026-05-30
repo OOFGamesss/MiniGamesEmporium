@@ -4,13 +4,13 @@ using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using MiniGamesEmporium.Actions;
+using MiniGamesEmporium.Services;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Actions;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.State;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
-using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.Utility;
 using System;
@@ -44,6 +44,7 @@ public sealed class DeathrollBracketTab
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
     private readonly ChatQueueService chatQueue;
+    private readonly AutoPayoutService autoPayoutService;
     private readonly ISharedImmediateTexture? _trophyTexture;
     private static string comboFilter = string.Empty;
     private string swapFilter = string.Empty;
@@ -54,11 +55,12 @@ public sealed class DeathrollBracketTab
     private bool openUnlinkedModal = false;
     private List<string> unlinkedModalPlayers = new();
 
-    public DeathrollBracketTab(PluginConfiguration config, DeathrollTournamentService deathrollService, ChatQueueService chatQueue)
+    public DeathrollBracketTab(PluginConfiguration config, DeathrollTournamentService deathrollService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService)
     {
-        this.config           = config;
-        this.deathrollService = deathrollService;
-        this.chatQueue        = chatQueue;
+        this.config            = config;
+        this.deathrollService  = deathrollService;
+        this.chatQueue         = chatQueue;
+        this.autoPayoutService = autoPayoutService;
         var path = Path.Combine(
             MiniGamesEmporium.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty,
             "Images", "trophy.png");
@@ -1098,6 +1100,10 @@ public sealed class DeathrollBracketTab
         }
 
         ImGui.Spacing();
+
+        DrawAutoPayoutButton(state, winnerName, remaining, avail, startX);
+
+        ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
@@ -1105,6 +1111,37 @@ public sealed class DeathrollBracketTab
         var pctOverlay = $"{progress * 100f:F0}% paid out";
         ImGui.SetCursorPosX(startX);
         ImGui.ProgressBar(progress, new Vector2(avail, ImGui.GetFrameHeight()), pctOverlay);
+    }
+
+    private void DrawAutoPayoutButton(DeathrollTournamentState state, string winnerName, long remaining, float avail, float startX)
+    {
+        if (this.autoPayoutService.IsRunning)
+        {
+            var stopBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, "Stop Auto Payout").X;
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - stopBtnW) * 0.5f));
+            using var red = UIHelper.PushRedButtonColours();
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Auto Payout", "##DRStopAutoPayout"))
+                this.autoPayoutService.Stop();
+        }
+        else
+        {
+            using var disabled = ImRaii.Disabled(remaining <= 0);
+            var autoBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.MoneyBillWave, "Auto Payout").X;
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - autoBtnW) * 0.5f));
+            using var green = UIHelper.PushGreenButtonColours();
+            if (UIHelper.IconTextButton(FontAwesomeIcon.MoneyBillWave, "Auto Payout", "##DRAutoPayout"))
+            {
+                this.autoPayoutService.Start(
+                    winnerName,
+                    () =>
+                    {
+                        var p = this.deathrollService.ComputeTotalPot();
+                        var w = this.config.DeathrollTournamentSession?.WinnerPayoutGil ?? 0L;
+                        return Math.Max(0L, p - w);
+                    },
+                    () => this.deathrollService.IsSessionActive());
+            }
+        }
     }
 
     private static int ComputeRoundCount(int playerCount)

@@ -45,12 +45,13 @@ public sealed class DeathrollTournamentPanel : IDisposable
         ChatQueueService chatQueue,
         SessionService sessionService,
         IPluginLog log,
-        HistoryService historyService)
+        HistoryService historyService,
+        AutoPayoutService autoPayoutService)
     {
         this.config              = config;
         this.deathrollService    = deathrollService;
         this.sessionService      = sessionService;
-        this.bracketTab          = new DeathrollBracketTab(config, deathrollService, chatQueue);
+        this.bracketTab          = new DeathrollBracketTab(config, deathrollService, chatQueue, autoPayoutService);
         this.chatSettingsTab     = new DeathrollChatSettingsTab(config);
         this.settingsTab         = new DeathrollSettingsTab(config);
         this.statsTab            = new DeathrollStatsTab(config, deathrollService, chatQueue, historyService);

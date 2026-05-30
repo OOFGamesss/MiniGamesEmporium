@@ -1,4 +1,5 @@
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Utility;
 using System;
 
 /// <summary>Formats BAR 777 chat message templates by substituting placeholders such as {player}, {cost}, {maxcost}, {rolls}, {remaining}, {totalpot}, and {keyword} with live session and configuration values.</summary>
@@ -25,7 +26,7 @@ public static class Bar777MessageFormatter
                 ? Math.Max(0, session.RollsAllowed - session.RollsUsed).ToString()
                 : rollsAllowed.ToString());
         var isTell = template.TrimStart().StartsWith("/tell", StringComparison.OrdinalIgnoreCase);
-        var displayPlayer = isTell ? playerName : StripWorld(playerName);
+        var displayPlayer = isTell ? playerName : PlayerNameHelper.StripWorld(playerName);
         return template
             .Replace("{buyername}",   buyerName)
             .Replace("{player}",      displayPlayer)
@@ -39,9 +40,4 @@ public static class Bar777MessageFormatter
             .Replace("{keyword}",     keywordOverride ?? config.QueueKeyword);
     }
 
-    private static string StripWorld(string name)
-    {
-        var at = name.IndexOf('@');
-        return at >= 0 ? name[..at].Trim() : name.Trim();
-    }
 }

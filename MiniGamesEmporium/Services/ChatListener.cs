@@ -1,16 +1,13 @@
 using Dalamud.Game.Chat;
-using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Text;
-using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Plugin.Services;
-using MiniGamesEmporium.Games.Bar777.Utility;
-using MiniGamesEmporium.Games.DeathrollTournament.Services;
-using MiniGamesEmporium.Config;
 using System;
-using System.Linq;
+using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Events;
+using MiniGamesEmporium.Utility;
+using System.Collections.Generic;
 
-/// <summary>Subscribes to the Dalamud chat message event to detect BAR 777 rolls, Deathroll Tournament rolls, and enqueue players who post the configured queue join keyword.</summary>
+/// <summary>Subscribes to the Dalamud chat message event and dispatches roll and keyword events to registered per-game handlers.</summary>
 
 namespace MiniGamesEmporium.Services;
 public sealed class ChatListener : IDisposable
@@ -18,18 +15,27 @@ public sealed class ChatListener : IDisposable
     private readonly IChatGui chatGui;
     private readonly PluginConfiguration config;
     private readonly SessionService sessionService;
-    private readonly DeathrollTournamentService deathrollService;
+    private readonly IReadOnlyList<IChatRollHandler> rollHandlers;
+    private readonly IReadOnlyList<IChatKeywordHandler> keywordHandlers;
     private readonly IPluginLog log;
-    public ChatListener(IChatGui chatGui, PluginConfiguration config, SessionService sessionService, DeathrollTournamentService deathrollService, IPluginLog log)
+
+    public ChatListener(
+        IChatGui chatGui,
+        PluginConfiguration config,
+        SessionService sessionService,
+        IReadOnlyList<IChatRollHandler> rollHandlers,
+        IReadOnlyList<IChatKeywordHandler> keywordHandlers,
+        IPluginLog log)
     {
-        this.chatGui          = chatGui;
-        this.config           = config;
-        this.sessionService   = sessionService;
-        this.deathrollService = deathrollService;
-        this.log              = log;
+        this.chatGui         = chatGui;
+        this.config          = config;
+        this.sessionService  = sessionService;
+        this.rollHandlers    = rollHandlers;
+        this.keywordHandlers = keywordHandlers;
+        this.log             = log;
         this.chatGui.ChatMessage += OnChatMessage;
     }
-    
+
     public void Dispose()
     {
         this.chatGui.ChatMessage -= OnChatMessage;
@@ -41,177 +47,34 @@ public sealed class ChatListener : IDisposable
         var messageText = message.Message?.TextValue ?? string.Empty;
         var kind = message.LogKind;
         if (string.IsNullOrEmpty(messageText)) return;
-        this.log.Debug($"[MGE] [{kind}({(ushort)kind})] '{messageText}'");
+        this.log.Debug($"[{kind}({(ushort)kind})] '{messageText}'");
+
         if (kind == XivChatType.RandomNumber)
         {
             if (message.Message == null) return;
-            TryHandleBar777Roll(message.Message);
-            TryHandleDeathrollRoll(message.Message);
+            if (!RollParser.TryParse(message.Message, out var playerName, out var rollValue, out var rollMax)) return;
+            this.log.Information($"Roll: {playerName} rolled {rollValue} (max: {rollMax})");
+            foreach (var handler in this.rollHandlers)
+                handler.TryHandleRoll(playerName, rollValue, rollMax);
             return;
         }
-        if (kind == XivChatType.SystemMessage)
-            return;
+
+        if (kind == XivChatType.SystemMessage) return;
+
         var listen = this.config.QueueJoinChannels;
         if (!listen.AnyEnabled()) return;
         if (!IsEnqueueChatKind(kind, listen)) return;
-        TryHandleQueueKeyword(message.Sender, messageText);
+        foreach (var handler in this.keywordHandlers)
+            handler.TryHandleKeyword(message.Sender, messageText);
     }
 
-    private static bool IsEnqueueChatKind(XivChatType kind, QueueJoinChannelsConfig listen)
-    {
-        return kind switch
+    private static bool IsEnqueueChatKind(XivChatType kind, QueueJoinChannelsConfig listen) =>
+        kind switch
         {
             XivChatType.Say          => listen.Say,
             XivChatType.Shout        => listen.Shout,
             XivChatType.Yell         => listen.Yell,
             XivChatType.TellIncoming => listen.TellIncoming,
-            _ => false,
+            _                        => false,
         };
-    }
-
-    private void TryHandleBar777Roll(SeString seString)
-    {
-        var session = this.config.ActiveSession;
-        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
-        if (!TryParseRoll(seString, out var playerName, out var rollValue, out var rollMax)) return;
-        if (rollMax > 0) return;
-        if (string.IsNullOrEmpty(playerName)) return;
-        if (!session.PaymentVerified)
-        {
-            this.sessionService.TryCatchPaymentRoll(playerName, rollValue);
-            return;
-        }
-        if (!playerName.Equals(session.PlayerName, StringComparison.OrdinalIgnoreCase)) return;
-        this.sessionService.RecordRoll(rollValue);
-    }
-
-    private void TryHandleDeathrollRoll(SeString seString)
-    {
-        if (!this.deathrollService.HasActiveTournament()) return;
-        if (!TryParseRoll(seString, out var playerName, out var rollValue, out var rollMax)) return;
-        if (string.IsNullOrEmpty(playerName))
-        {
-            var localName = MiniGamesEmporium.ObjectTable.LocalPlayer?.Name.TextValue;
-            if (!string.IsNullOrEmpty(localName))
-                playerName = localName;
-        }
-        if (!this.deathrollService.TryCatchNextMatchOrderRoll(playerName, rollValue, rollMax) &&
-            !this.deathrollService.TryCatchNextGameOrderRoll(playerName, rollValue, rollMax))
-            this.deathrollService.TryRecordRoll(playerName, rollValue, rollMax);
-    }
-
-    private bool TryParseRoll(SeString seString, out string playerName, out int rollValue, out int rollMax)
-    {
-        playerName = string.Empty;
-        rollValue  = 0;
-        rollMax    = 0;
-
-        var playerPayload = seString.Payloads.OfType<PlayerPayload>().FirstOrDefault();
-        if (playerPayload != null)
-            playerName = playerPayload.PlayerName;
-
-        int n1 = 0, n2 = 0, found = 0;
-        foreach (var tp in seString.Payloads.OfType<TextPayload>())
-        {
-            var text = tp.Text ?? string.Empty;
-            var idx  = 0;
-            while (idx < text.Length && found < 2)
-            {
-                while (idx < text.Length && !char.IsDigit(text[idx])) idx++;
-                if (idx >= text.Length) break;
-                var start = idx;
-                while (idx < text.Length && char.IsDigit(text[idx])) idx++;
-                if (int.TryParse(text.AsSpan(start, idx - start), out var num))
-                {
-                    if (found == 0) n1 = num;
-                    else            n2 = num;
-                    found++;
-                }
-            }
-            if (found >= 2) break;
-        }
-
-        if (found == 0) return false;
-
-        if (found == 1)
-        {
-            rollValue = n1;
-        }
-        else
-        {
-            if (n1 <= n2) { rollValue = n1; rollMax = n2; }
-            else          { rollValue = n2; rollMax = n1; }
-        }
-
-        this.log.Information($"[MGE] Roll: {playerName} rolled {rollValue} (max: {rollMax})");
-        return true;
-    }
-
-    private static bool TryExtractNumbers(string text, out int first, out int second)
-    {
-        first  = 0;
-        second = 0;
-        var idx   = 0;
-        var found = 0;
-        while (idx < text.Length && found < 2)
-        {
-            while (idx < text.Length && !char.IsDigit(text[idx])) idx++;
-            if (idx >= text.Length) break;
-            var start = idx;
-            while (idx < text.Length && char.IsDigit(text[idx])) idx++;
-            if (int.TryParse(text.AsSpan(start, idx - start), out var num))
-            {
-                if (found == 0) first  = num;
-                else            second = num;
-                found++;
-            }
-        }
-        return found > 0;
-    }
-
-    private void TryHandleQueueKeyword(SeString? sender, string message)
-    {
-        var session = this.config.ActiveSession;
-        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
-        if (!this.config.Bar777.UseQueue) return;
-        if (this.sessionService.IsQueuePaused) return;
-        if (string.IsNullOrWhiteSpace(this.config.QueueKeyword)) return;
-        if (!message.Contains(this.config.QueueKeyword, StringComparison.OrdinalIgnoreCase)) return;
-        if (sender == null) return;
-        var queueName = BuildQueueName(sender);
-        if (string.IsNullOrWhiteSpace(queueName)) return;
-        var localName = MiniGamesEmporium.ObjectTable.LocalPlayer?.Name.TextValue;
-        if (!string.IsNullOrEmpty(localName))
-        {
-            var at = queueName.IndexOf('@');
-            var senderName = at < 0 ? queueName : queueName[..at];
-            if (senderName.Equals(localName, StringComparison.OrdinalIgnoreCase))
-                return;
-        }
-        this.sessionService.TryEnqueuePlayer(queueName);
-    }
-
-    private static string BuildQueueName(SeString sender)
-    {
-        foreach (var payload in sender.Payloads)
-        {
-            if (payload is PlayerPayload pp && !string.IsNullOrEmpty(pp.PlayerName))
-            {
-                var world = pp.World.Value.Name.ToString();
-                if (!string.IsNullOrEmpty(world))
-                    return $"{pp.PlayerName}@{world}";
-                var playerObj = MiniGamesEmporium.ObjectTable
-                    .OfType<IPlayerCharacter>()
-                    .FirstOrDefault(p => p.Name.TextValue.Equals(pp.PlayerName, StringComparison.OrdinalIgnoreCase));
-                if (playerObj != null)
-                {
-                    var objWorld = playerObj.HomeWorld.Value.Name.ToString();
-                    if (!string.IsNullOrEmpty(objWorld))
-                        return $"{pp.PlayerName}@{objWorld}";
-                }
-                return pp.PlayerName;
-            }
-        }
-        return sender.TextValue;
-    }
 }

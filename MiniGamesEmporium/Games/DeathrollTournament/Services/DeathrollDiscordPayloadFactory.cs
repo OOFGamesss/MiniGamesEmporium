@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,55 +12,60 @@ using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 namespace MiniGamesEmporium.Games.DeathrollTournament.Services;
 internal static class DeathrollDiscordPayloadFactory
 {
-    private const string WebhookUsername  = "Deathroll Tournament";
-    private const string AvatarUrl        = "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/images/deathrolltournament.png";
-    private const string FooterText       = "Created by Mini Games Emporium Plogon";
-    private const string FooterIconUrl    = "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/images/minigamesemporium.png";
-    private const int    ColourIdle       = 0x4A0E6E;
-    private const int    ColourActive     = unchecked((int)0xB80F5C);
-    private const int    ColourWinner     = unchecked((int)0xF0C030);
+    private const string FooterText    = "Created by Mini Games Emporium Plogon";
+    private const string FooterIconUrl = "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/images/minigamesemporium.png";
+    private const int    ColourIdle    = 0x4A0E6E;
+    private const int    ColourActive  = unchecked((int)0xB80F5C);
+    private const int    ColourWinner  = unchecked((int)0xF0C030);
 
     private static readonly DiscordFooterDto Footer = new() { Text = FooterText, IconUrl = FooterIconUrl };
 
-    internal static DiscordOutboundPayloadDto ForIdle(string bannerFileName, bool applyProfile) =>
-        new()
+    internal static DiscordOutboundPayloadDto ForIdle(string imageUrl, bool applyProfile, string username, string avatarUrl)
+    {
+        var isAttachment = imageUrl.StartsWith("attachment://", StringComparison.Ordinal);
+        return new()
         {
-            Username  = applyProfile ? WebhookUsername : null,
-            AvatarUrl = applyProfile ? AvatarUrl : null,
+            Username  = applyProfile ? username : null,
+            AvatarUrl = applyProfile ? avatarUrl : null,
             Embeds    =
             [
                 new DiscordEmbedDto
                 {
                     Title  = "No Tournament Active",
                     Color  = ColourIdle,
-                    Image  = new DiscordMediaDto($"attachment://{bannerFileName}"),
+                    Image  = new DiscordMediaDto(imageUrl),
                     Footer = Footer,
                 }
             ],
-            Attachments = [new DiscordAttachmentDto { Id = 0, Filename = bannerFileName }],
+        Attachments = isAttachment
+                ? [new DiscordAttachmentDto { Id = 0, Filename = imageUrl["attachment://".Length..] }]
+                : [],
         };
+    }
 
     internal static DiscordOutboundPayloadDto ForRegistration(
         IReadOnlyList<string> paidPlayers,
         DeathrollSessionInfo session,
         DeathrollTournamentConfig cfg,
         string imageFileName,
-        bool applyProfile)
+        bool applyProfile,
+        string username,
+        string avatarUrl)
     {
         var pot    = session.EntryCost * paidPlayers.Count + session.BoostedPot;
         var fields = new List<DiscordEmbedFieldDto>
         {
-            new() { Name = "Entry Cost",  Value = session.EntryCost == 0 ? "Free" : $"{session.EntryCost:N0} Gil", Inline = true },
-            new() { Name = "Players",     Value = $"{paidPlayers.Count}",                                       Inline = true },
-            new() { Name = "Current Pot", Value = $"{pot:N0} Gil",                               Inline = true },
+            new() { Name = "Entry Cost", Value = session.EntryCost == 0 ? "Free" : $"{session.EntryCost:N0} Gil", Inline = true },
+            new() { Name = "Players",    Value = $"{paidPlayers.Count}",                                           Inline = true },
         };
         if (session.BoostedPot > 0)
             fields.Add(new() { Name = "Boosted Pot", Value = $"{session.BoostedPot:N0} Gil", Inline = true });
+        fields.Add(new() { Name = "Current Pot", Value = $"{pot:N0} Gil", Inline = false });
 
         return new()
         {
-            Username  = applyProfile ? WebhookUsername : null,
-            AvatarUrl = applyProfile ? AvatarUrl : null,
+            Username  = applyProfile ? username : null,
+            AvatarUrl = applyProfile ? avatarUrl : null,
             Embeds    =
             [
                 new DiscordEmbedDto
@@ -79,7 +85,9 @@ internal static class DeathrollDiscordPayloadFactory
     internal static DiscordOutboundPayloadDto ForActiveTournament(
         DeathrollTournamentState state,
         string imageFileName,
-        bool applyProfile)
+        bool applyProfile,
+        string username,
+        string avatarUrl)
     {
         var hasWinner = state.TournamentWinner != null;
         var colour    = hasWinner ? ColourWinner : ColourActive;
@@ -89,8 +97,8 @@ internal static class DeathrollDiscordPayloadFactory
 
         return new()
         {
-            Username  = applyProfile ? WebhookUsername : null,
-            AvatarUrl = applyProfile ? AvatarUrl : null,
+            Username  = applyProfile ? username : null,
+            AvatarUrl = applyProfile ? avatarUrl : null,
             Embeds    =
             [
                 new DiscordEmbedDto

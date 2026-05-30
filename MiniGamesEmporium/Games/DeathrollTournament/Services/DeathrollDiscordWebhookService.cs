@@ -122,7 +122,9 @@ public sealed class DeathrollDiscordWebhookService : IDisposable
                 return;
             }
 
-            var parts = DiscordWebhookMultipartBuilder.BuildFileParts(imageBytes, imageFileName);
+            var parts = imageBytes.Length > 0
+                ? DiscordWebhookMultipartBuilder.BuildFileParts(imageBytes, imageFileName)
+                : (IReadOnlyList<DiscordMultipartFilePart>)Array.Empty<DiscordMultipartFilePart>();
 
             HttpResponseMessage? response = null;
             try
@@ -178,12 +180,15 @@ public sealed class DeathrollDiscordWebhookService : IDisposable
     {
         var tournament = _config.DeathrollTournamentSession;
         var session    = _config.DeathrollSession;
+        var appearance = _config.DeathrollTournament.Discord;
+        var username   = appearance.WebhookUsername;
+        var avatarUrl  = appearance.WebhookAvatarUrl;
 
         if (tournament != null)
         {
             var bracketBytes = Utility.DeathrollDiscordImageRenderer.RenderBracket(tournament);
             var dto          = DeathrollDiscordPayloadFactory.ForActiveTournament(
-                tournament, BracketFileName, isFirstPost);
+                tournament, BracketFileName, isFirstPost, username, avatarUrl);
             return (bracketBytes, BracketFileName, Serialize(dto));
         }
 
@@ -196,8 +201,14 @@ public sealed class DeathrollDiscordWebhookService : IDisposable
                 session.BoostedPot,
                 _config.DeathrollTournament.RegisteredPlayers.Count);
             var dto = DeathrollDiscordPayloadFactory.ForRegistration(
-                paidPlayers, session, _config.DeathrollTournament, PlayersFileName, isFirstPost);
+                paidPlayers, session, _config.DeathrollTournament, PlayersFileName, isFirstPost, username, avatarUrl);
             return (playerBytes, PlayersFileName, Serialize(dto));
+        }
+
+        if (!string.IsNullOrWhiteSpace(avatarUrl))
+        {
+            var idleDto = DeathrollDiscordPayloadFactory.ForIdle(avatarUrl, isFirstPost, username, avatarUrl);
+            return (Array.Empty<byte>(), string.Empty, Serialize(idleDto));
         }
 
         var bannerPath = Path.Combine(_imagesDir, BannerFileName);
@@ -206,9 +217,10 @@ public sealed class DeathrollDiscordWebhookService : IDisposable
             _log.Error("Deathroll idle banner missing: {Path}", bannerPath);
             return (null, BannerFileName, Array.Empty<byte>());
         }
-        var bannerBytes2 = File.ReadAllBytes(bannerPath);
-        var idleDto      = DeathrollDiscordPayloadFactory.ForIdle(BannerFileName, isFirstPost);
-        return (bannerBytes2, BannerFileName, Serialize(idleDto));
+        var bannerBytes = File.ReadAllBytes(bannerPath);
+        var fallbackDto = DeathrollDiscordPayloadFactory.ForIdle(
+            $"attachment://{BannerFileName}", isFirstPost, username, avatarUrl);
+        return (bannerBytes, BannerFileName, Serialize(fallbackDto));
     }
 
     private List<string> GetPaidPlayerNames()

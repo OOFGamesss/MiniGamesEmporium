@@ -8,8 +8,8 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Actions;
 using MiniGamesEmporium.Games.Bar777.Actions;
-using MiniGamesEmporium.Games.Bar777.State;
 using MiniGamesEmporium.Services;
+using MiniGamesEmporium.Games.Bar777.State;
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.IO;
@@ -25,16 +25,18 @@ public sealed class GameTab
     private readonly PluginConfiguration config;
     private readonly SessionService sessionService;
     private readonly ChatQueueService chatQueue;
+    private readonly AutoPayoutService autoPayoutService;
     private readonly ISharedImmediateTexture? _trophyTexture;
     private int _pendingRollCount;
     private int _lastKnownAmountTraded = -1;
     private DateTime _lastKnownSessionStart;
 
-    public GameTab(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue)
+    public GameTab(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService)
     {
-        this.config         = config;
-        this.sessionService = sessionService;
-        this.chatQueue      = chatQueue;
+        this.config            = config;
+        this.sessionService    = sessionService;
+        this.chatQueue         = chatQueue;
+        this.autoPayoutService = autoPayoutService;
         var path = Path.Combine(
             MiniGamesEmporium.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty,
             "Images", "trophy.png");
@@ -143,6 +145,10 @@ public sealed class GameTab
         }
 
         ImGui.Spacing();
+
+        DrawAutoPayoutButton(session.PlayerName, remaining, avail, startX);
+
+        ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
@@ -161,6 +167,41 @@ public sealed class GameTab
                 this.sessionService.EndQueuePlayerAndProcessNext();
             else
                 this.sessionService.EndWalkInAndReset();
+        }
+    }
+
+    private void DrawAutoPayoutButton(string playerName, long remaining, float avail, float startX)
+    {
+        if (this.autoPayoutService.IsRunning)
+        {
+            var stopBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, "Stop Auto Payout").X;
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - stopBtnW) * 0.5f));
+            using var red = UIHelper.PushRedButtonColours();
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Auto Payout", "##Bar777StopAutoPayout"))
+                this.autoPayoutService.Stop();
+        }
+        else
+        {
+            using var disabled = ImRaii.Disabled(remaining <= 0);
+            var autoBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.MoneyBillWave, "Auto Payout").X;
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - autoBtnW) * 0.5f));
+            using var green = UIHelper.PushGreenButtonColours();
+            if (UIHelper.IconTextButton(FontAwesomeIcon.MoneyBillWave, "Auto Payout", "##Bar777AutoPayout"))
+            {
+                this.autoPayoutService.Start(
+                    playerName,
+                    () =>
+                    {
+                        var p = this.config.Bar777.BoostedPot + this.config.Bar777.SessionTradedTotal;
+                        var w = this.sessionService.GetActiveSession()?.WinnerPayoutGil ?? 0L;
+                        return Math.Max(0L, p - w);
+                    },
+                    () =>
+                    {
+                        var s = this.sessionService.GetActiveSession();
+                        return s != null && Bar777GameIds.Matches(s.GameName);
+                    });
+            }
         }
     }
 

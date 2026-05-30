@@ -1,9 +1,9 @@
-using System;
 using MiniGamesEmporium.Config;
+using System;
 
 /// <summary>Serialisable snapshot of the current BAR 777 session state, exposed via the IPC gate for consumption by external plugins.</summary>
 
-namespace MiniGamesEmporium.IPC;
+namespace MiniGamesEmporium.Games.Bar777.IPC;
 
 [Serializable]
 public sealed class Bar777GameInfoIpc

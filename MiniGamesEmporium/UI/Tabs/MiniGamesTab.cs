@@ -51,13 +51,14 @@ public sealed class MiniGamesTab : IDisposable
         DeathrollTournamentService deathrollService,
         DeathrollDiscordWebhookService deathrollDiscordService,
         IPluginLog log,
-        HistoryService historyService)
+        HistoryService historyService,
+        AutoPayoutService autoPayoutService)
     {
         this.config                   = config;
         this.deathrollService         = deathrollService;
         this.sessionService           = sessionService;
-        this.bar777Panel              = new Bar777Panel(config, sessionService, chatQueue, deathrollService, historyService);
-        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log, historyService);
+        this.bar777Panel              = new Bar777Panel(config, sessionService, chatQueue, deathrollService, historyService, autoPayoutService);
+        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log, historyService, autoPayoutService);
         this.minefieldGambitPanel = new MinefieldGambitPanel();
         this.gamblerDerbyPanel = new GamblerDerbyPanel();
         this.hotShotsPanel = new HotShotsPanel();

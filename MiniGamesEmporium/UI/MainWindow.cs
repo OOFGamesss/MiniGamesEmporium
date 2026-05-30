@@ -50,7 +50,8 @@ public sealed class MainWindow : Window, IDisposable
         DeathrollDiscordWebhookService deathrollDiscordService,
         PresetService presetService,
         IPluginLog log,
-        HistoryService historyService)
+        HistoryService historyService,
+        AutoPayoutService autoPayoutService)
         : base("Mini Games Emporium##MGE_Main_v2")
     {
         SizeConstraints = new WindowSizeConstraints
@@ -61,7 +62,7 @@ public sealed class MainWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         this.transactionHistoryTab = new TransactionHistoryTab(historyService);
         this.sessionHistoryTab     = new SessionHistoryTab(historyService);
-        this.miniGamesTab          = new MiniGamesTab(config, sessionService, chatQueue, deathrollService, deathrollDiscordService, log, historyService);
+        this.miniGamesTab          = new MiniGamesTab(config, sessionService, chatQueue, deathrollService, deathrollDiscordService, log, historyService, autoPayoutService);
         this.presetManagerTab      = new PresetManagerTab(config, presetService);
         this.settingsTab           = new SettingsTab(config);
         this.supportTab            = new SupportTab();

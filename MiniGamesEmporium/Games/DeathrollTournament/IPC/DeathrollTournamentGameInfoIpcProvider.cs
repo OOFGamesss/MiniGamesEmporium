@@ -1,13 +1,13 @@
-using System;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using System;
 
 /// <summary>Registers the Deathroll Tournament IPC gate and pushes updated snapshots to subscribers on session changes and periodic framework ticks.</summary>
 
-namespace MiniGamesEmporium.IPC;
+namespace MiniGamesEmporium.Games.DeathrollTournament.IPC;
 
 public sealed class DeathrollTournamentGameInfoIpcProvider : IDisposable
 {

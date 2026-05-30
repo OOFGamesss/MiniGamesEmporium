@@ -1,4 +1,5 @@
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Utility;
 
 /// <summary>Formats Deathroll Tournament chat message templates by substituting placeholders with live session values.</summary>
 /// <remarks>
@@ -33,19 +34,19 @@ public static class DeathrollMessageFormatter
         var playerCount   = tournament?.PlayerCountAtStart ?? cfg.RegisteredPlayers.Count;
         var round         = ComputeRoundLabel(tournament);
         return template
-            .Replace("{player1}",     StripWorld(player1))
-            .Replace("{player2}",     StripWorld(player2))
-            .Replace("{winner}",      StripWorld(winner))
+            .Replace("{player1}",     PlayerNameHelper.StripWorld(player1))
+            .Replace("{player2}",     PlayerNameHelper.StripWorld(player2))
+            .Replace("{winner}",      PlayerNameHelper.StripWorld(winner))
             .Replace("{totalpot}",    pot.ToString("N0"))
             .Replace("{entrycost}",   entryCost.ToString("N0"))
             .Replace("{boostedpot}",  boostedPot.ToString("N0"))
             .Replace("{playercount}", playerCount.ToString())
             .Replace("{round}",       round)
             .Replace("{random10}",    random10.ToString())
-            .Replace("{firstplayer}", StripWorld(firstPlayer))
-            .Replace("{roundwinner}", StripWorld(roundWinner))
-            .Replace("{matchwinner}", StripWorld(matchWinner))
-            .Replace("{matchloser}",  StripWorld(matchLoser))
+            .Replace("{firstplayer}", PlayerNameHelper.StripWorld(firstPlayer))
+            .Replace("{roundwinner}", PlayerNameHelper.StripWorld(roundWinner))
+            .Replace("{matchwinner}", PlayerNameHelper.StripWorld(matchWinner))
+            .Replace("{matchloser}",  PlayerNameHelper.StripWorld(matchLoser))
             .Replace("{roundscore}",  roundScore)
             .Replace("{roundsleft}",  roundsLeft.ToString());
     }
@@ -70,9 +71,4 @@ public static class DeathrollMessageFormatter
         return idx == count - 1 ? "The Final" : $"Round {idx + 1}";
     }
 
-    private static string StripWorld(string entry)
-    {
-        var at = entry.IndexOf('@');
-        return at >= 0 ? entry[..at].Trim() : entry.Trim();
-    }
 }

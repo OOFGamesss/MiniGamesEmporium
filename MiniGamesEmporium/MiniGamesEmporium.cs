@@ -7,7 +7,11 @@ using ECommons;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Events;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.Games.Bar777.Events;
+using MiniGamesEmporium.Games.Bar777.IPC;
 using MiniGamesEmporium.Games.Bar777.Utility;
+using MiniGamesEmporium.Games.DeathrollTournament.Events;
+using MiniGamesEmporium.Games.DeathrollTournament.IPC;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.IPC;
 using MiniGamesEmporium.Services;
@@ -44,6 +48,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly ChatListener chatListener;
     private readonly TradeListenerService tradeListenerService;
     private readonly ChatQueueService chatQueueService;
+    private readonly AutoPayoutService autoPayoutService;
     private readonly WindowOpenedIpc windowOpenedIpc;
     private readonly Bar777GameInfoIpcProvider bar777IpcProvider;
     private readonly DeathrollTournamentGameInfoIpcProvider deathrollIpcProvider;
@@ -66,6 +71,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         presetService = new PresetService(Configuration);
         deathrollService = new DeathrollTournamentService(Configuration, historyService);
         deathrollDiscordService = new DeathrollDiscordWebhookService(Log, Configuration, PluginInterface.AssemblyLocation.DirectoryName!);
+        deathrollService.SessionUpdated += deathrollDiscordService.TriggerSync;
         _onMatchWon      = (_, _, _, _) => deathrollDiscordService.TriggerSync();
         _onGameWon       = (_, _, _, _) => deathrollDiscordService.TriggerSync();
         _onTournamentWon = (_, _)       => deathrollDiscordService.TriggerSync();
@@ -98,9 +104,16 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
             IsVisible  = () => { var s = sessionService.GetActiveSession(); return s != null && Bar777GameIds.Matches(s.GameName) && Configuration.Bar777.UseQueue; },
             OnSelected = sessionService.TryEnqueuePlayer,
         });
-        chatListener          = new ChatListener(ChatGui, Configuration, sessionService, deathrollService, Log);
+        chatListener = new ChatListener(
+            ChatGui,
+            Configuration,
+            sessionService,
+            new IChatRollHandler[]    { new Bar777RollHandler(Configuration, sessionService), new DeathrollRollHandler(deathrollService) },
+            new IChatKeywordHandler[] { new Bar777KeywordHandler(Configuration, sessionService) },
+            Log);
         tradeListenerService  = new TradeListenerService(sessionService, deathrollService, Log);
-        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log, historyService);
+        autoPayoutService     = new AutoPayoutService(chatQueueService, Log);
+        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log, historyService, autoPayoutService);
         windowSystem.AddWindow(mainWindow);
         windowOpenedIpc = new WindowOpenedIpc(PluginInterface, mainWindow);
         bar777IpcProvider = new Bar777GameInfoIpcProvider(PluginInterface, Framework, Configuration, sessionService);
@@ -127,6 +140,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
         PluginInterface.UiBuilder.OpenConfigUi -= OpenConfigUi;
+        deathrollService.SessionUpdated -= deathrollDiscordService.TriggerSync;
         deathrollService.MatchWon      -= _onMatchWon;
         deathrollService.GameWon       -= _onGameWon;
         deathrollService.TournamentWon -= _onTournamentWon;
@@ -138,6 +152,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         deathrollIpcProvider.Dispose();
         chatListener.Dispose();
         tradeListenerService.Dispose();
+        autoPayoutService.Dispose();
         chatQueueService.Dispose();
         historyService.Dispose();
         windowSystem.RemoveAllWindows();

@@ -41,13 +41,13 @@ public sealed class Bar777Panel : IDisposable
     private readonly Bar777StatsTab bar777StatsTab;
     private readonly ChatQueueService chatQueue;
     private readonly Bar777ChatAutomation chatAutomation;
-    public Bar777Panel(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, DeathrollTournamentService deathrollService, HistoryService historyService)
+    public Bar777Panel(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, DeathrollTournamentService deathrollService, HistoryService historyService, AutoPayoutService autoPayoutService)
     {
         this.config = config;
         this.sessionService = sessionService;
         this.chatQueue = chatQueue;
         this.deathrollService = deathrollService;
-        this.gameTab = new GameTab(config, sessionService, chatQueue);
+        this.gameTab = new GameTab(config, sessionService, chatQueue, autoPayoutService);
         this.queuePanel = new QueuePanel(sessionService);
         this.bar777SettingsTab = new Bar777SettingsTab(config);
         this.bar777ChatSettingsTab = new Bar777ChatSettingsTab(config);
