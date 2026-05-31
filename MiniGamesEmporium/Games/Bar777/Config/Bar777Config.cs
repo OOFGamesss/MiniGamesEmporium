@@ -13,6 +13,7 @@ public class Bar777Config
     public long BoostedPot { get; set; } = 0L;
     public long SessionTradedTotal { get; set; } = 0L;
     public bool UseQueue { get; set; } = false;
+    public bool AddTradesToPot { get; set; } = true;
     public bool AutoCatchRoll { get; set; } = false;
     public int PlayersPlayed { get; set; } = 0;
     public Bar777ChatConfig Chat { get; set; } = new();

@@ -23,7 +23,7 @@ public sealed class Bar777GameInfoIpc
         return new Bar777GameInfoIpc
         {
             BoostedPot    = config.Bar777.BoostedPot,
-            TotalPot      = config.Bar777.BoostedPot + config.Bar777.SessionTradedTotal,
+            TotalPot      = config.Bar777.BoostedPot + (config.Bar777.AddTradesToPot ? config.Bar777.SessionTradedTotal : 0L),
             CostPerRoll   = config.Bar777.CostPerRoll,
             MaxRolls      = config.Bar777.MaxRolls,
             PlayersPlayed = config.Bar777.PlayersPlayed,

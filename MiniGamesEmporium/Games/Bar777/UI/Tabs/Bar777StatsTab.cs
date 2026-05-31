@@ -36,7 +36,7 @@ public sealed class Bar777StatsTab
     public void DrawInline(bool showQueue)
     {
         var totalTraded = this.config.Bar777.SessionTradedTotal;
-        var totalPot    = this.config.Bar777.BoostedPot + totalTraded;
+        var totalPot    = this.config.Bar777.BoostedPot + (this.config.Bar777.AddTradesToPot ? totalTraded : 0L);
         using var child = ImRaii.Child("##Bar777StatsPanel", new Vector2(-1, GetInlineHeight(showQueue)), true);
         if (!child.Success) return;
         using var table = ImRaii.Table("##Bar777StatsTable", 3, ImGuiTableFlags.None, new Vector2(-1, 0));

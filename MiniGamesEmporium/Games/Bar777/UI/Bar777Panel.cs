@@ -34,7 +34,7 @@ public sealed class Bar777Panel : IDisposable
     private readonly PluginConfiguration config;
     private readonly SessionService sessionService;
     private readonly DeathrollTournamentService deathrollService;
-    private readonly GameTab gameTab;
+    private readonly Bar777GameTab gameTab;
     private readonly QueuePanel queuePanel;
     private readonly Bar777SettingsTab bar777SettingsTab;
     private readonly Bar777ChatSettingsTab bar777ChatSettingsTab;
@@ -47,7 +47,7 @@ public sealed class Bar777Panel : IDisposable
         this.sessionService = sessionService;
         this.chatQueue = chatQueue;
         this.deathrollService = deathrollService;
-        this.gameTab = new GameTab(config, sessionService, chatQueue, autoPayoutService);
+        this.gameTab = new Bar777GameTab(config, sessionService, chatQueue, autoPayoutService);
         this.queuePanel = new QueuePanel(sessionService);
         this.bar777SettingsTab = new Bar777SettingsTab(config);
         this.bar777ChatSettingsTab = new Bar777ChatSettingsTab(config);

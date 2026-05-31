@@ -15,6 +15,7 @@ public static class Bar777PreSessionSettingsFields
         DrawBoostedPotSetting(config);
         DrawRollCountSetting(config);
         DrawWinNumberSetting(config);
+        DrawAddTradesToPotToggle(config);
         DrawEntryTypeToggle(config);
     }
     private static float ResolvedFieldWidth()
@@ -63,7 +64,7 @@ public static class Bar777PreSessionSettingsFields
         ImGui.SetNextItemWidth(ResolvedFieldWidth());
         if (ImGuiEx.InputFancyNumeric("##WinNumber", ref win, 1))
         {
-            config.Bar777.WinNumber = Math.Clamp(win, 1, 1000);
+            config.Bar777.WinNumber = Math.Clamp(win, 0, 1000);
             config.Save();
         }
     }
@@ -91,6 +92,22 @@ public static class Bar777PreSessionSettingsFields
         if (ImGui.RadioButton("Queue##EntryQueue", config.Bar777.UseQueue))
         {
             config.Bar777.UseQueue = true;
+            config.Save();
+        }
+    }
+    private static void DrawAddTradesToPotToggle(PluginConfiguration config)
+    {
+        ImGui.Spacing();
+        ImGui.TextDisabled("Add Trades to Pot");
+        if (ImGui.RadioButton("Yes##AddTradesToPotYes", config.Bar777.AddTradesToPot))
+        {
+            config.Bar777.AddTradesToPot = true;
+            config.Save();
+        }
+        ImGui.SameLine();
+        if (ImGui.RadioButton("No##AddTradesToPotNo", !config.Bar777.AddTradesToPot))
+        {
+            config.Bar777.AddTradesToPot = false;
             config.Save();
         }
     }

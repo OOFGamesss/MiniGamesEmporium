@@ -18,7 +18,7 @@ using System.Numerics;
 /// <summary>Draws the active game view for BAR 777, handling the player header display, take-bet phase controls (two-column: collect payment left, buyer right), roll progress tracking, roll log, and session end or queue advance buttons.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
-public sealed class GameTab
+public sealed class Bar777GameTab
 {
     private static readonly Vector4 GoldColour = new(1f, 0.84f, 0f, 1f);
     private const float TrophySide = 140f;
@@ -31,7 +31,7 @@ public sealed class GameTab
     private int _lastKnownAmountTraded = -1;
     private DateTime _lastKnownSessionStart;
 
-    public GameTab(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService)
+    public Bar777GameTab(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService)
     {
         this.config            = config;
         this.sessionService    = sessionService;
@@ -108,7 +108,7 @@ public sealed class GameTab
         ImGui.Separator();
         ImGui.Spacing();
 
-        var pot       = this.config.Bar777.BoostedPot + this.config.Bar777.SessionTradedTotal;
+        var pot       = this.config.Bar777.BoostedPot + (this.config.Bar777.AddTradesToPot ? this.config.Bar777.SessionTradedTotal : 0L);
         var paid      = session.WinnerPayoutGil;
         var remaining = Math.Max(0L, pot - paid);
 
@@ -192,7 +192,7 @@ public sealed class GameTab
                     playerName,
                     () =>
                     {
-                        var p = this.config.Bar777.BoostedPot + this.config.Bar777.SessionTradedTotal;
+                        var p = this.config.Bar777.BoostedPot + (this.config.Bar777.AddTradesToPot ? this.config.Bar777.SessionTradedTotal : 0L);
                         var w = this.sessionService.GetActiveSession()?.WinnerPayoutGil ?? 0L;
                         return Math.Max(0L, p - w);
                     },

@@ -20,7 +20,7 @@ public static class Bar777MessageFormatter
         var session = config.ActiveSession;
         var rollsAllowed = session?.RollsAllowed ?? config.Bar777.MaxRolls;
         var boughtRolls  = session?.RollsAllowed ?? 0;
-        var totalPot = totalPotOverride ?? config.Bar777.BoostedPot + config.Bar777.SessionTradedTotal;
+        var totalPot = totalPotOverride ?? config.Bar777.BoostedPot + (config.Bar777.AddTradesToPot ? config.Bar777.SessionTradedTotal : 0L);
         var remaining = remainingOverride
             ?? (session != null
                 ? Math.Max(0, session.RollsAllowed - session.RollsUsed).ToString()
