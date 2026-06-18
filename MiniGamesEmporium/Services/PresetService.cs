@@ -128,11 +128,14 @@ public sealed class PresetService
             AutoNextMatchDelaySeconds = s.AutoNextMatchDelaySeconds,
             AutoCatchNextRound        = s.AutoCatchNextRound,
             Chat                      = DeepClone(s.Chat),
-            Discord                   = new DeathrollTournamentDiscordEntry
+            WebhookUsername           = s.WebhookUsername,
+            WebhookAvatarUrl          = s.WebhookAvatarUrl,
+            DiscordWebhooks           = s.DiscordWebhooks.Select(e => new DeathrollTournamentDiscordEntry
             {
-                Url     = s.Discord.Url,
-                Enabled = s.Discord.Enabled,
-            },
+                Alias   = e.Alias,
+                Url     = e.Url,
+                Enabled = e.Enabled,
+            }).ToList(),
         };
     }
 
@@ -155,8 +158,14 @@ public sealed class PresetService
         this.config.DeathrollTournament.AutoNextMatchDelaySeconds = d.AutoNextMatchDelaySeconds;
         this.config.DeathrollTournament.AutoCatchNextRound        = d.AutoCatchNextRound;
         this.config.DeathrollTournament.Chat                      = DeepClone(d.Chat);
-        this.config.DeathrollTournament.Discord.Url               = d.Discord.Url;
-        this.config.DeathrollTournament.Discord.Enabled           = d.Discord.Enabled;
+        this.config.DeathrollTournament.WebhookUsername           = d.WebhookUsername;
+        this.config.DeathrollTournament.WebhookAvatarUrl          = d.WebhookAvatarUrl;
+        this.config.DeathrollTournament.DiscordWebhooks           = d.DiscordWebhooks.Select(e => new DeathrollTournamentDiscordEntry
+        {
+            Alias   = e.Alias,
+            Url     = e.Url,
+            Enabled = e.Enabled,
+        }).ToList();
     }
 
     public string BuildExportString(bool bar777, bool deathroll, bool discord, bool queue)
@@ -245,12 +254,13 @@ public sealed class PresetService
     private static DeathrollTournamentConfig BuildDeathrollFromPayload(
         DeathrollExportEntry? entry, DiscordExportEntry? discordEntry, PluginPreset? def)
     {
-        var discord = ResolveDiscord(discordEntry, def);
+        var (webhooks, username, avatarUrl) = ResolveDiscord(discordEntry, def);
         if (entry == null)
         {
             var source = def != null ? DeepClone(def.DeathrollTournament) : new DeathrollTournamentConfig();
-            source.Discord.Url     = discord.Url;
-            source.Discord.Enabled = discord.Enabled;
+            source.DiscordWebhooks  = webhooks;
+            source.WebhookUsername  = username;
+            source.WebhookAvatarUrl = avatarUrl;
             return source;
         }
         return new DeathrollTournamentConfig
@@ -261,17 +271,39 @@ public sealed class PresetService
             AutoNextMatchDelaySeconds = entry.AutoNextMatchDelaySeconds,
             AutoCatchNextRound        = entry.AutoCatchNextRound,
             Chat                      = DeepClone(entry.Chat),
-            Discord                   = discord,
+            WebhookUsername           = username,
+            WebhookAvatarUrl          = avatarUrl,
+            DiscordWebhooks           = webhooks,
         };
     }
 
-    private static DeathrollTournamentDiscordEntry ResolveDiscord(DiscordExportEntry? entry, PluginPreset? def)
+    private static (List<DeathrollTournamentDiscordEntry> Webhooks, string Username, string AvatarUrl) ResolveDiscord(
+        DiscordExportEntry? entry, PluginPreset? def)
     {
         if (entry != null)
-            return new DeathrollTournamentDiscordEntry { Url = entry.Url, Enabled = entry.Enabled };
+            return (
+                entry.Webhooks.Select(w => new DeathrollTournamentDiscordEntry
+                {
+                    Alias   = w.Alias,
+                    Url     = w.Url,
+                    Enabled = w.Enabled,
+                }).ToList(),
+                entry.WebhookUsername,
+                entry.WebhookAvatarUrl
+            );
         if (def != null)
-            return new DeathrollTournamentDiscordEntry { Url = def.DeathrollTournament.Discord.Url, Enabled = def.DeathrollTournament.Discord.Enabled };
-        return new DeathrollTournamentDiscordEntry();
+            return (
+                def.DeathrollTournament.DiscordWebhooks.Select(e => new DeathrollTournamentDiscordEntry
+                {
+                    Alias   = e.Alias,
+                    Url     = e.Url,
+                    Enabled = e.Enabled,
+                }).ToList(),
+                def.DeathrollTournament.WebhookUsername,
+                def.DeathrollTournament.WebhookAvatarUrl
+            );
+        return (new List<DeathrollTournamentDiscordEntry>(), "Deathroll Tournament",
+            "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/images/deathrolltournament.png");
     }
 
     private Bar777ExportEntry CaptureBar777Export()
@@ -305,8 +337,14 @@ public sealed class PresetService
 
     private DiscordExportEntry CaptureDiscordExport() => new()
     {
-        Url     = this.config.DeathrollTournament.Discord.Url,
-        Enabled = this.config.DeathrollTournament.Discord.Enabled,
+        Webhooks = this.config.DeathrollTournament.DiscordWebhooks.Select(e => new DiscordWebhookExportItem
+        {
+            Alias   = e.Alias,
+            Url     = e.Url,
+            Enabled = e.Enabled,
+        }).ToList(),
+        WebhookUsername  = this.config.DeathrollTournament.WebhookUsername,
+        WebhookAvatarUrl = this.config.DeathrollTournament.WebhookAvatarUrl,
     };
 
     private static T DeepClone<T>(T obj) where T : notnull

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-/// <summary>Serialisable configuration for the Deathroll Tournament game, storing entry cost, boosted pot, per-round best-of settings, the pre-tournament player registration list, and the nested chat configuration.</summary>
+/// <summary>Serialisable configuration for the Deathroll Tournament game, storing entry cost, boosted pot, per-round best-of settings, the pre-tournament player registration list, shared Discord webhook appearance, and the nested chat configuration.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Config;
 [Serializable]
@@ -17,6 +17,8 @@ public class DeathrollTournamentConfig
     public bool AutoNextMatch { get; set; } = false;
     public int AutoNextMatchDelaySeconds { get; set; } = 5;
     public bool AutoCatchNextRound { get; set; } = false;
+    public string WebhookUsername { get; set; } = "Deathroll Tournament";
+    public string WebhookAvatarUrl { get; set; } = "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/images/deathrolltournament.png";
     public DeathrollTournamentChatConfig Chat { get; set; } = new();
-    public DeathrollTournamentDiscordEntry Discord { get; set; } = new();
+    public List<DeathrollTournamentDiscordEntry> DiscordWebhooks { get; set; } = new();
 }

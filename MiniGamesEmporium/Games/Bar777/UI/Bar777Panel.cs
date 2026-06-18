@@ -60,30 +60,25 @@ public sealed class Bar777Panel : IDisposable
     }
     public void Draw()
     {
-        var session = this.sessionService.GetActiveSession();
-        var bar777SessionActive = session != null && Bar777GameIds.Matches(session.GameName);
-        if (!bar777SessionActive)
-        {
-            DrawStartSessionDoor(session);
-            return;
-        }
         ImGui.Spacing();
-        {
-            using var bar777TabsChrome = new EmporiumNeonTheme.Bar777NestedTabChromeScope();
-            using var tabBar = ImRaii.TabBar("##Bar777_TabBar_v8");
-            if (tabBar.Success)
-            {
-                DrawGameWithQueueTab();
-                DrawBar777ChatSettingsTab();
-                DrawBar777SettingsTab();
-            }
-        }
+        using var bar777TabsChrome = new EmporiumNeonTheme.Bar777NestedTabChromeScope();
+        using var tabBar = ImRaii.TabBar("##Bar777_TabBar_v8");
+        if (!tabBar.Success) return;
+        DrawGameWithQueueTab();
+        DrawBar777ChatSettingsTab();
+        DrawBar777SettingsTab();
     }
     private void DrawGameWithQueueTab()
     {
         using var tab = ImRaii.TabItem("Game");
         if (!tab.Success)
             return;
+        var session = this.sessionService.GetActiveSession();
+        if (session == null || !Bar777GameIds.Matches(session.GameName))
+        {
+            DrawStartSessionDoor(session);
+            return;
+        }
         ImGui.Spacing();
         if (!this.config.Bar777.UseQueue)
         {

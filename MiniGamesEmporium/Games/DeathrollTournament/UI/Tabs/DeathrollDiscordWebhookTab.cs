@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
@@ -13,13 +16,15 @@ using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.UI.Components;
 
-/// <summary>Draws the Deathroll Tournament Discord webhook configuration tab: URL input, delivery status warning, setup guide, post behaviour reference, and Discord embed previews.</summary>
+/// <summary>Draws the Deathroll Tournament Discord webhook configuration tab: a list of named webhook entries each with enable, alias and URL fields, shared appearance settings, a setup guide, post behaviour reference, and Discord embed previews.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollDiscordWebhookTab
 {
-    private const int UrlBufferLength      = 1536;
-    private const int UsernameBufferLength = 128;
+    private const int   UrlBufferLength      = 1536;
+    private const int   UsernameBufferLength = 128;
+    private const int   AliasBufferLength    = 64;
+    private const float AliasInputWidth      = 150f;
 
     private static readonly Vector4 MutedText  = new(0.60f, 0.57f, 0.68f, 1f);
     private static readonly Vector4 ErrorText  = new(1f,    0.45f, 0.42f, 1f);
@@ -31,13 +36,15 @@ public sealed class DeathrollDiscordWebhookTab
     private readonly ISharedImmediateTexture        _lobbyTexture;
     private readonly ISharedImmediateTexture        _bracketTexture;
 
-    private string _urlDraft              = string.Empty;
-    private string _lastCommittedUrl      = string.Empty;
-    private string _usernameDraft         = string.Empty;
-    private string _lastCommittedUsername = string.Empty;
-    private string _avatarUrlDraft        = string.Empty;
+    private List<string> _aliasDrafts = new();
+    private List<string> _urlDrafts   = new();
+    private int          _pendingRemoveIndex = -1;
+
+    private string _usernameDraft          = string.Empty;
+    private string _lastCommittedUsername  = string.Empty;
+    private string _avatarUrlDraft         = string.Empty;
     private string _lastCommittedAvatarUrl = string.Empty;
-    private bool   _draftInitialised      = false;
+    private bool   _appearanceInitialised  = false;
 
     public DeathrollDiscordWebhookTab(
         PluginConfiguration config,
@@ -50,7 +57,7 @@ public sealed class DeathrollDiscordWebhookTab
 
         var imagesDir = Path.Combine(
             MiniGamesEmporium.PluginInterface.AssemblyLocation.DirectoryName!,
-            "Images");
+            "Images", "Screenshots");
         _lobbyTexture   = MiniGamesEmporium.TextureProvider.GetFromFile(
             Path.Combine(imagesDir, "drt-example-lobby.png"));
         _bracketTexture = MiniGamesEmporium.TextureProvider.GetFromFile(
@@ -59,7 +66,8 @@ public sealed class DeathrollDiscordWebhookTab
 
     public void Draw()
     {
-        EnsureDraftInitialised();
+        SyncDraftsToEntries();
+        EnsureAppearanceInitialised();
 
         ImGuiHelpers.ScaledDummy(8f);
         DrawSectionHeader("Webhook setup");
@@ -67,17 +75,8 @@ public sealed class DeathrollDiscordWebhookTab
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(6f);
 
-        if (Entry.PostFailed)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, ErrorText))
-                ImGui.TextWrapped(
-                    "The last delivery failed. Toggle Enable off then on to retry. "
-                        + "If the Discord message was deleted a new one will be created.");
-            ImGui.Spacing();
-        }
-
-        DrawSectionHeader("Webhook URL");
-        DrawWebhookRow();
+        DrawSectionHeader("Webhook URLs");
+        DrawWebhookList();
 
         ImGuiHelpers.ScaledDummy(6f);
         DrawSectionHeader("Webhook appearance (Delete original webhook to reset)");
@@ -92,44 +91,110 @@ public sealed class DeathrollDiscordWebhookTab
         DrawPreviewPair();
     }
 
-    private DeathrollTournamentDiscordEntry Entry => _config.DeathrollTournament.Discord;
+    private List<DeathrollTournamentDiscordEntry> Entries => _config.DeathrollTournament.DiscordWebhooks;
 
-    private void DrawWebhookRow()
+    private void SyncDraftsToEntries()
     {
-        using var id = ImRaii.PushId("DRDiscordRow");
+        if (_aliasDrafts.Count == Entries.Count) return;
+        _aliasDrafts           = Entries.Select(e => e.Alias).ToList();
+        _urlDrafts             = Entries.Select(e => e.Url).ToList();
+        _appearanceInitialised = false;
+    }
 
-        var enabledFlag = Entry.Enabled;
+    private void EnsureAppearanceInitialised()
+    {
+        if (_appearanceInitialised) return;
+        _usernameDraft          = _config.DeathrollTournament.WebhookUsername;
+        _lastCommittedUsername  = _config.DeathrollTournament.WebhookUsername;
+        _avatarUrlDraft         = _config.DeathrollTournament.WebhookAvatarUrl;
+        _lastCommittedAvatarUrl = _config.DeathrollTournament.WebhookAvatarUrl;
+        _appearanceInitialised  = true;
+    }
 
-        using (ImRaii.PushColor(ImGuiCol.Text, ErrorText, Entry.PostFailed))
+    private void DrawWebhookList()
+    {
+        for (var i = 0; i < Entries.Count; i++)
+            DrawWebhookRow(i);
+
+        if (Entries.Count == 0)
         {
-            if (ImGui.Checkbox("##DRDiscordEnabled", ref enabledFlag))
-                ToggleEnabled(enabledFlag);
-
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip(Entry.PostFailed
-                    ? "Delivery failed: toggle Enable off then on to retry."
-                    : "Paste the webhook URL below, then enable to start posting.");
+            using (ImRaii.PushColor(ImGuiCol.Text, MutedText))
+                ImGui.TextUnformatted("No webhooks configured. Add one below.");
         }
+
+        if (_pendingRemoveIndex >= 0)
+        {
+            RemoveEntry(_pendingRemoveIndex);
+            _pendingRemoveIndex = -1;
+        }
+
+        ImGuiHelpers.ScaledDummy(4f);
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Plus, "Add Webhook", "##DRAddWebhook"))
+            AddEntry();
+    }
+
+    private void DrawWebhookRow(int i)
+    {
+        var entry = Entries[i];
+        using var pushId = ImRaii.PushId(i);
+
+        var enabled   = entry.Enabled;
+        var urlBlank  = string.IsNullOrWhiteSpace(_urlDrafts[i]);
+        using (ImRaii.PushColor(ImGuiCol.Text, ErrorText, entry.PostFailed))
+        using (ImRaii.Disabled(urlBlank))
+        {
+            if (ImGui.Checkbox("##enabled", ref enabled))
+                ToggleEnabled(i, enabled);
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(urlBlank
+                ? "Enter a webhook URL before enabling."
+                : entry.PostFailed
+                    ? "Delivery failed: toggle Enable off then on to retry."
+                    : "Enable to start posting.");
 
         ImGui.SameLine();
 
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, ErrorFrame, Entry.PostFailed))
+        var remaining = ImGui.GetContentRegionAvail().X;
+        var deleteW   = UIHelper.CalcButtonSize(FontAwesomeIcon.Trash, string.Empty).X;
+        var spacing   = ImGui.GetStyle().ItemSpacing.X;
+        var aliasW    = AliasInputWidth * ImGuiHelpers.GlobalScale;
+        var urlW      = MathF.Max(remaining - aliasW - deleteW - spacing * 2f, 40f);
+
+        ImGui.SetNextItemWidth(aliasW);
+        var alias = _aliasDrafts[i];
+        ImGui.InputTextWithHint("##alias", "Discord Server Name", ref alias, AliasBufferLength);
+        _aliasDrafts[i] = alias;
+        if (ImGui.IsItemDeactivatedAfterEdit()) CommitAlias(i);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("A label to identify which Discord this webhook is for.");
+
+        ImGui.SameLine();
+
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, ErrorFrame, entry.PostFailed))
         {
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-            ImGui.InputText("##DRDiscordUrl", ref _urlDraft, UrlBufferLength);
+            ImGui.SetNextItemWidth(urlW);
+            var url = _urlDrafts[i];
+            ImGui.InputTextWithHint("##url", "Discord Webhook URL", ref url, UrlBufferLength);
+            _urlDrafts[i] = url;
         }
+        if (ImGui.IsItemDeactivatedAfterEdit()) CommitUrl(i);
 
-        if (ImGui.IsItemDeactivatedAfterEdit())
-            CommitUrl();
+        ImGui.SameLine();
 
-        ImGui.Spacing();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, string.Empty, "##delete"))
+            _pendingRemoveIndex = i;
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Remove this webhook.");
+
+        ImGuiHelpers.ScaledDummy(2f);
     }
 
     private void DrawSetupGuide()
     {
         GuideBullet("In Discord, open channel settings (gear icon) for your tournament announcement channel.");
         GuideBullet("Go to Integrations → Webhooks. Create or select a webhook and copy its URL.");
-        GuideBullet("Paste the URL below and tick Enable. The plugin posts and patches the embed automatically.");
+        GuideBullet("Click Add Webhook below, give it an alias, paste the URL, and tick Enable.");
         GuideBullet("Toggle Enable off then on to force a retry or create a fresh embed after a failure.");
         ImGuiHelpers.ScaledDummy(8f);
     }
@@ -207,9 +272,9 @@ public sealed class DeathrollDiscordWebhookTab
 
     private void DrawAppearanceRows()
     {
-        var availW      = ImGui.GetContentRegionAvail().X;
-        var labelW      = ImGui.CalcTextSize("Image URL").X + ImGuiHelpers.GlobalScale * 8f;
-        var inputW      = availW - labelW - ImGui.GetStyle().ItemSpacing.X;
+        var availW = ImGui.GetContentRegionAvail().X;
+        var labelW = ImGui.CalcTextSize("Image URL").X + ImGuiHelpers.GlobalScale * 8f;
+        var inputW = availW - labelW - ImGui.GetStyle().ItemSpacing.X;
 
         using (ImRaii.PushColor(ImGuiCol.Text, MutedText))
             ImGui.TextUnformatted("Name");
@@ -218,7 +283,7 @@ public sealed class DeathrollDiscordWebhookTab
         ImGui.InputText("##DRWebhookName", ref _usernameDraft, UsernameBufferLength);
         if (ImGui.IsItemDeactivatedAfterEdit()) CommitUsername();
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Display name shown on the Discord webhook message.");
+            ImGui.SetTooltip("Display name shown on all Discord webhook messages.");
 
         ImGuiHelpers.ScaledDummy(4f);
 
@@ -234,30 +299,45 @@ public sealed class DeathrollDiscordWebhookTab
         ImGuiHelpers.ScaledDummy(6f);
     }
 
-    private void EnsureDraftInitialised()
+    private void AddEntry()
     {
-        if (_draftInitialised) return;
-        _urlDraft               = Entry.Url;
-        _lastCommittedUrl       = Entry.Url;
-        _usernameDraft          = Entry.WebhookUsername;
-        _lastCommittedUsername  = Entry.WebhookUsername;
-        _avatarUrlDraft         = Entry.WebhookAvatarUrl;
-        _lastCommittedAvatarUrl = Entry.WebhookAvatarUrl;
-        _draftInitialised       = true;
+        Entries.Add(new DeathrollTournamentDiscordEntry());
+        _aliasDrafts.Add(string.Empty);
+        _urlDrafts.Add(string.Empty);
+        _config.Save();
     }
 
-    private void CommitUrl()
+    private void RemoveEntry(int i)
     {
-        var trimmed = _urlDraft.Trim();
-        _urlDraft = trimmed;
-        if (trimmed == _lastCommittedUrl) return;
-
-        Entry.MessageId  = null;
-        Entry.PostFailed = false;
-        Entry.Url        = trimmed;
-        _lastCommittedUrl = trimmed;
+        if (i < 0 || i >= Entries.Count) return;
+        Entries.RemoveAt(i);
+        _aliasDrafts.RemoveAt(i);
+        _urlDrafts.RemoveAt(i);
         _config.Save();
+        KickApply();
+    }
 
+    private void CommitAlias(int i)
+    {
+        if (i < 0 || i >= Entries.Count) return;
+        var trimmed = _aliasDrafts[i].Trim();
+        _aliasDrafts[i]  = trimmed;
+        Entries[i].Alias = trimmed;
+        _config.Save();
+    }
+
+    private void CommitUrl(int i)
+    {
+        if (i < 0 || i >= Entries.Count) return;
+        var trimmed = _urlDrafts[i].Trim();
+        _urlDrafts[i] = trimmed;
+        var entry = Entries[i];
+        if (trimmed == entry.Url) return;
+
+        entry.MessageId  = null;
+        entry.PostFailed = false;
+        entry.Url        = trimmed;
+        _config.Save();
         KickApply();
     }
 
@@ -267,7 +347,7 @@ public sealed class DeathrollDiscordWebhookTab
         _usernameDraft = trimmed;
         if (trimmed == _lastCommittedUsername) return;
 
-        Entry.WebhookUsername  = trimmed;
+        _config.DeathrollTournament.WebhookUsername = trimmed;
         _lastCommittedUsername = trimmed;
         _config.Save();
         KickApply();
@@ -279,16 +359,17 @@ public sealed class DeathrollDiscordWebhookTab
         _avatarUrlDraft = trimmed;
         if (trimmed == _lastCommittedAvatarUrl) return;
 
-        Entry.WebhookAvatarUrl   = trimmed;
-        _lastCommittedAvatarUrl  = trimmed;
+        _config.DeathrollTournament.WebhookAvatarUrl = trimmed;
+        _lastCommittedAvatarUrl = trimmed;
         _config.Save();
         KickApply();
     }
 
-    private void ToggleEnabled(bool desired)
+    private void ToggleEnabled(int i, bool desired)
     {
-        CommitUrl();
-        Entry.Enabled = desired;
+        if (i < 0 || i >= Entries.Count) return;
+        CommitUrl(i);
+        Entries[i].Enabled = desired;
         _config.Save();
         KickApply();
     }

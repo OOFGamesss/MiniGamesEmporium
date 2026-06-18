@@ -44,6 +44,15 @@ public sealed class DeathrollExportEntry
 [Serializable]
 public sealed class DiscordExportEntry
 {
+    public List<DiscordWebhookExportItem> Webhooks { get; set; } = new();
+    public string WebhookUsername { get; set; } = "Deathroll Tournament";
+    public string WebhookAvatarUrl { get; set; } = "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/images/deathrolltournament.png";
+}
+
+[Serializable]
+public sealed class DiscordWebhookExportItem
+{
+    public string Alias { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
     public bool Enabled { get; set; } = false;
 }

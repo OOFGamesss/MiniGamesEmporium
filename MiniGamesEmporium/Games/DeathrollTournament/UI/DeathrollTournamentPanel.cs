@@ -68,11 +68,6 @@ public sealed class DeathrollTournamentPanel : IDisposable
 
     public void Draw()
     {
-        if (!this.deathrollService.IsSessionActive())
-        {
-            DrawStartDoor();
-            return;
-        }
         ImGui.Spacing();
         using var chrome = new EmporiumNeonTheme.DeathrollTournamentNestedTabChromeScope();
         using var tabBar = ImRaii.TabBar("##DR_TabBar_v1");
@@ -87,6 +82,11 @@ public sealed class DeathrollTournamentPanel : IDisposable
     {
         using var tab = ImRaii.TabItem("Game");
         if (!tab.Success) return;
+        if (!this.deathrollService.IsSessionActive())
+        {
+            DrawStartDoor();
+            return;
+        }
         ImGui.Spacing();
         var statsH          = DeathrollStatsTab.GetInlineHeight();
         var isPreTournament = !this.deathrollService.HasActiveTournament();

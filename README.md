@@ -98,12 +98,12 @@ All outbound messages are queued with a one-second gap between each to stay with
 
 > **BAR 777 Door (Pre-Session)**
 >
-> ![BAR 777 Door (Pre-Session)](MiniGamesEmporium/Images/start-session-tab.png?v=2)
+> ![BAR 777 Door (Pre-Session)](MiniGamesEmporium/Images/Screenshots/start-session-tab.png?v=2)
 
 ---
 > **Game Tab: Queue Mode**
 >
-> ![Game Tab: Queue Mode](MiniGamesEmporium/Images/queue-mode.png?v=2)
+> ![Game Tab: Queue Mode](MiniGamesEmporium/Images/Screenshots/queue-mode.png?v=2)
 
 ---
 

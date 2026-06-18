@@ -77,15 +77,21 @@ public sealed class DeathrollDiscordWebhookService : IDisposable
 
     private async Task SyncCoreAsync(bool forceEvenIfFailed, CancellationToken ct = default)
     {
-        var entry = _config.DeathrollTournament.Discord;
-        if (!entry.Enabled || string.IsNullOrWhiteSpace(entry.Url)) return;
-        if (!forceEvenIfFailed && entry.PostFailed)                  return;
+        var entries = _config.DeathrollTournament.DiscordWebhooks;
+        if (entries.Count == 0) return;
 
         await _gate.WaitAsync(ct);
         try
         {
-            await DispatchAsync(entry, ct);
-            _config.Save();
+            var dispatched = false;
+            foreach (var entry in entries)
+            {
+                if (!entry.Enabled || string.IsNullOrWhiteSpace(entry.Url)) continue;
+                if (!forceEvenIfFailed && entry.PostFailed) continue;
+                await DispatchAsync(entry, ct);
+                dispatched = true;
+            }
+            if (dispatched) _config.Save();
         }
         finally
         {
@@ -180,9 +186,8 @@ public sealed class DeathrollDiscordWebhookService : IDisposable
     {
         var tournament = _config.DeathrollTournamentSession;
         var session    = _config.DeathrollSession;
-        var appearance = _config.DeathrollTournament.Discord;
-        var username   = appearance.WebhookUsername;
-        var avatarUrl  = appearance.WebhookAvatarUrl;
+        var username   = _config.DeathrollTournament.WebhookUsername;
+        var avatarUrl  = _config.DeathrollTournament.WebhookAvatarUrl;
 
         if (tournament != null)
         {

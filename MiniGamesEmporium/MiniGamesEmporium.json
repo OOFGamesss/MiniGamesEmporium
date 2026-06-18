@@ -4,7 +4,7 @@
   "InternalName": "MiniGamesEmporium",
   "Punchline": "Host BAR 777 and other mini games with automated queue management.",
   "Description": "A plugin to manage mini game sessions, player queues, and Gil transactions. Use /minigames to open the main window.",
-  "Changelog": "- Changed winning number minimum for BAR 777 to 0.\n- Added new option to BAR 777 to allow taken in trades to add to the pot.",
+  "Changelog": "- Updated to latest Gamba Where IPC.\n- You can now access game settings, discord webhooks without have to start a session.\n- You can now have multiple discord webhooks for deathroll tournament and also name each one to avoid confusion.",
   "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
   "ApplicableVersion": "any",
   "Tags": [

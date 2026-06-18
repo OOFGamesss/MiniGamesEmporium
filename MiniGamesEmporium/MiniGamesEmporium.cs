@@ -50,8 +50,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly ChatQueueService chatQueueService;
     private readonly AutoPayoutService autoPayoutService;
     private readonly WindowOpenedIpc windowOpenedIpc;
-    private readonly Bar777GameInfoIpcProvider bar777IpcProvider;
-    private readonly DeathrollTournamentGameInfoIpcProvider deathrollIpcProvider;
+    private readonly Bar777Rules bar777Rules;
+    private readonly DeathrollTournamentRules deathrollRules;
     private readonly PlayerContextMenuHandler playerContextMenuHandler;
     private readonly ChatPlayerContextMenuHandler chatPlayerContextMenuHandler;
     private readonly Action<string, string, int, int> _onMatchWon;
@@ -115,9 +115,10 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         autoPayoutService     = new AutoPayoutService(chatQueueService, Log);
         mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log, historyService, autoPayoutService);
         windowSystem.AddWindow(mainWindow);
-        windowOpenedIpc = new WindowOpenedIpc(PluginInterface, mainWindow);
-        bar777IpcProvider = new Bar777GameInfoIpcProvider(PluginInterface, Framework, Configuration, sessionService);
-        deathrollIpcProvider = new DeathrollTournamentGameInfoIpcProvider(PluginInterface, Framework, Configuration, deathrollService);
+        windowOpenedIpc = new WindowOpenedIpc(PluginInterface, Log, mainWindow);
+        bar777Rules = new Bar777Rules(PluginInterface, Framework, Log, Configuration);
+        deathrollRules = new DeathrollTournamentRules(PluginInterface, Framework, Log, Configuration);
+        
         CommandManager.AddHandler(MainCommandFull, new CommandInfo(OnCommand)
         {
             HelpMessage = "Opens the Mini Games Emporium window.",
@@ -148,8 +149,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         playerContextMenuHandler.Dispose();
         chatPlayerContextMenuHandler.Dispose();
         windowOpenedIpc.Dispose();
-        bar777IpcProvider.Dispose();
-        deathrollIpcProvider.Dispose();
+        bar777Rules.Dispose();
+        deathrollRules.Dispose();
         chatListener.Dispose();
         tradeListenerService.Dispose();
         autoPayoutService.Dispose();

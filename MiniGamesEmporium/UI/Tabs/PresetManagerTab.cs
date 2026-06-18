@@ -522,7 +522,7 @@ public sealed class PresetManagerTab
         DrawDeathrollChatRows(d.Chat);
         ImGui.Spacing();
         ImGui.TextDisabled("Discord");
-        DrawDeathrollDiscordRows(d.Discord);
+        DrawDeathrollDiscordRows(d);
     }
 
     private static void DrawDeathrollGameRows(DeathrollTournamentConfig d)
@@ -560,13 +560,33 @@ public sealed class PresetManagerTab
         DrawRow("Match Win",              c.AnnounceMatchWinMessage);
     }
 
-    private static void DrawDeathrollDiscordRows(DeathrollTournamentDiscordEntry disc)
+    private static void DrawDeathrollDiscordRows(DeathrollTournamentConfig d)
     {
-        using var t = ImRaii.Table("##DeathrollDiscord", 2, ImGuiTableFlags.RowBg);
-        if (!t.Success) return;
+        using var appearance = ImRaii.Table("##DeathrollDiscordAppearance", 2, ImGuiTableFlags.RowBg);
+        if (appearance.Success)
+        {
+            SetupPreviewColumns();
+            DrawRow("Display Name", d.WebhookUsername);
+            DrawRow("Avatar URL",   d.WebhookAvatarUrl);
+        }
+        appearance.Dispose();
+
+        if (d.DiscordWebhooks.Count == 0)
+        {
+            ImGui.TextDisabled("  (no webhooks)");
+            return;
+        }
+
+        ImGui.Spacing();
+        ImGui.TextDisabled("Webhooks");
+        using var webhooks = ImRaii.Table("##DeathrollDiscordWebhooks", 2, ImGuiTableFlags.RowBg);
+        if (!webhooks.Success) return;
         SetupPreviewColumns();
-        DrawBoolRow("Enabled",     disc.Enabled);
-        DrawRow("Webhook URL",     disc.Url);
+        foreach (var entry in d.DiscordWebhooks)
+        {
+            var alias = string.IsNullOrWhiteSpace(entry.Alias) ? "(no alias)" : entry.Alias;
+            DrawBoolRow(alias, entry.Enabled);
+        }
     }
 
     private static void DrawQueueSection(string keyword, QueueJoinChannelsConfig channels)
