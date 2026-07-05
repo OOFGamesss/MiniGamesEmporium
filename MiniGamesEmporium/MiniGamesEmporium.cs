@@ -9,18 +9,24 @@ using MiniGamesEmporium.Events;
 using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.Bar777.Events;
 using MiniGamesEmporium.Games.Bar777.IPC;
+using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Games.Bar777.Utility;
+using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Events;
 using MiniGamesEmporium.Games.DeathrollTournament.IPC;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.HigherLower.Events;
+using MiniGamesEmporium.Games.HigherLower.IPC;
+using MiniGamesEmporium.Games.HigherLower.Services;
+using MiniGamesEmporium.Games.HigherLower.Utility;
 using MiniGamesEmporium.IPC;
 using MiniGamesEmporium.Services;
-using MiniGamesEmporium.State;
+using MiniGamesEmporium.Models;
 using MiniGamesEmporium.UI;
 using System;
 using System.Collections.Generic;
 
-/// <summary>Plugin entry point that initialises all services, registers the main and config slash commands, and manages the Dalamud window system lifecycle.</summary>
+/// <summary>Plugin entry point that wires up the services, commands, and window system.</summary>
 
 namespace MiniGamesEmporium;
 public sealed class MiniGamesEmporium : IDalamudPlugin
@@ -41,17 +47,22 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly WindowSystem windowSystem = new("MiniGamesEmporium");
     private readonly MainWindow mainWindow;
     private readonly HistoryService historyService;
+    private readonly Bar777SessionService bar777SessionService;
     private readonly SessionService sessionService;
+    private readonly PlayerInfoService playerInfoService;
+    private readonly RollService rollService;
     private readonly PresetService presetService;
     private readonly DeathrollTournamentService deathrollService;
-    private readonly DeathrollDiscordWebhookService deathrollDiscordService;
-    private readonly ChatListener chatListener;
+    private readonly DeathrollWebhookService deathrollDiscordService;
+    private readonly HigherLowerService higherLowerService;
+    private readonly ChatListenerService chatListener;
     private readonly TradeListenerService tradeListenerService;
     private readonly ChatQueueService chatQueueService;
     private readonly AutoPayoutService autoPayoutService;
     private readonly WindowOpenedIpc windowOpenedIpc;
     private readonly Bar777Rules bar777Rules;
     private readonly DeathrollTournamentRules deathrollRules;
+    private readonly HigherLowerRules higherLowerRules;
     private readonly PlayerContextMenuHandler playerContextMenuHandler;
     private readonly ChatPlayerContextMenuHandler chatPlayerContextMenuHandler;
     private readonly Action<string, string, int, int> _onMatchWon;
@@ -61,16 +72,20 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     {
         ECommonsMain.Init(PluginInterface, this);
         Configuration = PluginInterface.GetPluginConfig() as PluginConfiguration ?? new PluginConfiguration();
-        Configuration.QueueJoinChannels ??= new QueueJoinChannelsConfig();
+        Configuration.QueueJoinChannels ??= new QueueConfig();
         Configuration.Bar777.Chat ??= new Bar777ChatConfig();
         Configuration.SessionHistory ??= new();
         Configuration.Transactions ??= new();
         historyService = new HistoryService(PluginInterface, Configuration);
         chatQueueService = new ChatQueueService();
-        sessionService = new SessionService(Configuration, historyService);
+        bar777SessionService = new Bar777SessionService(Configuration, historyService);
+        sessionService = new SessionService();
+        playerInfoService = new PlayerInfoService();
+        rollService = new RollService(playerInfoService);
+        higherLowerService = new HigherLowerService(Configuration, historyService, ChatGui);
         presetService = new PresetService(Configuration);
         deathrollService = new DeathrollTournamentService(Configuration, historyService);
-        deathrollDiscordService = new DeathrollDiscordWebhookService(Log, Configuration, PluginInterface.AssemblyLocation.DirectoryName!);
+        deathrollDiscordService = new DeathrollWebhookService(Log, Configuration, PluginInterface.AssemblyLocation.DirectoryName!);
         deathrollService.SessionUpdated += deathrollDiscordService.TriggerSync;
         _onMatchWon      = (_, _, _, _) => deathrollDiscordService.TriggerSync();
         _onGameWon       = (_, _, _, _) => deathrollDiscordService.TriggerSync();
@@ -78,6 +93,9 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         deathrollService.MatchWon      += _onMatchWon;
         deathrollService.GameWon       += _onGameWon;
         deathrollService.TournamentWon += _onTournamentWon;
+        sessionService.RegisterGame(Bar777GameIds.DisplayName, bar777SessionService.IsActive, bar777SessionService.CancelSession);
+        sessionService.RegisterGame(HigherLowerGameIds.DisplayName, higherLowerService.IsSessionActive, higherLowerService.CancelSession);
+        sessionService.RegisterGame("Deathroll Tournament", deathrollService.IsSessionActive, deathrollService.StopSession);
         playerContextMenuHandler = new PlayerContextMenuHandler(ContextMenu);
         playerContextMenuHandler.Register(new PlayerContextMenuEntry
         {
@@ -88,8 +106,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         playerContextMenuHandler.Register(new PlayerContextMenuEntry
         {
             Label      = "Add to BAR 777 Queue",
-            IsVisible  = () => { var s = sessionService.GetActiveSession(); return s != null && Bar777GameIds.Matches(s.GameName) && Configuration.Bar777.UseQueue; },
-            OnSelected = sessionService.TryEnqueuePlayer,
+            IsVisible  = () => { var s = bar777SessionService.GetActiveSession(); return s != null && Bar777GameIds.Matches(s.GameName) && Configuration.Bar777.UseQueue; },
+            OnSelected = bar777SessionService.TryEnqueuePlayer,
         });
         chatPlayerContextMenuHandler = new ChatPlayerContextMenuHandler(ContextMenu);
         chatPlayerContextMenuHandler.Register(new PlayerContextMenuEntry
@@ -101,23 +119,25 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         chatPlayerContextMenuHandler.Register(new PlayerContextMenuEntry
         {
             Label      = "Add to BAR 777 Queue",
-            IsVisible  = () => { var s = sessionService.GetActiveSession(); return s != null && Bar777GameIds.Matches(s.GameName) && Configuration.Bar777.UseQueue; },
-            OnSelected = sessionService.TryEnqueuePlayer,
+            IsVisible  = () => { var s = bar777SessionService.GetActiveSession(); return s != null && Bar777GameIds.Matches(s.GameName) && Configuration.Bar777.UseQueue; },
+            OnSelected = bar777SessionService.TryEnqueuePlayer,
         });
-        chatListener = new ChatListener(
+        chatListener = new ChatListenerService(
             ChatGui,
             Configuration,
-            sessionService,
-            new IChatRollHandler[]    { new Bar777RollHandler(Configuration, sessionService), new DeathrollRollHandler(deathrollService) },
-            new IChatKeywordHandler[] { new Bar777KeywordHandler(Configuration, sessionService) },
+            bar777SessionService,
+            new IChatRollHandler[]    { new Bar777RollHandler(Configuration, bar777SessionService), new DeathrollRollHandler(deathrollService, playerInfoService), new HigherLowerRollHandler(Configuration, higherLowerService, playerInfoService) },
+            new IChatKeywordHandler[] { new Bar777KeywordHandler(Configuration, bar777SessionService, playerInfoService), new DeathrollKeywordHandler(Configuration, deathrollService, playerInfoService), new HigherLowerKeywordHandler() },
+            rollService,
             Log);
-        tradeListenerService  = new TradeListenerService(sessionService, deathrollService, Log);
+        tradeListenerService  = new TradeListenerService(bar777SessionService, deathrollService, higherLowerService, Log);
         autoPayoutService     = new AutoPayoutService(chatQueueService, Log);
-        mainWindow = new MainWindow(Configuration, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log, historyService, autoPayoutService);
+        mainWindow = new MainWindow(Configuration, bar777SessionService, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log, historyService, autoPayoutService, higherLowerService, playerInfoService);
         windowSystem.AddWindow(mainWindow);
         windowOpenedIpc = new WindowOpenedIpc(PluginInterface, Log, mainWindow);
         bar777Rules = new Bar777Rules(PluginInterface, Framework, Log, Configuration);
         deathrollRules = new DeathrollTournamentRules(PluginInterface, Framework, Log, Configuration);
+        higherLowerRules = new HigherLowerRules(PluginInterface, Framework, Log, Configuration, higherLowerService);
         
         CommandManager.AddHandler(MainCommandFull, new CommandInfo(OnCommand)
         {
@@ -151,8 +171,10 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         windowOpenedIpc.Dispose();
         bar777Rules.Dispose();
         deathrollRules.Dispose();
+        higherLowerRules.Dispose();
         chatListener.Dispose();
         tradeListenerService.Dispose();
+        higherLowerService.Dispose();
         autoPayoutService.Dispose();
         chatQueueService.Dispose();
         historyService.Dispose();

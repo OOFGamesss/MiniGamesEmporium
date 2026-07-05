@@ -1,8 +1,9 @@
+using System;
+
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
+using MiniGamesEmporium.Models;
 using MiniGamesEmporium.Services;
-using MiniGamesEmporium.State;
-using System;
 
 /// <summary>Adds a manual donation to the Deathroll Tournament pot and records it as a transaction for audit purposes.</summary>
 

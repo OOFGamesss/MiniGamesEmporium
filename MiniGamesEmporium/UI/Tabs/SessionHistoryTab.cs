@@ -2,12 +2,12 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Services;
-using MiniGamesEmporium.State;
+using MiniGamesEmporium.Models;
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Draws the Session History tab, listing completed sessions as collapsible entries with pot breakdown, winner, players played, and timestamp, with options to delete individual sessions or clear all history. Results are paginated at 100 per page.</summary>
+/// <summary>Draws the Session History tab listing completed sessions.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class SessionHistoryTab
@@ -94,6 +94,8 @@ public sealed class SessionHistoryTab
         DrawDetailRow("Total Pot",       $"{record.TotalPot:N0} gil");
         DrawDetailRow("Boosted Pot",     $"{record.BoostedPot:N0} gil");
         DrawDetailRow("Taken in Trades", $"{record.AmountInTrades:N0} gil");
+        if (record.KeptFromTrades > 0)
+            DrawDetailRow("Kept from Trades", $"{record.KeptFromTrades:N0} gil");
         DrawDetailRow("Players Played",  record.PlayersPlayed.ToString());
         if (record.RoundsPlayed.HasValue)
             DrawDetailRow("Rounds Played",  record.RoundsPlayed.Value.ToString());

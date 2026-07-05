@@ -1,8 +1,9 @@
-using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Utility;
 using System;
 
-/// <summary>Formats BAR 777 chat message templates by substituting placeholders such as {player}, {cost}, {maxcost}, {rolls}, {remaining}, {totalpot}, and {keyword} with live session and configuration values.</summary>
+using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Utility;
+
+/// <summary>Fills BAR 777 message templates with live session values.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Actions;
 public static class Bar777MessageFormatter
@@ -20,17 +21,16 @@ public static class Bar777MessageFormatter
         var session = config.ActiveSession;
         var rollsAllowed = session?.RollsAllowed ?? config.Bar777.MaxRolls;
         var boughtRolls  = session?.RollsAllowed ?? 0;
-        var totalPot = totalPotOverride ?? config.Bar777.BoostedPot + (config.Bar777.AddTradesToPot ? config.Bar777.SessionTradedTotal : 0L);
+        var totalPot = totalPotOverride ?? config.Bar777.ComputeTotalPot();
         var remaining = remainingOverride
             ?? (session != null
                 ? Math.Max(0, session.RollsAllowed - session.RollsUsed).ToString()
                 : rollsAllowed.ToString());
-        var isTell = template.TrimStart().StartsWith("/tell", StringComparison.OrdinalIgnoreCase);
-        var displayPlayer = isTell ? playerName : PlayerNameHelper.StripWorld(playerName);
+        var displayPlayer = MessageFormat.DisplayPlayer(template, playerName);
         return template
             .Replace("{buyername}",   buyerName)
             .Replace("{player}",      displayPlayer)
-            .Replace("{position}",    queuePosition == 0 ? "next" : $"#{queuePosition}")
+            .Replace("{position}",    MessageFormat.Position(queuePosition))
             .Replace("{cost}",        config.Bar777.CostPerRoll.ToString("N0"))
             .Replace("{maxcost}",    (config.Bar777.CostPerRoll * config.Bar777.MaxRolls).ToString("N0"))
             .Replace("{rolls}",       rollsAllowed.ToString())

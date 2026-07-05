@@ -1,26 +1,29 @@
 using System;
 using System.IO;
 using System.Numerics;
+
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using Dalamud.Utility;
+
 using MiniGamesEmporium.UI.Components;
+
+/// <summary>Renders the Support tab with FAQ, Discord invite and website links.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 
 public class SupportTab
 {
-    private readonly ISharedImmediateTexture? _logo;
-
     private const string OofGamesDiscordUrl = "https://discord.gg/vM6ff4h5Ym";
     private const string OofGamesWebsiteUrl = "https://oofgames.fyi";
-
-    private const string DiscordJoinLine = "Join the OOF Games Discord ";
-    private const string WebsiteVisitLine = "Visit the OOF Games Website ";
+    private const string DiscordJoinLine    = "Join the OOF Games Discord ";
+    private const string WebsiteVisitLine   = "Visit the OOF Games Website ";
     private const float LogoSide = 160f;
+
+    private readonly ISharedImmediateTexture? _logo;
 
     public SupportTab()
     {

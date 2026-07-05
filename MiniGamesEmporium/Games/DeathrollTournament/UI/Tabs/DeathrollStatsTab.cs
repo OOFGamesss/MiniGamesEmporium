@@ -8,7 +8,7 @@ using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using System.Numerics;
 
-/// <summary>Renders an inline stats panel at the bottom of the Deathroll Tournament game view, showing the total pot with a yell button, boosted pot, entry cost, player/round counts, and a donation input row.</summary>
+/// <summary>Renders the Deathroll Tournament stats panel with pot totals and a donation row.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollStatsTab

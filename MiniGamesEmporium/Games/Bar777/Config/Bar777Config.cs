@@ -1,6 +1,6 @@
 using System;
 
-/// <summary>Serialisable configuration for the BAR 777 game, storing the display name, entry cost, roll count, winning number, boosted pot, queue mode toggle, and the nested chat configuration.</summary>
+/// <summary>Serialisable configuration for the BAR 777 game.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Config;
 [Serializable]
@@ -13,8 +13,10 @@ public class Bar777Config
     public long BoostedPot { get; set; } = 0L;
     public long SessionTradedTotal { get; set; } = 0L;
     public bool UseQueue { get; set; } = false;
-    public bool AddTradesToPot { get; set; } = true;
+    public int TradesToPotPercent { get; set; } = 100;
     public bool AutoCatchRoll { get; set; } = false;
     public int PlayersPlayed { get; set; } = 0;
     public Bar777ChatConfig Chat { get; set; } = new();
+    public long ComputeTotalPot() => BoostedPot + (SessionTradedTotal * TradesToPotPercent / 100);
+    public long ComputeTradesHeldBack() => SessionTradedTotal - (SessionTradedTotal * TradesToPotPercent / 100);
 }

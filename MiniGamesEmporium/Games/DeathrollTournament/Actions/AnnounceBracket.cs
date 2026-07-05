@@ -1,9 +1,11 @@
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.DeathrollTournament.State;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 using MiniGamesEmporium.Services;
+using MiniGamesEmporium.Utility;
 
-/// <summary>Sends the configurable bracket announcement followed by a numbered matchup list for the current round.</summary>
+/// <summary>Sends the bracket announcement and the current round's matchup list.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Actions;
 public static class AnnounceBracket
@@ -19,7 +21,7 @@ public static class AnnounceBracket
         {
             if (string.IsNullOrEmpty(match.Player1) || string.IsNullOrEmpty(match.Player2)) continue;
             if (DeathrollGameIds.IsBye(match.Player1) || DeathrollGameIds.IsBye(match.Player2)) continue;
-            chatQueue.Enqueue($"{channel}  {StripWorld(match.Player1)} vs {StripWorld(match.Player2)}");
+            chatQueue.Enqueue($"{channel}  {PlayerInfoService.StripWorld(match.Player1)} vs {PlayerInfoService.StripWorld(match.Player2)}");
         }
     }
 
@@ -28,17 +30,5 @@ public static class AnnounceBracket
         if (string.IsNullOrEmpty(message) || message[0] != '/') return "/say";
         var space = message.IndexOf(' ');
         return space > 0 ? message[..space] : "/say";
-    }
-
-    public static string GetRoundLabel(DeathrollTournamentState state)
-    {
-        var idx = state.CurrentRoundIndex;
-        return idx == state.Rounds.Count - 1 ? "The Final" : $"Round {idx + 1}";
-    }
-
-    private static string StripWorld(string entry)
-    {
-        var at = entry.IndexOf('@');
-        return at >= 0 ? entry[..at].Trim() : entry.Trim();
     }
 }

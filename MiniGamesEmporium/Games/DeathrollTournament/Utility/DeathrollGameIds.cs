@@ -1,6 +1,6 @@
 using System;
 
-/// <summary>Defines the display name and placeholder constants for Deathroll Tournament, and provides helpers to identify the game and distinguish real players from BYE slots.</summary>
+/// <summary>Display name and placeholder constants for Deathroll Tournament, with helpers.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Utility;
 public static class DeathrollGameIds

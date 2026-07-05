@@ -1,9 +1,7 @@
-using Dalamud.Game.ClientState.Objects.SubKinds;
 using MiniGamesEmporium.Services;
-using System;
-using System.Linq;
+using MiniGamesEmporium.Utility;
 
-/// <summary>Enqueues a target-and-trade sequence so the player is targeted immediately before /trade fires, preventing a stale target if other messages are already queued.</summary>
+/// <summary>Targets a player then sends /trade, queued so the target is set first.</summary>
 
 namespace MiniGamesEmporium.Actions;
 public static class SendTradeRequest
@@ -12,9 +10,7 @@ public static class SendTradeRequest
     {
         chatQueue.EnqueueAction(() =>
         {
-            var playerObj = MiniGamesEmporium.ObjectTable
-                .OfType<IPlayerCharacter>()
-                .FirstOrDefault(x => x.Name.TextValue.Equals(characterName, StringComparison.OrdinalIgnoreCase));
+            var playerObj = PlayerInfoService.FindNearby(characterName);
             if (playerObj != null)
                 MiniGamesEmporium.TargetManager.Target = playerObj;
         });

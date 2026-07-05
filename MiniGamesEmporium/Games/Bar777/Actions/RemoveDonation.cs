@@ -1,7 +1,8 @@
-using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Services;
-using MiniGamesEmporium.State;
 using System;
+
+using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Models;
+using MiniGamesEmporium.Services;
 
 /// <summary>Subtracts a manual withdrawal from the BAR 777 boosted pot and records it as a negative transaction for audit purposes.</summary>
 

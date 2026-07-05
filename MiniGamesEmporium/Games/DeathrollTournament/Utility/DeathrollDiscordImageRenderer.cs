@@ -1,15 +1,18 @@
+using MiniGamesEmporium.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.DeathrollTournament.State;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using MiniGamesEmporium.Utility;
 
-/// <summary>Generates PNG images for Discord embeds using SixLabors: a paid-player registration card and a live tournament bracket.</summary>
+/// <summary>Generates PNG images for Discord embeds: a registration card and a bracket.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Utility;
 public static class DeathrollDiscordImageRenderer
@@ -45,7 +48,6 @@ public static class DeathrollDiscordImageRenderer
     private const int MatchBoxH     = 60;
     private const int MatchSlotH    = 70;
 
-    /// <summary>Renders the registration-phase player list card. Only paid players are listed.</summary>
     public static byte[] RenderPlayerList(
         IReadOnlyList<string> paidPlayers,
         long entryCost,
@@ -71,7 +73,6 @@ public static class DeathrollDiscordImageRenderer
         return EncodePng(img);
     }
 
-    /// <summary>Renders the full tournament bracket card from the live session state.</summary>
     public static byte[] RenderBracket(DeathrollTournamentState state)
     {
         var roundCount       = state.Rounds.Count;
@@ -188,7 +189,7 @@ public static class DeathrollDiscordImageRenderer
         var subFont   = GetFont(12, FontStyle.Regular);
 
         var title = state.TournamentWinner != null
-            ? $"TOURNAMENT COMPLETE  -  {ParseName(state.TournamentWinner)} WINS!"
+            ? $"TOURNAMENT COMPLETE  -  {PlayerInfoService.StripWorld(state.TournamentWinner)} WINS!"
             : "DEATHROLL TOURNAMENT  -  LIVE BRACKET";
         var titleColor = state.TournamentWinner != null ? AccentGold : AccentPink;
 
@@ -319,7 +320,7 @@ public static class DeathrollDiscordImageRenderer
         if (match.IsResolved) return TextMuted;
         if (isCurrent && !string.IsNullOrEmpty(state.CurrentTurnPlayerName))
         {
-            if (ParseName(player).Equals(ParseName(state.CurrentTurnPlayerName), StringComparison.OrdinalIgnoreCase))
+            if (PlayerInfoService.StripWorld(player).Equals(PlayerInfoService.StripWorld(state.CurrentTurnPlayerName), StringComparison.OrdinalIgnoreCase))
                 return AccentGold;
         }
         return TextPrimary;
@@ -368,13 +369,7 @@ public static class DeathrollDiscordImageRenderer
     {
         if (string.IsNullOrEmpty(slot)) return "TBD";
         if (DeathrollGameIds.IsBye(slot)) return "BYE";
-        return ParseName(slot);
-    }
-
-    private static string ParseName(string entry)
-    {
-        var at = entry.IndexOf('@');
-        return at < 0 ? entry.Trim() : entry[..at].Trim();
+        return PlayerInfoService.StripWorld(slot);
     }
 
     private static byte[] EncodePng(Image<Rgba32> img)

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using MiniGamesEmporium.Games.DeathrollTournament.Models;
 
-/// <summary>Defines the phase of an active deathroll match within the bracket.</summary>
+/// <summary>Serialisable snapshot of a live Deathroll Tournament session and its match phases.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.State;
+
 public enum MatchPhase
 {
     NotStarted,
@@ -13,7 +15,6 @@ public enum MatchPhase
     MatchComplete,
 }
 
-/// <summary>Serialisable snapshot of a live Deathroll Tournament session, holding the full bracket structure, current match progress, active roll log, and the overall tournament winner once resolved.</summary>
 [Serializable]
 public class DeathrollTournamentState
 {
@@ -44,4 +45,7 @@ public class DeathrollTournamentState
 
     public string? TournamentWinner { get; set; } = null;
     public long WinnerPayoutGil { get; set; } = 0;
+
+    public string CurrentRoundLabel() =>
+        CurrentRoundIndex == Rounds.Count - 1 ? "The Final" : $"Round {CurrentRoundIndex + 1}";
 }

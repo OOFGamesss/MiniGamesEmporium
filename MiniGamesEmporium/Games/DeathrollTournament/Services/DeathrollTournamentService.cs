@@ -1,14 +1,16 @@
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.DeathrollTournament.State;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 using MiniGamesEmporium.Services;
-using MiniGamesEmporium.State;
+using MiniGamesEmporium.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using MiniGamesEmporium.Utility;
 
 
-/// <summary>Manages the full lifecycle of a Deathroll Tournament session: player registration, bracket generation with BYE seeding, match progression, order-roll and deathroll recording, best-of series tracking, and winner advancement.</summary>
+/// <summary>Manages the full lifecycle of a Deathroll Tournament session.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Services;
 public sealed class DeathrollTournamentService
@@ -100,16 +102,16 @@ public sealed class DeathrollTournamentService
 
     public bool IsPaid(string playerEntry)
     {
-        var name = ParseName(playerEntry);
+        var name = PlayerInfoService.StripWorld(playerEntry);
         return this.config.DeathrollTournament.PaidPlayers
-            .Any(p => ParseName(p).Equals(name, StringComparison.OrdinalIgnoreCase));
+            .Any(p => PlayerInfoService.StripWorld(p).Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
     public void MarkAsPaid(string playerEntry)
     {
-        var name = ParseName(playerEntry);
+        var name = PlayerInfoService.StripWorld(playerEntry);
         var list = this.config.DeathrollTournament.PaidPlayers;
-        if (list.Any(p => ParseName(p).Equals(name, StringComparison.OrdinalIgnoreCase))) return;
+        if (list.Any(p => PlayerInfoService.StripWorld(p).Equals(name, StringComparison.OrdinalIgnoreCase))) return;
         list.Add(name);
         Save();
         SessionUpdated?.Invoke();
@@ -117,9 +119,9 @@ public sealed class DeathrollTournamentService
 
     public void TogglePaid(string playerEntry)
     {
-        var name = ParseName(playerEntry);
+        var name = PlayerInfoService.StripWorld(playerEntry);
         var list = this.config.DeathrollTournament.PaidPlayers;
-        var existing = list.FirstOrDefault(p => ParseName(p).Equals(name, StringComparison.OrdinalIgnoreCase));
+        var existing = list.FirstOrDefault(p => PlayerInfoService.StripWorld(p).Equals(name, StringComparison.OrdinalIgnoreCase));
         if (existing != null)
             list.Remove(existing);
         else
@@ -140,10 +142,9 @@ public sealed class DeathrollTournamentService
         {
             foreach (var kv in this.config.DeathrollTournament.PlayerBuyers)
             {
-                var buyerAt = kv.Value.IndexOf('@');
-                var buyerBase = buyerAt >= 0 ? kv.Value[..buyerAt].Trim() : kv.Value;
+                var buyerBase = PlayerInfoService.StripWorld(kv.Value);
                 if (!buyerBase.Equals(tradePartner, StringComparison.OrdinalIgnoreCase)) continue;
-                var candidate = registered.FirstOrDefault(p => ParseName(p).Equals(kv.Key, StringComparison.OrdinalIgnoreCase));
+                var candidate = registered.FirstOrDefault(p => PlayerInfoService.StripWorld(p).Equals(kv.Key, StringComparison.OrdinalIgnoreCase));
                 if (candidate == null) continue;
                 match = candidate;
                 buyerName = tradePartner;
@@ -152,8 +153,8 @@ public sealed class DeathrollTournamentService
         }
         if (match == null || IsPaid(match)) return;
         var transactionName = string.IsNullOrEmpty(buyerName)
-            ? ParseName(match)
-            : $"{ParseName(match)} (Paid by {buyerName})";
+            ? PlayerInfoService.StripWorld(match)
+            : $"{PlayerInfoService.StripWorld(match)} (Paid by {buyerName})";
         this.historyService.AddTransaction(new TransactionRecord
         {
             PlayerName = transactionName,
@@ -192,7 +193,7 @@ public sealed class DeathrollTournamentService
     {
         var state = this.config.DeathrollTournamentSession;
         if (state?.TournamentWinner == null) return;
-        if (!ParseName(state.TournamentWinner).Equals(partnerName, StringComparison.OrdinalIgnoreCase)) return;
+        if (!PlayerInfoService.StripWorld(state.TournamentWinner).Equals(partnerName, StringComparison.OrdinalIgnoreCase)) return;
         state.WinnerPayoutGil += amountSent;
         Save();
         SessionUpdated?.Invoke();
@@ -202,17 +203,18 @@ public sealed class DeathrollTournamentService
     {
         return this.config.DeathrollTournament.RegisteredPlayers
             .Where(p => !IsPaid(p))
-            .Select(ParseName)
+            .Select(PlayerInfoService.StripWorld)
             .ToList();
     }
 
     public void AddPlayer(string playerEntry)
     {
         if (string.IsNullOrWhiteSpace(playerEntry)) return;
-        var name = ParseName(playerEntry.Trim());
+        var name = PlayerInfoService.StripWorld(playerEntry.Trim());
         var list = this.config.DeathrollTournament.RegisteredPlayers;
-        if (list.Any(p => ParseName(p).Equals(name, StringComparison.OrdinalIgnoreCase))) return;
+        if (list.Any(p => PlayerInfoService.StripWorld(p).Equals(name, StringComparison.OrdinalIgnoreCase))) return;
         list.Add(playerEntry.Trim());
+        AutoMarkPaidIfFree(playerEntry);
         Save();
     }
 
@@ -220,7 +222,7 @@ public sealed class DeathrollTournamentService
     {
         var list = this.config.DeathrollTournament.RegisteredPlayers;
         if (index < 0 || index >= list.Count) return;
-        var name = ParseName(list[index]);
+        var name = PlayerInfoService.StripWorld(list[index]);
         this.config.DeathrollTournament.PlayerBuyers.Remove(name);
         list.RemoveAt(index);
         Save();
@@ -228,19 +230,19 @@ public sealed class DeathrollTournamentService
     public void SetPlayerBuyer(string playerEntry, string buyerName)
     {
         if (string.IsNullOrWhiteSpace(buyerName)) return;
-        var name = ParseName(playerEntry);
+        var name = PlayerInfoService.StripWorld(playerEntry);
         this.config.DeathrollTournament.PlayerBuyers[name] = buyerName.Trim();
         Save();
         SessionUpdated?.Invoke();
     }
     public string GetPlayerBuyer(string playerEntry)
     {
-        var name = ParseName(playerEntry);
+        var name = PlayerInfoService.StripWorld(playerEntry);
         return this.config.DeathrollTournament.PlayerBuyers.TryGetValue(name, out var buyer) ? buyer : string.Empty;
     }
     public void ClearPlayerBuyer(string playerEntry)
     {
-        var name = ParseName(playerEntry);
+        var name = PlayerInfoService.StripWorld(playerEntry);
         if (!this.config.DeathrollTournament.PlayerBuyers.Remove(name)) return;
         Save();
         SessionUpdated?.Invoke();
@@ -248,7 +250,7 @@ public sealed class DeathrollTournamentService
 
     public bool IsPlayerVerified(string playerEntry)
     {
-        var name = ParseName(playerEntry);
+        var name = PlayerInfoService.StripWorld(playerEntry);
         return !this.config.DeathrollTournament.UnverifiedPlayers
             .Any(u => u.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
@@ -258,21 +260,32 @@ public sealed class DeathrollTournamentService
         var trimmed = name.Trim();
         if (string.IsNullOrWhiteSpace(trimmed)) return;
         var list = this.config.DeathrollTournament.RegisteredPlayers;
-        if (list.Any(p => ParseName(p).Equals(trimmed, StringComparison.OrdinalIgnoreCase))) return;
+        if (list.Any(p => PlayerInfoService.StripWorld(p).Equals(trimmed, StringComparison.OrdinalIgnoreCase))) return;
         list.Add(trimmed);
         this.config.DeathrollTournament.UnverifiedPlayers.Add(trimmed);
+        AutoMarkPaidIfFree(trimmed);
         Save();
+    }
+
+    private void AutoMarkPaidIfFree(string playerEntry)
+    {
+        var entryCost = this.config.DeathrollSession?.EntryCost ?? this.config.DeathrollTournament.EntryCost;
+        if (entryCost != 0) return;
+        var name = PlayerInfoService.StripWorld(playerEntry);
+        var paid = this.config.DeathrollTournament.PaidPlayers;
+        if (paid.Any(p => PlayerInfoService.StripWorld(p).Equals(name, StringComparison.OrdinalIgnoreCase))) return;
+        paid.Add(name);
     }
 
     public void LinkPlayer(int index, string nearbyEntry)
     {
         var list = this.config.DeathrollTournament.RegisteredPlayers;
         if (index < 0 || index >= list.Count) return;
-        var oldName = ParseName(list[index]);
-        var newName = ParseName(nearbyEntry.Trim());
+        var oldName = PlayerInfoService.StripWorld(list[index]);
+        var newName = PlayerInfoService.StripWorld(nearbyEntry.Trim());
         list[index] = nearbyEntry.Trim();
         var paid    = this.config.DeathrollTournament.PaidPlayers;
-        var paidIdx = paid.FindIndex(p => ParseName(p).Equals(oldName, StringComparison.OrdinalIgnoreCase));
+        var paidIdx = paid.FindIndex(p => PlayerInfoService.StripWorld(p).Equals(oldName, StringComparison.OrdinalIgnoreCase));
         if (paidIdx >= 0) paid[paidIdx] = newName;
         var buyers = this.config.DeathrollTournament.PlayerBuyers;
         if (buyers.TryGetValue(oldName, out var buyer))
@@ -293,7 +306,7 @@ public sealed class DeathrollTournamentService
     {
         return this.config.DeathrollTournament.RegisteredPlayers
             .Where(p => !IsPlayerVerified(p))
-            .Select(ParseName)
+            .Select(PlayerInfoService.StripWorld)
             .ToList();
     }
 
@@ -519,8 +532,8 @@ public sealed class DeathrollTournamentService
         if (rollMax != 10) return;
         var match = GetCurrentMatch(state);
         if (match == null) return;
-        var p1 = ParseName(match.Player1);
-        var p2 = ParseName(match.Player2);
+        var p1 = PlayerInfoService.StripWorld(match.Player1);
+        var p2 = PlayerInfoService.StripWorld(match.Player2);
         if (NamesMatch(senderName, p1) && state.OrderRollPlayer1 == 0)
             state.OrderRollPlayer1 = rollValue;
         else if (NamesMatch(senderName, p2) && state.OrderRollPlayer2 == 0)
@@ -568,7 +581,7 @@ public sealed class DeathrollTournamentService
         if (match == null) return;
         state.ActiveRollLog.Add(new DeathrollEntry
         {
-            PlayerName = ParseName(state.CurrentTurnPlayerName),
+            PlayerName = PlayerInfoService.StripWorld(state.CurrentTurnPlayerName),
             RollMax    = state.CurrentDeathrollMax == 0 ? 1000 : state.CurrentDeathrollMax,
             RollValue  = rollValue,
         });
@@ -687,7 +700,7 @@ public sealed class DeathrollTournamentService
 
     private static List<List<BracketMatch>> GenerateBracket(List<string> players)
     {
-        var size   = NextPowerOf2(players.Count);
+        var size   = BracketMath.NextPowerOf2(players.Count);
         var padded = players.ToList();
         while (padded.Count < size) padded.Add(DeathrollGameIds.ByeSlot);
         var rounds  = new List<List<BracketMatch>>();
@@ -752,24 +765,10 @@ public sealed class DeathrollTournamentService
         return state.Rounds[r][m];
     }
 
-    private static int NextPowerOf2(int n)
-    {
-        if (n <= 1) return 2;
-        var p = 1;
-        while (p < n) p <<= 1;
-        return p;
-    }
-
-    private static string ParseName(string entry)
-    {
-        var at = entry.IndexOf('@');
-        return at < 0 ? entry.Trim() : entry[..at].Trim();
-    }
-
     private static bool NamesMatch(string a, string b)
     {
-        var parsedA = ParseName(a);
-        var parsedB = ParseName(b);
+        var parsedA = PlayerInfoService.StripWorld(a);
+        var parsedB = PlayerInfoService.StripWorld(b);
         if (parsedA.Equals(parsedB, StringComparison.OrdinalIgnoreCase)) return true;
         return CrossWorldNamesMatch(parsedA, parsedB) || CrossWorldNamesMatch(parsedB, parsedA);
     }

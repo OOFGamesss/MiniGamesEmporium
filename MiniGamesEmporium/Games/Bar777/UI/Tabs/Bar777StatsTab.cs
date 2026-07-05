@@ -8,7 +8,7 @@ using MiniGamesEmporium.UI.Components;
 using System.Linq;
 using System.Numerics;
 
-/// <summary>Renders an inline stats panel at the bottom of the game view, showing the total pot with a yell button, boosted pot, Gil taken in trades, players played, optionally the queue length, and a donation input row.</summary>
+/// <summary>Renders the BAR 777 stats panel with pot totals and a donation row.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
 public sealed class Bar777StatsTab
@@ -26,18 +26,21 @@ public sealed class Bar777StatsTab
         this.chatQueue = chatQueue;
         this.historyService = historyService;
     }
-    public static float GetInlineHeight(bool showQueue)
+    public static float GetInlineHeight(bool showQueue) => GetInlineHeight(showQueue, showKept: false);
+    public static float GetInlineHeight(bool showQueue, bool showKept)
     {
         var rowH   = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
         var inputH = ImGui.GetFrameHeight()    + ImGui.GetStyle().CellPadding.Y * 2f;
-        var rows   = showQueue ? 5 : 4;
+        var rows   = 4 + (showQueue ? 1 : 0) + (showKept ? 1 : 0);
         return rows * rowH + inputH + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
     }
     public void DrawInline(bool showQueue)
     {
         var totalTraded = this.config.Bar777.SessionTradedTotal;
-        var totalPot    = this.config.Bar777.BoostedPot + (this.config.Bar777.AddTradesToPot ? totalTraded : 0L);
-        using var child = ImRaii.Child("##Bar777StatsPanel", new Vector2(-1, GetInlineHeight(showQueue)), true);
+        var totalPot    = this.config.Bar777.ComputeTotalPot();
+        var keptFromTrades = this.config.Bar777.ComputeTradesHeldBack();
+        var showKept    = keptFromTrades > 0;
+        using var child = ImRaii.Child("##Bar777StatsPanel", new Vector2(-1, GetInlineHeight(showQueue, showKept)), true);
         if (!child.Success) return;
         using var table = ImRaii.Table("##Bar777StatsTable", 3, ImGuiTableFlags.None, new Vector2(-1, 0));
         if (!table.Success) return;
@@ -47,6 +50,8 @@ public sealed class Bar777StatsTab
         DrawTotalPotRow(totalPot);
         DrawRow("Boosted Pot",     $"{this.config.Bar777.BoostedPot:N0} Gil", EmporiumNeonTheme.WinGold);
         DrawRow("Taken in Trades", $"{totalTraded:N0} Gil",                   EmporiumNeonTheme.NeonCyan);
+        if (showKept)
+            DrawRow("Kept from Trades", $"{keptFromTrades:N0} Gil",           EmporiumNeonTheme.WarnAmber);
         DrawRow("Players Played",  this.config.Bar777.PlayersPlayed.ToString(), EmporiumNeonTheme.NeonMagenta);
         if (showQueue)
             DrawRow("In Queue", this.config.QueuedPlayers.Count.ToString(), new Vector4(0.94f, 0.92f, 0.98f, 1f));

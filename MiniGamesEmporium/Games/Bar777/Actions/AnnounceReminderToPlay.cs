@@ -1,7 +1,7 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
-/// <summary>Sends a reminder via /tell to a queued player when their position reaches the configured threshold, prompting them to come and play.</summary>
+/// <summary>Reminds a queued player by /tell when they near the front of the queue.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Actions;
 public static class AnnounceReminderToPlay

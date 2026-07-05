@@ -1,7 +1,7 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
-/// <summary>Sends the configurable Request Gil tell message to a registered player, substituting their full name (including world) and the entry cost.</summary>
+/// <summary>Sends the Request Gil tell to a registered player with the entry cost.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Actions;
 public static class RequestGil

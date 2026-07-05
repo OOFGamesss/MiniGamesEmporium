@@ -5,15 +5,17 @@ using MiniGamesEmporium.Services;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using MiniGamesEmporium.Utility;
+using MiniGamesEmporium.Games.Bar777.Services;
 
-/// <summary>Renders the player waitlist sidebar, including the currently hosted player row, a scrollable queue table with per-row remind and remove buttons, and a manual player add field at the bottom.</summary>
+/// <summary>Renders the player waitlist sidebar with the queue table and manual add field.</summary>
 
 namespace MiniGamesEmporium.UI.Components;
 public sealed class QueuePanel
 {
-    private readonly SessionService sessionService;
+    private readonly Bar777SessionService bar777SessionService;
     private string comboFilter = string.Empty;
-    public QueuePanel(SessionService sessionService) => this.sessionService = sessionService;
+    public QueuePanel(Bar777SessionService bar777SessionService) => this.bar777SessionService = bar777SessionService;
     private const float QueueListMinScrollHeightPx = 96f;
     private static readonly Vector4 ReminderButton        = new(0.04f, 0.42f, 0.16f, 1f);
     private static readonly Vector4 ReminderButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
@@ -140,7 +142,7 @@ public sealed class QueuePanel
         Func<string, bool>? hasBeenReminded,
         Action<string, int>? onManualReminder)
     {
-        var queue = this.sessionService.Queue;
+        var queue = this.bar777SessionService.Queue;
         var hasVisibleWaiting = HasAnyWaitingRow(queue, currentSessionPlayerName);
         if (!hasVisibleWaiting)
         {
@@ -197,7 +199,7 @@ public sealed class QueuePanel
         if (remindIndex >= 0)
             onManualReminder!.Invoke(queue[remindIndex], remindDisplayOrdinal);
         if (removeIndex >= 0)
-            this.sessionService.RemoveFromQueue(removeIndex);
+            this.bar777SessionService.RemoveFromQueue(removeIndex);
     }
     private static bool HasAnyWaitingRow(IReadOnlyList<string> queue, string? currentSessionPlayerName)
     {
@@ -212,15 +214,13 @@ public sealed class QueuePanel
     {
         if (currentSessionPlayerName == null)
             return false;
-        var qAt = queuedName.IndexOf('@');
-        var qName = qAt < 0 ? queuedName : queuedName[..qAt];
-        var cAt = currentSessionPlayerName.IndexOf('@');
-        var cName = cAt < 0 ? currentSessionPlayerName : currentSessionPlayerName[..cAt];
+        var qName = PlayerInfoService.StripWorld(queuedName);
+        var cName = PlayerInfoService.StripWorld(currentSessionPlayerName);
         return qName.Equals(cName, StringComparison.OrdinalIgnoreCase);
     }
     private void DrawManualAddRow(IReadOnlyList<string> nearbyPlayers)
     {
-        var queue = this.sessionService.Queue;
+        var queue = this.bar777SessionService.Queue;
         var preview = nearbyPlayers.Count == 0 ? "No players nearby" : "Add player to queue...";
         ImGui.SetNextItemWidth(-1);
         using var combo = ImRaii.Combo("##NearbyAdd", preview, ImGuiComboFlags.HeightLarge);
@@ -241,7 +241,7 @@ public sealed class QueuePanel
             if (!player.Contains(this.comboFilter, StringComparison.OrdinalIgnoreCase)) continue;
             any = true;
             if (!ImGui.Selectable(player)) continue;
-            this.sessionService.TryEnqueuePlayer(player);
+            this.bar777SessionService.TryEnqueuePlayer(player);
             this.comboFilter = string.Empty;
             ImGui.CloseCurrentPopup();
         }
@@ -249,12 +249,10 @@ public sealed class QueuePanel
     }
     private static bool IsAlreadyQueued(string nearbyEntry, IReadOnlyList<string> queue)
     {
-        var at = nearbyEntry.IndexOf('@');
-        var nearbyName = at < 0 ? nearbyEntry : nearbyEntry[..at];
+        var nearbyName = PlayerInfoService.StripWorld(nearbyEntry);
         foreach (var q in queue)
         {
-            var qAt = q.IndexOf('@');
-            var qName = qAt < 0 ? q : q[..qAt];
+            var qName = PlayerInfoService.StripWorld(q);
             if (qName.Equals(nearbyName, StringComparison.OrdinalIgnoreCase)) return true;
         }
         return false;

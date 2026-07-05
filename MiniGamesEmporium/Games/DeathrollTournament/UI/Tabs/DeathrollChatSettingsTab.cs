@@ -3,7 +3,7 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.UI.Components;
 using System.Numerics;
 
-/// <summary>Draws the Chat settings tab for Deathroll Tournament, allowing the host to configure all automated and manually triggered message templates along with their placeholder reference.</summary>
+/// <summary>Draws the Chat settings tab for Deathroll Tournament message templates.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollChatSettingsTab

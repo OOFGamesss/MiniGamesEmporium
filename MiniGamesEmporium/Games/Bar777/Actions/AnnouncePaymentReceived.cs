@@ -1,7 +1,7 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
-/// <summary>Sends the start rolls message to chat once full payment has been verified for the active session player.</summary>
+/// <summary>Sends the start-rolls message once payment is verified.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Actions;
 public static class AnnouncePaymentReceived

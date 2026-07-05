@@ -2,7 +2,7 @@ using ECommons.Automation;
 using ECommons.Automation.NeoTaskManager;
 using System;
 
-/// <summary>Wraps the ECommons TaskManager to dispatch chat commands and in-game actions sequentially, inserting a one-second delay between each chat message to avoid flooding the chat server.</summary>
+/// <summary>Dispatches chat commands and actions sequentially, spacing messages to avoid flooding.</summary>
 
 namespace MiniGamesEmporium.Services;
 public sealed class ChatQueueService : IDisposable

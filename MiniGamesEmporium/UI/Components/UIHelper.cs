@@ -5,11 +5,9 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
-namespace MiniGamesEmporium.UI.Components;
+/// <summary>Shared UI rendering helpers used across all tabs.</summary>
 
-/// <summary>
-/// Shared UI rendering helpers used across all tab components.
-/// </summary>
+namespace MiniGamesEmporium.UI.Components;
 internal static class UIHelper
 {
     internal static bool IconTextButton(FontAwesomeIcon icon, string label, string id = "", float minWidth = 0f)

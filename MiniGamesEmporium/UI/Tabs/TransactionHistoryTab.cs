@@ -1,12 +1,12 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Services;
-using MiniGamesEmporium.State;
+using MiniGamesEmporium.Models;
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Draws the Transaction History tab, displaying a scrollable, resizable ledger of all recorded Gil trades with columns for player name, game, amount, and local date and time. Results are paginated at 100 per page.</summary>
+/// <summary>Draws the Transaction History tab listing all recorded Gil trades.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class TransactionHistoryTab

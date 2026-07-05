@@ -2,7 +2,7 @@ using Dalamud.Bindings.ImGui;
 using System;
 using System.Numerics;
 
-/// <summary>Defines the neon colour palette, layout constants, and ImGui push/pop scope helpers that apply the plugin's visual theme consistently across all windows and panels.</summary>
+/// <summary>Defines the neon colour palette, layout constants, and ImGui theme scopes.</summary>
 
 namespace MiniGamesEmporium.UI.Components;
 public static class EmporiumNeonTheme
@@ -13,8 +13,8 @@ public static class EmporiumNeonTheme
     public static readonly Vector4 MinefieldGreenDim = new(0.06f, 0.55f, 0.18f, 1f);
     public static readonly Vector4 GamblerDerbyYellow = new(1f, 0.90f, 0.05f, 1f);
     public static readonly Vector4 GamblerDerbyYellowDim = new(0.55f, 0.50f, 0.06f, 1f);
-    public static readonly Vector4 HotShotsOrange = new(1f, 0.55f, 0.10f, 1f);
-    public static readonly Vector4 HotShotsOrangeDim = new(0.55f, 0.30f, 0.05f, 1f);
+    public static readonly Vector4 HigherLowerOrange = new(1f, 0.55f, 0.10f, 1f);
+    public static readonly Vector4 HigherLowerOrangeDim = new(0.55f, 0.30f, 0.05f, 1f);
     public static readonly Vector4 BeerPongWhite = new(0.95f, 0.95f, 0.95f, 1f);
     public static readonly Vector4 BeerPongWhiteDim = new(0.55f, 0.55f, 0.55f, 1f);
     public static readonly Vector4 DartsBlue = new(0.15f, 0.55f, 1f, 1f);
@@ -62,11 +62,11 @@ public static class EmporiumNeonTheme
     private static readonly Vector4 GamblerDerbyTabActive = new(0.42f, 0.36f, 0.04f, 1f);
     private static readonly Vector4 GamblerDerbyTabUnfocused = new(0.06f, 0.05f, 0.02f, 1f);
     private static readonly Vector4 GamblerDerbyTabUnfocusedActive = new(0.32f, 0.28f, 0.04f, 1f);
-    private static readonly Vector4 HotShotsTabBase = new(0.08f, 0.05f, 0.02f, 1f);
-    private static readonly Vector4 HotShotsTabHovered = new(0.28f, 0.16f, 0.04f, 1f);
-    private static readonly Vector4 HotShotsTabActive = new(0.42f, 0.22f, 0.04f, 1f);
-    private static readonly Vector4 HotShotsTabUnfocused = new(0.06f, 0.04f, 0.02f, 1f);
-    private static readonly Vector4 HotShotsTabUnfocusedActive = new(0.32f, 0.18f, 0.04f, 1f);
+    private static readonly Vector4 HigherLowerTabBase = new(0.08f, 0.05f, 0.02f, 1f);
+    private static readonly Vector4 HigherLowerTabHovered = new(0.28f, 0.16f, 0.04f, 1f);
+    private static readonly Vector4 HigherLowerTabActive = new(0.42f, 0.22f, 0.04f, 1f);
+    private static readonly Vector4 HigherLowerTabUnfocused = new(0.06f, 0.04f, 0.02f, 1f);
+    private static readonly Vector4 HigherLowerTabUnfocusedActive = new(0.32f, 0.18f, 0.04f, 1f);
     private static readonly Vector4 BeerPongTabBase = new(0.07f, 0.07f, 0.08f, 1f);
     private static readonly Vector4 BeerPongTabHovered = new(0.22f, 0.22f, 0.26f, 1f);
     private static readonly Vector4 BeerPongTabActive = new(0.36f, 0.36f, 0.42f, 1f);
@@ -216,16 +216,16 @@ public static class EmporiumNeonTheme
         }
         public void Dispose() => ImGui.PopStyleColor(ColourCount);
     }
-    public readonly struct HotShotsTabItemScope : IDisposable
+    public readonly struct HigherLowerTabItemScope : IDisposable
     {
         private const int ColourCount = 5;
-        public HotShotsTabItemScope()
+        public HigherLowerTabItemScope()
         {
-            ImGui.PushStyleColor(ImGuiCol.Tab, HotShotsTabBase);
-            ImGui.PushStyleColor(ImGuiCol.TabHovered, HotShotsTabHovered);
-            ImGui.PushStyleColor(ImGuiCol.TabActive, HotShotsTabActive);
-            ImGui.PushStyleColor(ImGuiCol.TabUnfocused, HotShotsTabUnfocused);
-            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, HotShotsTabUnfocusedActive);
+            ImGui.PushStyleColor(ImGuiCol.Tab, HigherLowerTabBase);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered, HigherLowerTabHovered);
+            ImGui.PushStyleColor(ImGuiCol.TabActive, HigherLowerTabActive);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocused, HigherLowerTabUnfocused);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, HigherLowerTabUnfocusedActive);
         }
         public void Dispose() => ImGui.PopStyleColor(ColourCount);
     }
@@ -304,6 +304,19 @@ public static class EmporiumNeonTheme
             ImGui.PushStyleColor(ImGuiCol.TabActive, DeathrollTournamentTabActive);
             ImGui.PushStyleColor(ImGuiCol.TabUnfocused, DeathrollTournamentTabUnfocused);
             ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, DeathrollTournamentTabUnfocusedActive);
+        }
+        public void Dispose() => ImGui.PopStyleColor(ColourCount);
+    }
+    public readonly struct HigherLowerNestedTabChromeScope : IDisposable
+    {
+        private const int ColourCount = 5;
+        public HigherLowerNestedTabChromeScope()
+        {
+            ImGui.PushStyleColor(ImGuiCol.Tab,               HigherLowerTabBase);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered,        HigherLowerTabHovered);
+            ImGui.PushStyleColor(ImGuiCol.TabActive,         HigherLowerTabActive);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocused,      HigherLowerTabUnfocused);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, HigherLowerTabUnfocusedActive);
         }
         public void Dispose() => ImGui.PopStyleColor(ColourCount);
     }

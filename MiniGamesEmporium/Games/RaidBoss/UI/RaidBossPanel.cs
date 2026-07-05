@@ -3,7 +3,7 @@ using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Placeholder panel for the Raid Boss game, displaying a centred coming-soon message scaled to fill the available panel area.</summary>
+/// <summary>Placeholder panel for the Raid Boss game, showing a coming-soon message.</summary>
 
 namespace MiniGamesEmporium.Games.RaidBoss.UI;
 public sealed class RaidBossPanel

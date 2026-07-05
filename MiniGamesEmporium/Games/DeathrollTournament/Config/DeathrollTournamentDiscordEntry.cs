@@ -1,6 +1,6 @@
 using System;
 
-/// <summary>Persisted state for one Deathroll Tournament Discord webhook: alias label, URL, the Discord message ID of the managed embed, and delivery status flags.</summary>
+/// <summary>Persisted state for one Deathroll Tournament Discord webhook.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Config;
 [Serializable]

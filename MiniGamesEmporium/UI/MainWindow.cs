@@ -5,7 +5,10 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Utility;
+using MiniGamesEmporium.Games.Bar777.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.HigherLower.Services;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.UI.Tabs;
@@ -13,7 +16,7 @@ using System;
 using System.Numerics;
 
 
-/// <summary>The main plugin window, hosting the top-level tab bar for Mini Games, Session History, Transaction History, and Settings, plus a floating Stop Session button overlaid on the tab band during active BAR 777 sessions.</summary>
+/// <summary>The main plugin window hosting the top-level tab bar and stop-session button.</summary>
 
 namespace MiniGamesEmporium.UI;
 public sealed class MainWindow : Window, IDisposable
@@ -26,12 +29,14 @@ public sealed class MainWindow : Window, IDisposable
     private readonly PresetManagerTab presetManagerTab;
     private readonly SettingsTab settingsTab;
     private readonly SupportTab supportTab;
-    private readonly SessionService sessionService;
+    private readonly Bar777SessionService bar777SessionService;
     private readonly DeathrollTournamentService deathrollService;
+    private readonly HigherLowerService higherLowerService;
     private readonly PluginConfiguration config;
     private bool focusSettingsTab;
     private bool pendingStopConfirm;
     private bool pendingDeathrollStopConfirm;
+    private bool pendingHLStopConfirm;
     private int prePushedColours;
     private bool miniGamesTabActive = true;
 
@@ -44,14 +49,17 @@ public sealed class MainWindow : Window, IDisposable
     }
     public MainWindow(
         PluginConfiguration config,
+        Bar777SessionService bar777SessionService,
         SessionService sessionService,
         ChatQueueService chatQueue,
         DeathrollTournamentService deathrollService,
-        DeathrollDiscordWebhookService deathrollDiscordService,
+        DeathrollWebhookService deathrollDiscordService,
         PresetService presetService,
         IPluginLog log,
         HistoryService historyService,
-        AutoPayoutService autoPayoutService)
+        AutoPayoutService autoPayoutService,
+        HigherLowerService higherLowerService,
+        PlayerInfoService playerInfoService)
         : base("Mini Games Emporium##MGE_Main_v2")
     {
         SizeConstraints = new WindowSizeConstraints
@@ -62,12 +70,13 @@ public sealed class MainWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         this.transactionHistoryTab = new TransactionHistoryTab(historyService);
         this.sessionHistoryTab     = new SessionHistoryTab(historyService);
-        this.miniGamesTab          = new MiniGamesTab(config, sessionService, chatQueue, deathrollService, deathrollDiscordService, log, historyService, autoPayoutService);
+        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, sessionService, chatQueue, deathrollService, deathrollDiscordService, log, historyService, autoPayoutService, higherLowerService, playerInfoService);
         this.presetManagerTab      = new PresetManagerTab(config, presetService);
         this.settingsTab           = new SettingsTab(config);
         this.supportTab            = new SupportTab();
-        this.sessionService        = sessionService;
+        this.bar777SessionService  = bar777SessionService;
         this.deathrollService      = deathrollService;
+        this.higherLowerService    = higherLowerService;
         this.config                = config;
     }
     public void Dispose()
@@ -113,12 +122,14 @@ public sealed class MainWindow : Window, IDisposable
         }
         DrawBar777StopSessionMainTabRowButton(tabBarRowScreenY, tabBarContentY);
         DrawDeathrollStopButton(tabBarRowScreenY, tabBarContentY);
+        DrawHigherLowerStopButton(tabBarRowScreenY, tabBarContentY);
         DrawStopSessionConfirmPopup();
         DrawDeathrollStopConfirmPopup();
+        DrawHLStopConfirmPopup();
     }
     private void DrawBar777StopSessionMainTabRowButton(float tabBarRowScreenY, float tabBarContentY)
     {
-        var session = this.sessionService.GetActiveSession();
+        var session = this.bar777SessionService.GetActiveSession();
         if (session == null || !Bar777GameIds.Matches(session.GameName))
             return;
         var tabBarHeight = tabBarContentY - tabBarRowScreenY - ImGui.GetStyle().ItemSpacing.Y;
@@ -130,7 +141,7 @@ public sealed class MainWindow : Window, IDisposable
             var xRight = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
             var xStop = xRight - stopBtnSize.X;
             var yBtn = tabBarRowScreenY + MathF.Max(0f, (tabBarHeight - 1f - stopBtnSize.Y) * 0.5f);
-            var isPaused = this.sessionService.IsPaused;
+            var isPaused = this.bar777SessionService.IsPaused;
             var pauseLabel = isPaused ? "Continue Session" : "Pause Session";
             var pauseIcon = isPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
             var pauseBtnSize = UIHelper.CalcButtonSize(pauseIcon, pauseLabel);
@@ -165,8 +176,8 @@ public sealed class MainWindow : Window, IDisposable
             var icon = isPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
             if (UIHelper.IconTextButton(icon, label, "##MGE_Bar777PauseMain"))
             {
-                if (isPaused) this.sessionService.ResumeSession();
-                else this.sessionService.PauseSession();
+                if (isPaused) this.bar777SessionService.ResumeSession();
+                else this.bar777SessionService.PauseSession();
             }
         }
         finally
@@ -213,7 +224,7 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.Spacing();
         if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Session", "##ConfirmStop"))
         {
-            this.sessionService.CancelSession();
+            this.bar777SessionService.CancelSession();
             ImGui.CloseCurrentPopup();
         }
         ImGui.SameLine();
@@ -231,7 +242,7 @@ public sealed class MainWindow : Window, IDisposable
             var stopBtnSize  = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, stopLabel);
             var yBtn         = tabBarRowScreenY + MathF.Max(0f, (tabBarHeight - 1f - stopBtnSize.Y) * 0.5f);
             var xRight       = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
-            var isPaused     = this.sessionService.IsPaused;
+            var isPaused     = this.bar777SessionService.IsPaused;
             var pauseLabel   = isPaused ? "Continue Tournament" : "Pause Tournament";
             var pauseIcon    = isPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
             var pauseBtnSize = UIHelper.CalcButtonSize(pauseIcon, pauseLabel);
@@ -268,8 +279,8 @@ public sealed class MainWindow : Window, IDisposable
         {
             if (UIHelper.IconTextButton(icon, label, "##MGE_DeathrollPauseMain"))
             {
-                if (isPaused) this.sessionService.ResumeSession();
-                else          this.sessionService.PauseSession();
+                if (isPaused) this.bar777SessionService.ResumeSession();
+                else          this.bar777SessionService.PauseSession();
             }
         }
         finally
@@ -314,7 +325,7 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.Spacing();
         if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Tournament", "##ConfirmDeathrollStop"))
         {
-            this.sessionService.ResumeSession();
+            this.bar777SessionService.ResumeSession();
             this.deathrollService.StopSession();
             ImGui.CloseCurrentPopup();
         }
@@ -354,5 +365,65 @@ public sealed class MainWindow : Window, IDisposable
     {
         using var tab = ImRaii.TabItem("Support");
         if (tab.Success) this.supportTab.Draw();
+    }
+
+    private void DrawHigherLowerStopButton(float tabBarRowScreenY, float tabBarContentY)
+    {
+        if (!this.higherLowerService.IsSessionActive()) return;
+        var tabBarHeight = tabBarContentY - tabBarRowScreenY - ImGui.GetStyle().ItemSpacing.Y;
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(8f, 1f));
+        try
+        {
+            const string stopLabel = "Stop Session";
+            var stopBtnSize = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, stopLabel);
+            var yBtn        = tabBarRowScreenY + MathF.Max(0f, (tabBarHeight - 1f - stopBtnSize.Y) * 0.5f);
+            var xRight      = ImGui.GetWindowPos().X + ImGui.GetWindowContentRegionMax().X - ImGui.GetScrollX();
+            var xStop       = xRight - stopBtnSize.X;
+            ImGui.SetCursorScreenPos(new Vector2(xStop, yBtn));
+            ImGui.PushStyleColor(ImGuiCol.Button,        EmporiumNeonTheme.Bar777Red);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1f, 0.22f, 0.38f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new Vector4(0.72f, 0.08f, 0.22f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border,        EmporiumNeonTheme.Bar777RedDim);
+            ImGui.PushStyleColor(ImGuiCol.Text,          new Vector4(1f, 0.98f, 0.98f, 1f));
+            try
+            {
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, stopLabel, "##MGE_HLStopMain"))
+                    this.pendingHLStopConfirm = true;
+            }
+            finally
+            {
+                ImGui.PopStyleColor(5);
+            }
+        }
+        finally
+        {
+            ImGui.PopStyleVar();
+        }
+    }
+
+    private void DrawHLStopConfirmPopup()
+    {
+        if (this.pendingHLStopConfirm)
+        {
+            ImGui.OpenPopup("##HLStopConfirm");
+            this.pendingHLStopConfirm = false;
+        }
+        var centre = ImGui.GetMainViewport().GetCenter();
+        ImGui.SetNextWindowPos(centre, ImGuiCond.Always, new Vector2(0.5f, 0.5f));
+        using var popup = ImRaii.Popup("##HLStopConfirm", ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
+        if (!popup.Success) return;
+        ImGui.TextColored(EmporiumNeonTheme.HigherLowerOrange, "Stop Higher/Lower session?");
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.TextUnformatted("All session stats will be reset.");
+        ImGui.Spacing();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Session", "##ConfirmHLStop"))
+        {
+            this.higherLowerService.CancelSession();
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Cancel", "##CancelHLStop"))
+            ImGui.CloseCurrentPopup();
     }
 }

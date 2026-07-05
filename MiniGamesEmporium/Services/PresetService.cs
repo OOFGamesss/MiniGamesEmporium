@@ -1,13 +1,15 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
+using MiniGamesEmporium.Games.HigherLower.Config;
+using MiniGamesEmporium.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 
-/// <summary>Manages plugin presets: creates a default on first load, captures current settings into a preset, applies a preset to live config, and handles update, rename, and delete operations.</summary>
+/// <summary>Creates, applies, and manages named plugin presets.</summary>
 
 namespace MiniGamesEmporium.Services;
 public sealed class PresetService
@@ -60,6 +62,7 @@ public sealed class PresetService
         var preset = this.config.Presets[index];
         ApplyBar777Settings(preset.Bar777);
         ApplyDeathrollSettings(preset.DeathrollTournament);
+        ApplyHigherLowerSettings(preset.HigherLower);
         this.config.QueueKeyword = preset.QueueKeyword;
         this.config.QueueJoinChannels = DeepClone(preset.QueueJoinChannels);
         this.config.ActivePresetIndex = index;
@@ -100,6 +103,7 @@ public sealed class PresetService
         QueueJoinChannels = DeepClone(this.config.QueueJoinChannels),
         Bar777 = CaptureBar777(),
         DeathrollTournament = CaptureDeathroll(),
+        HigherLower = CaptureHigherLower(),
     };
 
     private Bar777Config CaptureBar777()
@@ -127,6 +131,9 @@ public sealed class PresetService
             AutoNextMatch             = s.AutoNextMatch,
             AutoNextMatchDelaySeconds = s.AutoNextMatchDelaySeconds,
             AutoCatchNextRound        = s.AutoCatchNextRound,
+            AutoJoinKeyword           = s.AutoJoinKeyword,
+            JoinKeyword               = s.JoinKeyword,
+            JoinChannels              = DeepClone(s.JoinChannels),
             Chat                      = DeepClone(s.Chat),
             WebhookUsername           = s.WebhookUsername,
             WebhookAvatarUrl          = s.WebhookAvatarUrl,
@@ -136,6 +143,21 @@ public sealed class PresetService
                 Url     = e.Url,
                 Enabled = e.Enabled,
             }).ToList(),
+        };
+    }
+
+    private HigherLowerConfig CaptureHigherLower()
+    {
+        var s = this.config.HigherLower;
+        return new HigherLowerConfig
+        {
+            EntryCost            = s.EntryCost,
+            DiceSides            = s.DiceSides,
+            AutoWinCount         = s.AutoWinCount,
+            TargetRounds         = s.TargetRounds,
+            AllowMultipleWinners = s.AllowMultipleWinners,
+            TradesToPotPercent   = s.TradesToPotPercent,
+            Chat                 = DeepClone(s.Chat),
         };
     }
 
@@ -157,6 +179,9 @@ public sealed class PresetService
         this.config.DeathrollTournament.AutoNextMatch             = d.AutoNextMatch;
         this.config.DeathrollTournament.AutoNextMatchDelaySeconds = d.AutoNextMatchDelaySeconds;
         this.config.DeathrollTournament.AutoCatchNextRound        = d.AutoCatchNextRound;
+        this.config.DeathrollTournament.AutoJoinKeyword           = d.AutoJoinKeyword;
+        this.config.DeathrollTournament.JoinKeyword               = d.JoinKeyword;
+        this.config.DeathrollTournament.JoinChannels              = DeepClone(d.JoinChannels);
         this.config.DeathrollTournament.Chat                      = DeepClone(d.Chat);
         this.config.DeathrollTournament.WebhookUsername           = d.WebhookUsername;
         this.config.DeathrollTournament.WebhookAvatarUrl          = d.WebhookAvatarUrl;
@@ -168,15 +193,27 @@ public sealed class PresetService
         }).ToList();
     }
 
-    public string BuildExportString(bool bar777, bool deathroll, bool discord, bool queue)
+    private void ApplyHigherLowerSettings(HigherLowerConfig h)
+    {
+        this.config.HigherLower.EntryCost            = h.EntryCost;
+        this.config.HigherLower.DiceSides            = h.DiceSides;
+        this.config.HigherLower.AutoWinCount         = h.AutoWinCount;
+        this.config.HigherLower.TargetRounds         = h.TargetRounds;
+        this.config.HigherLower.AllowMultipleWinners = h.AllowMultipleWinners;
+        this.config.HigherLower.TradesToPotPercent   = h.TradesToPotPercent;
+        this.config.HigherLower.Chat                 = DeepClone(h.Chat);
+    }
+
+    public string BuildExportString(bool bar777, bool deathroll, bool higherlower, bool discord, bool queue)
     {
         var payload = new PresetExportPayload
         {
-            Bar777              = bar777   ? CaptureBar777Export()   : null,
-            DeathrollTournament = deathroll ? CaptureDeathrollExport() : null,
-            Discord             = discord  ? CaptureDiscordExport()  : null,
-            QueueKeyword        = queue    ? this.config.QueueKeyword : null,
-            QueueJoinChannels   = queue    ? DeepClone(this.config.QueueJoinChannels) : null,
+            Bar777              = bar777      ? CaptureBar777Export()      : null,
+            DeathrollTournament = deathroll   ? CaptureDeathrollExport()   : null,
+            HigherLower         = higherlower ? CaptureHigherLowerExport() : null,
+            Discord             = discord     ? CaptureDiscordExport()     : null,
+            QueueKeyword        = queue       ? this.config.QueueKeyword   : null,
+            QueueJoinChannels   = queue       ? DeepClone(this.config.QueueJoinChannels) : null,
         };
         var json = JsonSerializer.Serialize(payload);
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
@@ -229,10 +266,11 @@ public sealed class PresetService
         Name                = name,
         Bar777              = BuildBar777FromPayload(payload.Bar777, def),
         DeathrollTournament = BuildDeathrollFromPayload(payload.DeathrollTournament, payload.Discord, def),
+        HigherLower         = BuildHigherLowerFromPayload(payload.HigherLower, def),
         QueueKeyword        = payload.QueueKeyword        ?? def?.QueueKeyword        ?? "!join",
         QueueJoinChannels   = payload.QueueJoinChannels  != null
             ? DeepClone(payload.QueueJoinChannels)
-            : (def != null ? DeepClone(def.QueueJoinChannels) : new QueueJoinChannelsConfig()),
+            : (def != null ? DeepClone(def.QueueJoinChannels) : new QueueConfig()),
     };
 
     private static Bar777Config BuildBar777FromPayload(Bar777ExportEntry? entry, PluginPreset? def)
@@ -248,6 +286,22 @@ public sealed class PresetService
             UseQueue      = entry.UseQueue,
             AutoCatchRoll = entry.AutoCatchRoll,
             Chat          = DeepClone(entry.Chat),
+        };
+    }
+
+    private static HigherLowerConfig BuildHigherLowerFromPayload(HigherLowerExportEntry? entry, PluginPreset? def)
+    {
+        if (entry == null)
+            return def != null ? DeepClone(def.HigherLower) : new HigherLowerConfig();
+        return new HigherLowerConfig
+        {
+            EntryCost            = entry.EntryCost,
+            DiceSides            = entry.DiceSides,
+            AutoWinCount         = entry.AutoWinCount,
+            TargetRounds         = entry.TargetRounds,
+            AllowMultipleWinners = entry.AllowMultipleWinners,
+            TradesToPotPercent   = entry.TradesToPotPercent,
+            Chat                 = DeepClone(entry.Chat),
         };
     }
 
@@ -270,6 +324,9 @@ public sealed class PresetService
             AutoNextMatch             = entry.AutoNextMatch,
             AutoNextMatchDelaySeconds = entry.AutoNextMatchDelaySeconds,
             AutoCatchNextRound        = entry.AutoCatchNextRound,
+            AutoJoinKeyword           = entry.AutoJoinKeyword,
+            JoinKeyword               = entry.JoinKeyword,
+            JoinChannels              = DeepClone(entry.JoinChannels),
             Chat                      = DeepClone(entry.Chat),
             WebhookUsername           = username,
             WebhookAvatarUrl          = avatarUrl,
@@ -321,6 +378,21 @@ public sealed class PresetService
         };
     }
 
+    private HigherLowerExportEntry CaptureHigherLowerExport()
+    {
+        var s = this.config.HigherLower;
+        return new HigherLowerExportEntry
+        {
+            EntryCost            = s.EntryCost,
+            DiceSides            = s.DiceSides,
+            AutoWinCount         = s.AutoWinCount,
+            TargetRounds         = s.TargetRounds,
+            AllowMultipleWinners = s.AllowMultipleWinners,
+            TradesToPotPercent   = s.TradesToPotPercent,
+            Chat                 = DeepClone(s.Chat),
+        };
+    }
+
     private DeathrollExportEntry CaptureDeathrollExport()
     {
         var s = this.config.DeathrollTournament;
@@ -331,6 +403,9 @@ public sealed class PresetService
             AutoNextMatch             = s.AutoNextMatch,
             AutoNextMatchDelaySeconds = s.AutoNextMatchDelaySeconds,
             AutoCatchNextRound        = s.AutoCatchNextRound,
+            AutoJoinKeyword           = s.AutoJoinKeyword,
+            JoinKeyword               = s.JoinKeyword,
+            JoinChannels              = DeepClone(s.JoinChannels),
             Chat                      = DeepClone(s.Chat),
         };
     }

@@ -1,9 +1,11 @@
 using Dalamud.Bindings.ImGui;
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.UI.Components;
 using System;
+using System.Numerics;
 
-/// <summary>Draws the Chat settings tab for BAR 777, allowing the host to configure and preview all automated and manually triggered message templates along with their placeholder reference.</summary>
+/// <summary>Draws the Chat settings tab for BAR 777 message templates.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
 public sealed class Bar777ChatSettingsTab
@@ -21,17 +23,11 @@ public sealed class Bar777ChatSettingsTab
         ImGui.TextUnformatted("Chat Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        ImGui.TextDisabled("All placeholders work in every message field:");
-        ImGui.TextDisabled("  {player}      = player name; @World included only for /tell messages (e.g. John Doe@Omega)");
-        ImGui.TextDisabled("  {buyername}   = buyer's full name always including @World (e.g. Jane Doe@Omega) - for use in buyer request message only");
-        ImGui.TextDisabled("  {position}    = player's position in the waiting list");
-        ImGui.TextDisabled("  {cost}        = cost per roll in Gil");
-        ImGui.TextDisabled("  {maxcost}    = cost per roll × max rolls");
-        ImGui.TextDisabled("  {rolls}       = max rolls allowed per session");
-        ImGui.TextDisabled("  {boughtrolls} = rolls this player actually purchased");
-        ImGui.TextDisabled("  {remaining}   = rolls remaining");
-        ImGui.TextDisabled("  {totalpot}    = total pot");
-        ImGui.TextDisabled("  {keyword}     = queue join keyword");
+        DrawChannelSelector();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawPlaceholderReference();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -45,9 +41,63 @@ public sealed class Bar777ChatSettingsTab
         ImGui.Spacing();
         DrawAutoSendTogglesSection();
     }
+    private void DrawChannelSelector()
+    {
+        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Chat Channel");
+        ImGui.TextDisabled("Changes messages set for /say, /party and /alliance to a channel of your choice");
+        ImGui.Spacing();
+        var channel = this.config.Bar777.Chat.Channel;
+        if (ImGui.RadioButton("Say##ChannelSay", channel == ChatChannel.Say))
+        {
+            this.config.Bar777.Chat.ApplyChatChannel(ChatChannel.Say);
+            this.config.Save();
+        }
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Party##ChannelParty", channel == ChatChannel.Party))
+        {
+            this.config.Bar777.Chat.ApplyChatChannel(ChatChannel.Party);
+            this.config.Save();
+        }
+        ImGui.SameLine();
+        if (ImGui.RadioButton("Alliance##ChannelAlliance", channel == ChatChannel.Alliance))
+        {
+            this.config.Bar777.Chat.ApplyChatChannel(ChatChannel.Alliance);
+            this.config.Save();
+        }
+    }
+    private static void DrawPlaceholderReference()
+    {
+        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Available Placeholders");
+        ImGui.Spacing();
+        DrawPlaceholderRow("{player}",      "Player name; @World included only for /tell messages (e.g. John Doe@Omega)");
+        DrawPlaceholderRow("{buyername}",   "Buyer's full name always including @World (e.g. Jane Doe@Omega) - buyer request message only");
+        DrawPlaceholderRow("{position}",    "Player's position in the waiting list");
+        DrawPlaceholderRow("{cost}",        "Cost per roll in Gil");
+        DrawPlaceholderRow("{maxcost}",     "Cost per roll × max rolls");
+        DrawPlaceholderRow("{rolls}",       "Max rolls allowed per session");
+        DrawPlaceholderRow("{boughtrolls}", "Rolls this player actually purchased");
+        DrawPlaceholderRow("{remaining}",   "Rolls remaining");
+        DrawPlaceholderRow("{totalpot}",    "Total pot in Gil");
+        DrawPlaceholderRow("{keyword}",     "Queue join keyword");
+    }
+
+    private static void DrawPlaceholderRow(string token, string desc)
+    {
+        ImGui.TextColored(new Vector4(1f, 0.80f, 0.30f, 1f), token);
+        ImGui.SameLine(110f);
+        ImGui.TextDisabled(desc);
+    }
+
     private void DrawManualMessageSection()
     {
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Manual Trigger Messages");
+        ImGui.Spacing();
+        DrawMultilineMessageField(
+            "Rules",
+            "Button: 'Send Rules' on the top-left of the Game panel.",
+            "##RulesMsg",
+            () => this.config.Bar777.Chat.RulesMessage,
+            v => { this.config.Bar777.Chat.RulesMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Start Rolls",
@@ -220,6 +270,15 @@ public sealed class Bar777ChatSettingsTab
         var val = get();
         ImGui.SetNextItemWidth(-1f);
         if (ImGui.InputText(id, ref val, 256))
+            set(val);
+    }
+    private static void DrawMultilineMessageField(string label, string hint, string id, Func<string> get, Action<string> set)
+    {
+        ImGui.TextUnformatted(label);
+        ImGui.TextDisabled(hint);
+        var val = get();
+        ImGui.SetNextItemWidth(-1f);
+        if (ImGui.InputTextMultiline(id, ref val, 1024, new Vector2(-1f, ImGui.GetTextLineHeight() * 6f)))
             set(val);
     }
 }

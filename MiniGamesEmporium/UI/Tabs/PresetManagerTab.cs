@@ -4,13 +4,15 @@ using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
+using MiniGamesEmporium.Games.HigherLower.Config;
+using MiniGamesEmporium.Models;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
 
-/// <summary>Draws the Preset Manager tab, providing a dropdown to select and instantly apply named presets, plus Add, Rename, and Delete management actions with modal popup name entry.</summary>
+/// <summary>Draws the Preset Manager tab for selecting and managing presets.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class PresetManagerTab
@@ -31,6 +33,7 @@ public sealed class PresetManagerTab
     private int fallbackPresetIndex = -1;
     private bool exportBar777 = true;
     private bool exportDeathroll = true;
+    private bool exportHigherLower = true;
     private bool exportDiscord = false;
     private bool exportQueue = true;
 
@@ -314,8 +317,8 @@ public sealed class PresetManagerTab
     {
         if (this.parsedImportPayload == null) return;
         var payload  = this.parsedImportPayload;
-        var detected = BuildSectionItems(payload.Bar777 != null, payload.DeathrollTournament != null, payload.Discord != null, payload.QueueKeyword != null);
-        var missing  = BuildSectionItems(payload.Bar777 == null, payload.DeathrollTournament == null, payload.Discord == null, payload.QueueKeyword == null);
+        var detected = BuildSectionItems(payload.Bar777 != null, payload.DeathrollTournament != null, payload.HigherLower != null, payload.Discord != null, payload.QueueKeyword != null);
+        var missing  = BuildSectionItems(payload.Bar777 == null, payload.DeathrollTournament == null, payload.HigherLower == null, payload.Discord == null, payload.QueueKeyword == null);
         if (detected.Count > 0)
         {
             ImGui.TextColored(EmporiumNeonTheme.SuccessMint, "Detected:");
@@ -351,13 +354,14 @@ public sealed class PresetManagerTab
         }
     }
 
-    private static List<string> BuildSectionItems(bool bar777, bool deathroll, bool discord, bool queue)
+    private static List<string> BuildSectionItems(bool bar777, bool deathroll, bool higherlower, bool discord, bool queue)
     {
-        var parts = new List<string>(4);
-        if (bar777)    parts.Add("BAR 777");
-        if (deathroll) parts.Add("Deathroll Tournament");
-        if (discord)   parts.Add("Discord Webhook");
-        if (queue)     parts.Add("Queue Actions");
+        var parts = new List<string>(5);
+        if (bar777)      parts.Add("BAR 777");
+        if (deathroll)   parts.Add("Deathroll Tournament");
+        if (higherlower) parts.Add("Higher/Lower");
+        if (discord)     parts.Add("Discord Webhook");
+        if (queue)       parts.Add("Queue Actions");
         return parts;
     }
 
@@ -409,6 +413,7 @@ public sealed class PresetManagerTab
     {
         ImGui.Checkbox("BAR 777",              ref this.exportBar777);
         ImGui.Checkbox("Deathroll Tournament", ref this.exportDeathroll);
+        ImGui.Checkbox("Higher/Lower",         ref this.exportHigherLower);
         ImGui.Checkbox("Discord Webhook",      ref this.exportDiscord);
         if (this.exportDiscord)
         {
@@ -423,13 +428,13 @@ public sealed class PresetManagerTab
 
     private void DrawExportConfirmButtons()
     {
-        var noneSelected = !this.exportBar777 && !this.exportDeathroll && !this.exportDiscord && !this.exportQueue;
+        var noneSelected = !this.exportBar777 && !this.exportDeathroll && !this.exportHigherLower && !this.exportDiscord && !this.exportQueue;
         {
             using var disabled = ImRaii.Disabled(noneSelected);
             if (UIHelper.IconTextButton(FontAwesomeIcon.Clipboard, "Copy to Clipboard", "##ExportCopy"))
             {
                 var str = this.presetService.BuildExportString(
-                    this.exportBar777, this.exportDeathroll, this.exportDiscord, this.exportQueue);
+                    this.exportBar777, this.exportDeathroll, this.exportHigherLower, this.exportDiscord, this.exportQueue);
                 ImGui.SetClipboardText(str);
                 ImGui.CloseCurrentPopup();
             }
@@ -458,6 +463,8 @@ public sealed class PresetManagerTab
         DrawBar777Section(this.config.Bar777);
         ImGui.Spacing();
         DrawDeathrollSection(this.config.DeathrollTournament);
+        ImGui.Spacing();
+        DrawHigherLowerSection(this.config.HigherLower);
         ImGui.Spacing();
         DrawQueueSection(this.config.QueueKeyword, this.config.QueueJoinChannels);
     }
@@ -535,6 +542,19 @@ public sealed class PresetManagerTab
         DrawBoolRow("Auto Next Match",  d.AutoNextMatch);
         DrawRow("Auto Next Delay",      d.AutoNextMatchDelaySeconds + "s");
         DrawBoolRow("Auto Catch Round", d.AutoCatchNextRound);
+        DrawBoolRow("Auto Join Keyword", d.AutoJoinKeyword);
+        DrawRow("Join Keyword",         d.JoinKeyword);
+        DrawRow("Join Channels",        SummariseChannels(d.JoinChannels));
+    }
+
+    private static string SummariseChannels(QueueConfig c)
+    {
+        var parts = new List<string>();
+        if (c.Say) parts.Add("Say");
+        if (c.Shout) parts.Add("Shout");
+        if (c.Yell) parts.Add("Yell");
+        if (c.TellIncoming) parts.Add("Tell");
+        return parts.Count > 0 ? string.Join(", ", parts) : "(none)";
     }
 
     private static void DrawDeathrollChatRows(DeathrollTournamentChatConfig c)
@@ -589,7 +609,48 @@ public sealed class PresetManagerTab
         }
     }
 
-    private static void DrawQueueSection(string keyword, QueueJoinChannelsConfig channels)
+    private static void DrawHigherLowerSection(HigherLowerConfig h)
+    {
+        ImGui.TextColored(EmporiumNeonTheme.HigherLowerOrange, "Higher/Lower");
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawHigherLowerGameRows(h);
+        ImGui.Spacing();
+        ImGui.TextDisabled("Chat Messages");
+        DrawHigherLowerChatRows(h.Chat);
+    }
+
+    private static void DrawHigherLowerGameRows(HigherLowerConfig h)
+    {
+        using var t = ImRaii.Table("##HigherLowerGame", 2, ImGuiTableFlags.RowBg);
+        if (!t.Success) return;
+        SetupPreviewColumns();
+        DrawRow("Entry Cost",              h.EntryCost.ToString("N0") + " gil");
+        DrawRow("Dice Sides",              h.DiceSides.ToString());
+        DrawRow("Target Rounds",           h.TargetRounds.ToString());
+        DrawBoolRow("Auto Win Count",      h.AutoWinCount);
+        DrawBoolRow("Allow Multiple Winners", h.AllowMultipleWinners);
+        DrawRow("Trades to Pot",           h.TradesToPotPercent + "%");
+    }
+
+    private static void DrawHigherLowerChatRows(HigherLowerChatConfig c)
+    {
+        using var t = ImRaii.Table("##HigherLowerChat", 2, ImGuiTableFlags.RowBg);
+        if (!t.Success) return;
+        SetupPreviewColumns();
+        DrawBoolRow("Auto Send Loss",      c.AutoSendLoss);
+        DrawBoolRow("Auto Send Let's Play", c.AutoSendLetsPlay);
+        DrawBoolRow("Auto Send Ask Guess", c.AutoSendAskGuess);
+        DrawRow("Request Gil",         c.TellAmountRequestMessage);
+        DrawRow("Win Shout",           c.WinShoutMessage);
+        DrawRow("Loss (Unlucky)",      c.LossUnluckyMessage);
+        DrawRow("Loss (Winning)",      c.LossWinningMessage);
+        DrawRow("Let's Play",          c.LetsPlayMessage);
+        DrawRow("Ask Guess",           c.AskGuessMessage);
+        DrawRow("Announce Pot",        c.AnnouncePotMessage);
+    }
+
+    private static void DrawQueueSection(string keyword, QueueConfig channels)
     {
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Queue Settings");
         ImGui.Separator();

@@ -3,7 +3,7 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.UI.Components;
 
-/// <summary>Draws the Settings tab for BAR 777, exposing the pre-session game configuration fields and, when queue mode is enabled, the queue keyword options.</summary>
+/// <summary>Draws the Settings tab for BAR 777.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
 public sealed class Bar777SettingsTab

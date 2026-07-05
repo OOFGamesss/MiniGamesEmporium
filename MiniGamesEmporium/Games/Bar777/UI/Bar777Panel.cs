@@ -5,10 +5,9 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.Bar777.Actions;
 using MiniGamesEmporium.Games.Bar777.Automation;
-using MiniGamesEmporium.Games.Bar777.State;
 using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.Games.Bar777.UI.Tabs;
-using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Services;
 
 using MiniGamesEmporium.UI.Components;
@@ -16,7 +15,7 @@ using MiniGamesEmporium.Utility;
 using System;
 using System.Numerics;
 
-/// <summary>Top-level UI panel for BAR 777, rendering the pre-session start door or blocking door when no session is active, and the game, chat settings, and settings tabs during an active session.</summary>
+/// <summary>Top-level UI panel for BAR 777.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI;
 public sealed class Bar777Panel : IDisposable
@@ -32,8 +31,8 @@ public sealed class Bar777Panel : IDisposable
         GameSessionDoorStyles.Bar777BlockingDoor.SeedTrackedContentSpanPx;
     private float trackedGameInfoCardSpanPx = 140f;
     private readonly PluginConfiguration config;
+    private readonly Bar777SessionService bar777SessionService;
     private readonly SessionService sessionService;
-    private readonly DeathrollTournamentService deathrollService;
     private readonly Bar777GameTab gameTab;
     private readonly QueuePanel queuePanel;
     private readonly Bar777SettingsTab bar777SettingsTab;
@@ -41,18 +40,18 @@ public sealed class Bar777Panel : IDisposable
     private readonly Bar777StatsTab bar777StatsTab;
     private readonly ChatQueueService chatQueue;
     private readonly Bar777ChatAutomation chatAutomation;
-    public Bar777Panel(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, DeathrollTournamentService deathrollService, HistoryService historyService, AutoPayoutService autoPayoutService)
+    public Bar777Panel(PluginConfiguration config, Bar777SessionService bar777SessionService, SessionService sessionService, ChatQueueService chatQueue, HistoryService historyService, AutoPayoutService autoPayoutService)
     {
-        this.config = config;
-        this.sessionService = sessionService;
-        this.chatQueue = chatQueue;
-        this.deathrollService = deathrollService;
-        this.gameTab = new Bar777GameTab(config, sessionService, chatQueue, autoPayoutService);
-        this.queuePanel = new QueuePanel(sessionService);
-        this.bar777SettingsTab = new Bar777SettingsTab(config);
+        this.config              = config;
+        this.bar777SessionService = bar777SessionService;
+        this.sessionService      = sessionService;
+        this.chatQueue           = chatQueue;
+        this.gameTab        = new Bar777GameTab(config, bar777SessionService, chatQueue, autoPayoutService);
+        this.queuePanel     = new QueuePanel(bar777SessionService);
+        this.bar777SettingsTab     = new Bar777SettingsTab(config);
         this.bar777ChatSettingsTab = new Bar777ChatSettingsTab(config);
-        this.bar777StatsTab = new Bar777StatsTab(config, chatQueue, historyService);
-        this.chatAutomation = new Bar777ChatAutomation(config, sessionService, chatQueue);
+        this.bar777StatsTab        = new Bar777StatsTab(config, chatQueue, historyService);
+        this.chatAutomation        = new Bar777ChatAutomation(config, bar777SessionService, chatQueue);
     }
     public void Dispose()
     {
@@ -73,17 +72,16 @@ public sealed class Bar777Panel : IDisposable
         using var tab = ImRaii.TabItem("Game");
         if (!tab.Success)
             return;
-        var session = this.sessionService.GetActiveSession();
+        var session = this.bar777SessionService.GetActiveSession();
         if (session == null || !Bar777GameIds.Matches(session.GameName))
         {
-            DrawStartSessionDoor(session);
+            DrawStartSessionDoor();
             return;
         }
-        ImGui.Spacing();
         if (!this.config.Bar777.UseQueue)
         {
             this.gameTab.Draw(skipLeadingSpacing: true);
-            var statsHWalkIn = Bar777StatsTab.GetInlineHeight(showQueue: false);
+            var statsHWalkIn = Bar777StatsTab.GetInlineHeight(showQueue: false, showKept: this.config.Bar777.ComputeTradesHeldBack() > 0);
             var targetYWalkIn = ImGui.GetContentRegionMax().Y - statsHWalkIn;
             if (targetYWalkIn > ImGui.GetCursorPosY())
                 ImGui.SetCursorPosY(targetYWalkIn);
@@ -107,7 +105,7 @@ public sealed class Bar777Panel : IDisposable
             if (gamePane.Success)
             {
                 this.gameTab.Draw(skipLeadingSpacing: true);
-                var statsH = Bar777StatsTab.GetInlineHeight(showQueue: true);
+                var statsH = Bar777StatsTab.GetInlineHeight(showQueue: true, showKept: this.config.Bar777.ComputeTradesHeldBack() > 0);
                 var targetY = ImGui.GetContentRegionMax().Y - statsH;
                 if (targetY > ImGui.GetCursorPosY())
                     ImGui.SetCursorPosY(targetY);
@@ -115,7 +113,7 @@ public sealed class Bar777Panel : IDisposable
             }
         }
         ImGui.TableSetColumnIndex(1);
-        var live = this.sessionService.GetActiveSession();
+        var live = this.bar777SessionService.GetActiveSession();
         var activeName =
             live is { PlayerName: { Length: > 0 } pn } ? pn.Trim() : null;
         string? currentForSidebar = null;
@@ -128,19 +126,19 @@ public sealed class Bar777Panel : IDisposable
         }
         var showReminders = this.config.Bar777.Chat.AutoSendReminderToPlay;
         this.queuePanel.Draw(
-            NearbyPlayerList.GetSorted(),
+            PlayerInfoService.GetNearbySorted(),
             fillColumnHeight: true,
             currentForSidebar,
             hasBeenReminded: showReminders ? this.chatAutomation.HasBeenReminded : null,
             onManualReminder: showReminders ? this.chatAutomation.SendManualReminder : null,
             onAnnounceKeyword: () => AnnounceKeyword.Execute(this.config, this.chatQueue),
-            onToBackQueue: () => this.sessionService.SendCurrentBar777ToBackOfWaitlistAndStartNext(),
-            onRemoveFromQueue: () => this.sessionService.RemoveCurrentBar777FromWaitlistAndStartNext(),
-            isQueuePaused: this.sessionService.IsQueuePaused,
+            onToBackQueue: () => this.bar777SessionService.SendCurrentBar777ToBackOfWaitlistAndStartNext(),
+            onRemoveFromQueue: () => this.bar777SessionService.RemoveCurrentBar777FromWaitlistAndStartNext(),
+            isQueuePaused: this.bar777SessionService.IsQueuePaused,
             onToggleQueuePause: () =>
             {
-                if (this.sessionService.IsQueuePaused) this.sessionService.ResumeQueue();
-                else this.sessionService.PauseQueue();
+                if (this.bar777SessionService.IsQueuePaused) this.bar777SessionService.ResumeQueue();
+                else this.bar777SessionService.PauseQueue();
             });
     }
     private void DrawBar777ChatSettingsTab()
@@ -150,16 +148,12 @@ public sealed class Bar777Panel : IDisposable
         using var scroll = ImRaii.Child("##Bar777ChatScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.bar777ChatSettingsTab.Draw();
     }
-    private void DrawStartSessionDoor(ActiveSessionState? session)
+    private void DrawStartSessionDoor()
     {
-        if (this.deathrollService.IsSessionActive())
+        var blocking = this.sessionService.GetBlockingGameName(Bar777GameIds.DisplayName);
+        if (blocking != null)
         {
-            DrawDeathrollBlockingDoor();
-            return;
-        }
-        if (session != null && !Bar777GameIds.Matches(session.GameName))
-        {
-            DrawBlockingSessionDoor(session);
+            DrawActiveBlockingDoor(blocking);
             return;
         }
         DrawGameInfoDoorCard();
@@ -172,28 +166,28 @@ public sealed class Bar777Panel : IDisposable
             DrawBar777DoorStartBody);
     }
 
-    private void DrawDeathrollBlockingDoor()
+    private void DrawActiveBlockingDoor(string blockingGameName)
     {
         GameSessionDoorHost.Draw(
             KnownGameDoorModules.Bar777,
             DoorSurfaceBlocking,
             ref this.trackedBar777BlockingDoorSpanPx,
             GameSessionDoorStyles.Bar777BlockingDoor,
-            DrawDeathrollBlockingDoorBody);
+            () => DrawActiveBlockingDoorBody(blockingGameName));
     }
 
-    private void DrawDeathrollBlockingDoorBody()
+    private void DrawActiveBlockingDoorBody(string blockingGameName)
     {
         var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
         ImGui.PushTextWrapPos(wrapEnd);
-        ImGui.TextColored(
-            EmporiumNeonTheme.WarningPanel,
-            "A Deathroll Tournament session is currently active. Stop it before opening BAR 777.");
+        ImGui.TextColored(EmporiumNeonTheme.WarningPanel,
+            $"{blockingGameName} is currently running. Please end or discard the game to play {Bar777GameIds.DisplayName}.");
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Tournament Session", "##DiscardDeathrollSession"))
-            this.deathrollService.StopSession();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Session", "##Bar777DiscardSession"))
+            this.sessionService.CancelActiveGame();
     }
+
     private void DrawGameInfoDoorCard()
     {
         var containerH = MathF.Max(80f, this.trackedGameInfoCardSpanPx + 14f);
@@ -234,32 +228,9 @@ public sealed class Bar777Panel : IDisposable
         ImGui.Spacing();
         CentreStartSessionButton();
     }
-    private void DrawBlockingSessionDoor(ActiveSessionState session)
-    {
-        GameSessionDoorHost.Draw(
-            KnownGameDoorModules.Bar777,
-            DoorSurfaceBlocking,
-            ref this.trackedBar777BlockingDoorSpanPx,
-            GameSessionDoorStyles.Bar777BlockingDoor,
-            () => DrawBlockingDoorBody(session));
-    }
-    private void DrawBlockingDoorBody(ActiveSessionState session)
-    {
-        var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
-        ImGui.PushTextWrapPos(wrapEnd);
-        ImGui.TextColored(
-            EmporiumNeonTheme.WarningPanel,
-            $"Another game session is still saved ({FormatBlockingSessionLabel(session)}). Clear it before opening BAR 777.");
-        ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Saved Session", "##DiscardBlockingSession"))
-        {
-            this.sessionService.CancelSession();
-        }
-    }
     private void CentreStartSessionButton()
     {
-        var queue = this.sessionService.Queue;
+        var queue = this.bar777SessionService.Queue;
         string playerForSession;
         if (!this.config.Bar777.UseQueue)
             playerForSession = Bar777GameIds.WalkInPlayerPlaceholder;
@@ -273,13 +244,7 @@ public sealed class Bar777Panel : IDisposable
         var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Session", "##StartBar777Door");
         ImGui.PopStyleColor(3);
         if (clicked)
-            this.sessionService.StartSession(Bar777GameIds.DisplayName, playerForSession);
-    }
-    private static string FormatBlockingSessionLabel(ActiveSessionState session)
-    {
-        var game = string.IsNullOrWhiteSpace(session.GameName) ? "unknown game" : session.GameName.Trim();
-        var p = string.IsNullOrWhiteSpace(session.PlayerName) ? "unknown player" : session.PlayerName.Trim();
-        return $"{game} / {p}";
+            this.bar777SessionService.StartSession(Bar777GameIds.DisplayName, playerForSession);
     }
     private void DrawBar777SettingsTab()
     {

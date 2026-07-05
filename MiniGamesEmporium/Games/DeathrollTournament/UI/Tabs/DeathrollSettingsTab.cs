@@ -2,10 +2,11 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using ECommons.ImGuiMethods;
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.UI.Components;
 using MiniGamesEmporium.UI.Components;
 using System;
 
-/// <summary>Draws the Settings tab for Deathroll Tournament, exposing the entry cost, boosted pot, and per-round best-of configuration fields.</summary>
+/// <summary>Draws the Settings tab for Deathroll Tournament.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollSettingsTab
@@ -26,6 +27,10 @@ public sealed class DeathrollSettingsTab
         ImGui.Spacing();
         DrawEntryCost();
         DrawBoostedPot();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawAutoJoinSection();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -59,6 +64,9 @@ public sealed class DeathrollSettingsTab
             this.config.Save();
         }
     }
+
+    private void DrawAutoJoinSection()
+        => DeathrollAutoJoinFields.Draw(this.config, "Settings", -1f);
 
     private void DrawAutoNextMatchSection()
     {

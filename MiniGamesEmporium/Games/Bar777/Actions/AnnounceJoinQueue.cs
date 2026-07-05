@@ -1,7 +1,7 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
-/// <summary>Sends a confirmation message to a player when they successfully join the BAR 777 queue, including their current queue position.</summary>
+/// <summary>Confirms to a player that they joined the BAR 777 queue, with their position.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Actions;
 public static class AnnounceJoinQueue

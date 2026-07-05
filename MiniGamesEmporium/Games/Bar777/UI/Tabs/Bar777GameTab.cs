@@ -9,13 +9,14 @@ using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Actions;
 using MiniGamesEmporium.Games.Bar777.Actions;
 using MiniGamesEmporium.Services;
-using MiniGamesEmporium.Games.Bar777.State;
+using MiniGamesEmporium.Models;
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.IO;
 using System.Numerics;
+using MiniGamesEmporium.Games.Bar777.Services;
 
-/// <summary>Draws the active game view for BAR 777, handling the player header display, take-bet phase controls (two-column: collect payment left, buyer right), roll progress tracking, roll log, and session end or queue advance buttons.</summary>
+/// <summary>Draws the active game view for BAR 777.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
 public sealed class Bar777GameTab
@@ -23,7 +24,7 @@ public sealed class Bar777GameTab
     private static readonly Vector4 GoldColour = new(1f, 0.84f, 0f, 1f);
     private const float TrophySide = 140f;
     private readonly PluginConfiguration config;
-    private readonly SessionService sessionService;
+    private readonly Bar777SessionService bar777SessionService;
     private readonly ChatQueueService chatQueue;
     private readonly AutoPayoutService autoPayoutService;
     private readonly ISharedImmediateTexture? _trophyTexture;
@@ -31,10 +32,10 @@ public sealed class Bar777GameTab
     private int _lastKnownAmountTraded = -1;
     private DateTime _lastKnownSessionStart;
 
-    public Bar777GameTab(PluginConfiguration config, SessionService sessionService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService)
+    public Bar777GameTab(PluginConfiguration config, Bar777SessionService bar777SessionService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService)
     {
         this.config            = config;
-        this.sessionService    = sessionService;
+        this.bar777SessionService    = bar777SessionService;
         this.chatQueue         = chatQueue;
         this.autoPayoutService = autoPayoutService;
         var path = Path.Combine(
@@ -48,13 +49,22 @@ public sealed class Bar777GameTab
     {
         if (!skipLeadingSpacing)
             ImGui.Spacing();
-        var session = this.sessionService.GetActiveSession();
+        var session = this.bar777SessionService.GetActiveSession();
         if (session == null || !Bar777GameIds.Matches(session.GameName))
             return;
+        DrawSendRulesButton();
+        ImGui.Spacing();
         DrawActiveSessionView(session);
     }
 
-    private void DrawActiveSessionView(ActiveSessionState session)
+    private void DrawSendRulesButton()
+    {
+        using var blue = UIHelper.PushBlueButtonColours();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Scroll, "Send Rules", "##Bar777SendRules"))
+            AnnounceRules.Execute(this.config, this.chatQueue);
+    }
+
+    private void DrawActiveSessionView(ActiveSession session)
     {
         if (Bar777GameIds.IsWaitingPlaceholder(session.PlayerName))
         {
@@ -75,7 +85,7 @@ public sealed class Bar777GameTab
         DrawSessionControls(session);
     }
 
-    private void DrawWinnerScreen(ActiveSessionState session)
+    private void DrawWinnerScreen(ActiveSession session)
     {
         var avail  = ImGui.GetContentRegionAvail().X;
         var startX = ImGui.GetCursorPosX();
@@ -108,7 +118,7 @@ public sealed class Bar777GameTab
         ImGui.Separator();
         ImGui.Spacing();
 
-        var pot       = this.config.Bar777.BoostedPot + (this.config.Bar777.AddTradesToPot ? this.config.Bar777.SessionTradedTotal : 0L);
+        var pot       = this.config.Bar777.ComputeTotalPot();
         var paid      = session.WinnerPayoutGil;
         var remaining = Math.Max(0L, pot - paid);
 
@@ -164,9 +174,9 @@ public sealed class Bar777GameTab
         if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##WinnerEndGame"))
         {
             if (this.config.Bar777.UseQueue)
-                this.sessionService.EndQueuePlayerAndProcessNext();
+                this.bar777SessionService.EndQueuePlayerAndProcessNext();
             else
-                this.sessionService.EndWalkInAndReset();
+                this.bar777SessionService.EndWalkInAndReset();
         }
     }
 
@@ -192,13 +202,13 @@ public sealed class Bar777GameTab
                     playerName,
                     () =>
                     {
-                        var p = this.config.Bar777.BoostedPot + (this.config.Bar777.AddTradesToPot ? this.config.Bar777.SessionTradedTotal : 0L);
-                        var w = this.sessionService.GetActiveSession()?.WinnerPayoutGil ?? 0L;
+                        var p = this.config.Bar777.ComputeTotalPot();
+                        var w = this.bar777SessionService.GetActiveSession()?.WinnerPayoutGil ?? 0L;
                         return Math.Max(0L, p - w);
                     },
                     () =>
                     {
-                        var s = this.sessionService.GetActiveSession();
+                        var s = this.bar777SessionService.GetActiveSession();
                         return s != null && Bar777GameIds.Matches(s.GameName);
                     });
             }
@@ -213,7 +223,7 @@ public sealed class Bar777GameTab
         ImGui.ProgressBar(progress, new Vector2(avail, ImGui.GetFrameHeight()), pctOverlay);
     }
 
-    private void DrawPlayerHeader(ActiveSessionState session)
+    private void DrawPlayerHeader(ActiveSession session)
     {
         var avail  = ImGui.GetContentRegionAvail().X;
         var startX = ImGui.GetCursorPosX();
@@ -234,7 +244,7 @@ public sealed class Bar777GameTab
             ImGui.SameLine();
             using var red = UIHelper.PushRedButtonColours();
             if (UIHelper.IconTextButton(FontAwesomeIcon.UserSlash, "Un-set Player", "##UnsetPlayer"))
-                this.sessionService.UnlockWalkInPlayer();
+                this.bar777SessionService.UnlockWalkInPlayer();
         }
         else
         {
@@ -284,7 +294,7 @@ public sealed class Bar777GameTab
                 ImGui.SameLine();
                 using var green = UIHelper.PushGreenButtonColours();
                 if (UIHelper.IconTextButton(FontAwesomeIcon.UserCheck, "Set Player", "##SetWalkInPlayer"))
-                    this.sessionService.LockWalkInPlayer(charName, worldName);
+                    this.bar777SessionService.LockWalkInPlayer(charName, worldName);
             }
         }
 
@@ -297,7 +307,7 @@ public sealed class Bar777GameTab
         ImGui.SetWindowFontScale(1.0f);
     }
 
-    private static string GetStatusText(ActiveSessionState session)
+    private static string GetStatusText(ActiveSession session)
     {
         if (session.WinTriggered) return "WIN DETECTED!";
         if (session.RollsUsed >= session.RollsAllowed) return "Session Complete";
@@ -308,7 +318,7 @@ public sealed class Bar777GameTab
         return $"Rolling  {session.RollsUsed} / {session.RollsAllowed}";
     }
 
-    private static Vector4 GetStatusColour(ActiveSessionState session)
+    private static Vector4 GetStatusColour(ActiveSession session)
     {
         if (session.WinTriggered) return EmporiumNeonTheme.WinGold;
         if (session.RollsUsed >= session.RollsAllowed) return EmporiumNeonTheme.SuccessMint;
@@ -316,7 +326,7 @@ public sealed class Bar777GameTab
         return EmporiumNeonTheme.NeonCyan;
     }
 
-    private void DrawTakeBetPhase(ActiveSessionState session)
+    private void DrawTakeBetPhase(ActiveSession session)
     {
         if (session.PaymentVerified) return;
         ImGui.Separator();
@@ -338,7 +348,7 @@ public sealed class Bar777GameTab
         DrawStartGameSection(session);
     }
 
-    private void DrawPrimaryBetActions(ActiveSessionState session)
+    private void DrawPrimaryBetActions(ActiveSession session)
     {
         var startX = ImGui.GetCursorPosX();
         var avail  = ImGui.GetContentRegionAvail().X;
@@ -364,7 +374,7 @@ public sealed class Bar777GameTab
                     var (charName, worldName) = GetCurrentTarget();
                     if (!string.IsNullOrEmpty(charName))
                     {
-                        this.sessionService.LockWalkInPlayer(charName, worldName);
+                        this.bar777SessionService.LockWalkInPlayer(charName, worldName);
                         var tellName = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
                         SendTellAmountRequest.Execute(tellName, this.config, this.chatQueue, session.AmountTraded);
                     }
@@ -397,7 +407,7 @@ public sealed class Bar777GameTab
         }
     }
 
-    private void SyncPendingRolls(ActiveSessionState session)
+    private void SyncPendingRolls(ActiveSession session)
     {
         if (session.AmountTraded == this._lastKnownAmountTraded && session.StartedAt == this._lastKnownSessionStart) return;
         var costPerRoll = this.config.Bar777.CostPerRoll;
@@ -408,7 +418,7 @@ public sealed class Bar777GameTab
         this._lastKnownSessionStart = session.StartedAt;
     }
 
-    private void DrawBuyerSection(ActiveSessionState session)
+    private void DrawBuyerSection(ActiveSession session)
     {
         var startX = ImGui.GetCursorPosX();
         var avail  = ImGui.GetContentRegionAvail().X;
@@ -419,7 +429,7 @@ public sealed class Bar777GameTab
         ImGui.TextColored(EmporiumNeonTheme.NeonMagenta, headerText);
         ImGui.Spacing();
 
-        var buyer = this.sessionService.GetBuyer();
+        var buyer = this.bar777SessionService.GetBuyer();
         if (!string.IsNullOrEmpty(buyer))
         {
             var clearBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Times, "Clear").X;
@@ -434,7 +444,7 @@ public sealed class Bar777GameTab
             using (UIHelper.PushRedButtonColours())
             {
                 if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Clear", "##ClearBuyer"))
-                    this.sessionService.ClearBuyer();
+                    this.bar777SessionService.ClearBuyer();
             }
             ImGui.Spacing();
 
@@ -474,7 +484,7 @@ public sealed class Bar777GameTab
                     if (UIHelper.IconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##SetBuyer"))
                     {
                         var fullName = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
-                        this.sessionService.SetBuyer(fullName);
+                        this.bar777SessionService.SetBuyer(fullName);
                     }
                 }
             }
@@ -488,7 +498,7 @@ public sealed class Bar777GameTab
         ImGui.Spacing();
     }
 
-    private void DrawStartGameSection(ActiveSessionState session)
+    private void DrawStartGameSection(ActiveSession session)
     {
         SyncPendingRolls(session);
         ImGui.Separator();
@@ -538,10 +548,10 @@ public sealed class Bar777GameTab
         using var disabled = ImRaii.Disabled(this._pendingRollCount < 1 || noPlayer);
         using var green    = UIHelper.PushGreenButtonColours();
         if (UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Game", "##StartGame"))
-            this.sessionService.StartGameWithRolls(this._pendingRollCount);
+            this.bar777SessionService.StartGameWithRolls(this._pendingRollCount);
     }
 
-    private void DrawRollsPhase(ActiveSessionState session)
+    private void DrawRollsPhase(ActiveSession session)
     {
         if (!session.PaymentVerified) return;
         ImGui.Separator();
@@ -571,7 +581,7 @@ public sealed class Bar777GameTab
         ImGui.Spacing();
     }
 
-    private void DrawRollLog(ActiveSessionState session)
+    private void DrawRollLog(ActiveSession session)
     {
         var log = session.RollLog;
         if (log == null || log.Count == 0)
@@ -603,7 +613,7 @@ public sealed class Bar777GameTab
             }
         }
         if (deleteIndex.HasValue)
-            this.sessionService.RemoveRoll(deleteIndex.Value);
+            this.bar777SessionService.RemoveRoll(deleteIndex.Value);
     }
 
     private bool DrawRollEntry(System.Collections.Generic.List<int> log, int index)
@@ -626,7 +636,7 @@ public sealed class Bar777GameTab
         return deleteRequested;
     }
 
-    private void DrawSessionControls(ActiveSessionState session)
+    private void DrawSessionControls(ActiveSession session)
     {
         ImGui.Separator();
         ImGui.Spacing();
@@ -649,9 +659,9 @@ public sealed class Bar777GameTab
                     if (UIHelper.IconTextButton(FontAwesomeIcon.Check, "Yes, end early", "##ConfirmEndEarly"))
                     {
                         if (this.config.Bar777.UseQueue)
-                            this.sessionService.EndQueuePlayerAndProcessNext();
+                            this.bar777SessionService.EndQueuePlayerAndProcessNext();
                         else
-                            this.sessionService.EndWalkInAndReset();
+                            this.bar777SessionService.EndWalkInAndReset();
                         ImGui.CloseCurrentPopup();
                     }
                 }
@@ -670,7 +680,7 @@ public sealed class Bar777GameTab
             {
                 using var green = UIHelper.PushGreenButtonColours();
                 if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##EndWalkIn"))
-                    this.sessionService.EndWalkInAndReset();
+                    this.bar777SessionService.EndWalkInAndReset();
             }
             return;
         }
@@ -678,7 +688,7 @@ public sealed class Bar777GameTab
         {
             using var green = UIHelper.PushGreenButtonColours();
             if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##EndAndNext"))
-                this.sessionService.EndQueuePlayerAndProcessNext();
+                this.bar777SessionService.EndQueuePlayerAndProcessNext();
         }
     }
 
@@ -691,7 +701,7 @@ public sealed class Bar777GameTab
         return (charName, worldName);
     }
 
-    private static string BuildLockedDisplayName(ActiveSessionState session)
+    private static string BuildLockedDisplayName(ActiveSession session)
     {
         var world = session.PlayerWorld;
         return string.IsNullOrEmpty(world) ? session.PlayerName : $"{session.PlayerName}@{world}";

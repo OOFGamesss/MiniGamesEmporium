@@ -1,6 +1,6 @@
 using System;
 
-/// <summary>Serialisable configuration for Deathroll Tournament chat, storing message templates for bracket announcements, matchup calls, pot yells, and the winner shout, plus their auto-send toggles.</summary>
+/// <summary>Serialisable chat configuration for Deathroll Tournament messages and toggles.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Config;
 [Serializable]

@@ -1,8 +1,9 @@
+using System;
+
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Actions;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Services;
-using System;
 
 /// <summary>Subscribes to Deathroll Tournament service events and automatically dispatches the configured announcements to chat when each fires.</summary>
 

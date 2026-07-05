@@ -4,7 +4,7 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.UI.Components;
 using System;
 
-/// <summary>Renders the entry cost and boosted pot Gil fields shown on the Deathroll Tournament start door.</summary>
+/// <summary>Renders the Deathroll Tournament start-door entry cost and boosted pot fields.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Components;
 public static class DeathrollPreSessionSettingsFields
@@ -13,6 +13,8 @@ public static class DeathrollPreSessionSettingsFields
     {
         DrawEntryCost(config);
         DrawBoostedPot(config);
+        ImGui.Spacing();
+        DeathrollAutoJoinFields.Draw(config, "Door", ResolvedWidth());
     }
 
     private static void DrawEntryCost(PluginConfiguration config)

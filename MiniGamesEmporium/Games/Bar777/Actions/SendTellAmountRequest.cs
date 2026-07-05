@@ -1,8 +1,9 @@
-using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Services;
 using System;
 
-/// <summary>Sends a /tell to the current session player informing them of the Gil amount they still owe before their rolls can begin.</summary>
+using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Services;
+
+/// <summary>Tells the current player how much Gil they still owe before rolling.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Actions;
 public static class SendTellAmountRequest

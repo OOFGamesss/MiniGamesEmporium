@@ -1,8 +1,9 @@
+using System;
+
 using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Events;
+using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Services;
-using System;
 
 /// <summary>Handles RandomNumber roll events for BAR 777, routing them to payment verification or session roll recording.</summary>
 
@@ -10,12 +11,12 @@ namespace MiniGamesEmporium.Games.Bar777.Events;
 public sealed class Bar777RollHandler : IChatRollHandler
 {
     private readonly PluginConfiguration config;
-    private readonly SessionService sessionService;
+    private readonly Bar777SessionService bar777SessionService;
 
-    public Bar777RollHandler(PluginConfiguration config, SessionService sessionService)
+    public Bar777RollHandler(PluginConfiguration config, Bar777SessionService bar777SessionService)
     {
         this.config         = config;
-        this.sessionService = sessionService;
+        this.bar777SessionService = bar777SessionService;
     }
 
     public void TryHandleRoll(string playerName, int rollValue, int rollMax)
@@ -26,10 +27,10 @@ public sealed class Bar777RollHandler : IChatRollHandler
         if (string.IsNullOrEmpty(playerName)) return;
         if (!session.PaymentVerified)
         {
-            this.sessionService.TryCatchPaymentRoll(playerName, rollValue);
+            this.bar777SessionService.TryCatchPaymentRoll(playerName, rollValue);
             return;
         }
         if (!playerName.Equals(session.PlayerName, StringComparison.OrdinalIgnoreCase)) return;
-        this.sessionService.RecordRoll(rollValue);
+        this.bar777SessionService.RecordRoll(rollValue);
     }
 }

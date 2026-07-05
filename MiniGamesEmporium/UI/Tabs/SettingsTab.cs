@@ -3,7 +3,7 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.UI.Components;
 
-/// <summary>Draws the global plugin Settings tab, exposing per-game display name options and directing users to the per-game settings panels within the Mini Games tab.</summary>
+/// <summary>Draws the global plugin Settings tab.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class SettingsTab

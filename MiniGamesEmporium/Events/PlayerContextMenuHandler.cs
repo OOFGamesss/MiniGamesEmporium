@@ -6,7 +6,7 @@ using Dalamud.Plugin.Services;
 using System;
 using System.Collections.Generic;
 
-/// <summary>Subscribes to the Dalamud context menu and adds custom items for each registered entry when the target is a player character.</summary>
+/// <summary>Adds custom right-click menu items for player targets.</summary>
 
 namespace MiniGamesEmporium.Events;
 public sealed class PlayerContextMenuHandler : IDisposable
@@ -52,4 +52,11 @@ public sealed class PlayerContextMenuHandler : IDisposable
             });
         }
     }
+}
+
+public sealed class PlayerContextMenuEntry
+{
+    public required string Label { get; init; }
+    public required Func<bool> IsVisible { get; init; }
+    public required Action<string> OnSelected { get; init; }
 }

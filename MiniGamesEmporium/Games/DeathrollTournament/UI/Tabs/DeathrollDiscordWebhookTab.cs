@@ -13,10 +13,10 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
-using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.UI.Components;
 
-/// <summary>Draws the Deathroll Tournament Discord webhook configuration tab: a list of named webhook entries each with enable, alias and URL fields, shared appearance settings, a setup guide, post behaviour reference, and Discord embed previews.</summary>
+/// <summary>Draws the Deathroll Tournament Discord webhook configuration tab.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollDiscordWebhookTab
@@ -31,7 +31,7 @@ public sealed class DeathrollDiscordWebhookTab
     private static readonly Vector4 ErrorFrame = new(0.48f, 0.06f, 0.06f, 1f);
 
     private readonly PluginConfiguration            _config;
-    private readonly DeathrollDiscordWebhookService _webhookService;
+    private readonly DeathrollWebhookService _webhookService;
     private readonly IPluginLog                     _log;
     private readonly ISharedImmediateTexture        _lobbyTexture;
     private readonly ISharedImmediateTexture        _bracketTexture;
@@ -48,7 +48,7 @@ public sealed class DeathrollDiscordWebhookTab
 
     public DeathrollDiscordWebhookTab(
         PluginConfiguration config,
-        DeathrollDiscordWebhookService webhookService,
+        DeathrollWebhookService webhookService,
         IPluginLog log)
     {
         _config         = config;

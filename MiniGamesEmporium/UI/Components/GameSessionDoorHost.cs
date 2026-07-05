@@ -3,7 +3,7 @@ using Dalamud.Interface.Utility.Raii;
 using System;
 using System.Numerics;
 
-/// <summary>Defines sizing and padding parameters for a game session door panel, along with the pre-built door style presets and the static host that renders and sizes the centred door container.</summary>
+/// <summary>Renders and sizes the centred game session door, with preset door styles.</summary>
 
 namespace MiniGamesEmporium.UI.Components;
 public sealed record GameSessionDoorStyle
@@ -58,11 +58,32 @@ public static class GameSessionDoorStyles
         SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
         ShellInsetBottom = 8f,
     };
+    public static GameSessionDoorStyle HigherLowerStartDoor => new()
+    {
+        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
+        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
+        MinOuterContainerHeight = EmporiumNeonTheme.DoorContainerMinHeight,
+        MinTrackedContentSpan = 260f,
+        ContentBottomBleedPx = 12f,
+        SeedTrackedContentSpanPx = EmporiumNeonTheme.StartDoorEstimatedBodyHeight,
+        ShellInsetBottom = 8f,
+    };
+    public static GameSessionDoorStyle HigherLowerBlockingDoor => new()
+    {
+        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
+        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
+        MinOuterContainerHeight = 120f,
+        MinTrackedContentSpan = 96f,
+        ContentBottomBleedPx = 8f,
+        SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
+        ShellInsetBottom = 8f,
+    };
 }
 public static class KnownGameDoorModules
 {
     public const string Bar777              = "Bar777";
     public const string DeathrollTournament = "DeathrollTournament";
+    public const string HigherLower         = "HigherLower";
 }
 public static class GameSessionDoorHost
 {

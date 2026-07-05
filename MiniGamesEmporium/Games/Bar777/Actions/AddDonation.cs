@@ -1,7 +1,8 @@
-using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Services;
-using MiniGamesEmporium.State;
 using System;
+
+using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Models;
+using MiniGamesEmporium.Services;
 
 /// <summary>Adds a manual donation to the BAR 777 pot and records it as a transaction for audit purposes.</summary>
 

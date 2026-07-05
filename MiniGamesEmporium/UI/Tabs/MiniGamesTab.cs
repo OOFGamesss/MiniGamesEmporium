@@ -4,12 +4,15 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI;
+using MiniGamesEmporium.Games.Bar777.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.UI;
+using MiniGamesEmporium.Games.HigherLower.Services;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.Games.MinefieldGambit.UI;
 using MiniGamesEmporium.Games.GamblerDerby.UI;
-using MiniGamesEmporium.Games.HotShots.UI;
+using MiniGamesEmporium.Games.HigherLower.UI;
 using MiniGamesEmporium.Games.BeerPong.UI;
 using MiniGamesEmporium.Games.Darts.UI;
 using MiniGamesEmporium.Games.EightBallPool.UI;
@@ -21,7 +24,7 @@ using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Draws the Mini Games tab with themed sub-tabs for BAR 777, Deathroll Tournament, Minefield Gambit, Gambler Derby, Hot Shots, Beer Pong, Darts, 8 Ball Pool, Russian Roulette, Raid Boss, Deal or No Deal, and Voting Madness, and displays a centred win alert popup when a winning roll is detected.</summary>
+/// <summary>Draws the Mini Games tab, hosting each game's sub-tab and the win alert popup.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class MiniGamesTab : IDisposable
@@ -31,7 +34,7 @@ public sealed class MiniGamesTab : IDisposable
     private readonly DeathrollTournamentPanel deathrollTournamentPanel;
     private readonly MinefieldGambitPanel minefieldGambitPanel;
     private readonly GamblerDerbyPanel gamblerDerbyPanel;
-    private readonly HotShotsPanel hotShotsPanel;
+    private readonly HigherLowerPanel higherLowerPanel;
     private readonly BeerPongPanel beerPongPanel;
     private readonly DartsPanel dartsPanel;
     private readonly EightBallPoolPanel eightBallPoolPanel;
@@ -43,25 +46,30 @@ public sealed class MiniGamesTab : IDisposable
     private string winAlertPlayer = string.Empty;
     private int winAlertRoll = 0;
     private readonly DeathrollTournamentService deathrollService;
+    private readonly Bar777SessionService bar777SessionService;
     private readonly SessionService sessionService;
     public MiniGamesTab(
         PluginConfiguration config,
+        Bar777SessionService bar777SessionService,
         SessionService sessionService,
         ChatQueueService chatQueue,
         DeathrollTournamentService deathrollService,
-        DeathrollDiscordWebhookService deathrollDiscordService,
+        DeathrollWebhookService deathrollDiscordService,
         IPluginLog log,
         HistoryService historyService,
-        AutoPayoutService autoPayoutService)
+        AutoPayoutService autoPayoutService,
+        HigherLowerService higherLowerService,
+        PlayerInfoService playerInfoService)
     {
         this.config                   = config;
         this.deathrollService         = deathrollService;
+        this.bar777SessionService     = bar777SessionService;
         this.sessionService           = sessionService;
-        this.bar777Panel              = new Bar777Panel(config, sessionService, chatQueue, deathrollService, historyService, autoPayoutService);
+        this.bar777Panel              = new Bar777Panel(config, bar777SessionService, sessionService, chatQueue, historyService, autoPayoutService);
         this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log, historyService, autoPayoutService);
         this.minefieldGambitPanel = new MinefieldGambitPanel();
         this.gamblerDerbyPanel = new GamblerDerbyPanel();
-        this.hotShotsPanel = new HotShotsPanel();
+        this.higherLowerPanel = new HigherLowerPanel(config, higherLowerService, chatQueue, autoPayoutService, sessionService, playerInfoService);
         this.beerPongPanel = new BeerPongPanel();
         this.dartsPanel = new DartsPanel();
         this.eightBallPoolPanel = new EightBallPoolPanel();
@@ -69,7 +77,7 @@ public sealed class MiniGamesTab : IDisposable
         this.raidBossPanel         = new RaidBossPanel();
         this.dealOrNoDealPanel     = new DealOrNoDealPanel();
         this.votingMadnessPanel    = new VotingMadnessPanel();
-        sessionService.WinDetected += OnWinDetected;
+        bar777SessionService.WinDetected += OnWinDetected;
     }
     private void OnWinDetected(string playerName, int roll)
     {
@@ -79,21 +87,22 @@ public sealed class MiniGamesTab : IDisposable
     }
     public void Dispose()
     {
-        this.sessionService.WinDetected -= OnWinDetected;
+        this.bar777SessionService.WinDetected -= OnWinDetected;
         this.bar777Panel.Dispose();
         this.deathrollTournamentPanel.Dispose();
+        this.higherLowerPanel.Dispose();
     }
     public void Draw()
     {
         DrawWinAlertPopup();
         ImGui.Spacing();
-        using var tabBar = ImRaii.TabBar("##MGE_GameTabBar_v4");
+        using var tabBar = ImRaii.TabBar("##MGE_GameTabBar_v5");
         if (!tabBar.Success) return;
         DrawBar777Tab();
         DrawDeathrollTournamentTab();
+        DrawHigherLowerTab();
         DrawMinefieldGambitTab();
         DrawGamblerDerbyTab();
-        DrawHotShotsTab();
         DrawBeerPongTab();
         DrawDartsTab();
         DrawEightBallPoolTab();
@@ -130,12 +139,12 @@ public sealed class MiniGamesTab : IDisposable
         if (!tab.Success) return;
         this.gamblerDerbyPanel.Draw();
     }
-    private void DrawHotShotsTab()
+    private void DrawHigherLowerTab()
     {
-        using var chrome = new EmporiumNeonTheme.HotShotsTabItemScope();
-        using var tab = ImRaii.TabItem("Hot Shots");
+        using var chrome = new EmporiumNeonTheme.HigherLowerTabItemScope();
+        using var tab = ImRaii.TabItem("Higher/Lower");
         if (!tab.Success) return;
-        this.hotShotsPanel.Draw();
+        this.higherLowerPanel.Draw();
     }
     private void DrawBeerPongTab()
     {

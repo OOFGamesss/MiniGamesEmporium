@@ -1,6 +1,6 @@
 using System;
 
-/// <summary>Defines the display name and placeholder constants for BAR 777, and provides helper methods for identifying walk-in and waiting placeholders.</summary>
+/// <summary>Display name and placeholder constants for BAR 777, with placeholder helpers.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Utility;
 public static class Bar777GameIds

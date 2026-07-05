@@ -3,9 +3,8 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using Dalamud.Plugin.Services;
-using MiniGamesEmporium.Games.Bar777.State;
-using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.DeathrollTournament.Automation;
+using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.UI.Components;
 using MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
@@ -15,7 +14,7 @@ using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Top-level UI panel for Deathroll Tournament, rendering the pre-session start door when no session is active, and the bracket, chat settings, and settings tabs during an active tournament.</summary>
+/// <summary>Top-level UI panel for Deathroll Tournament.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI;
 public sealed class DeathrollTournamentPanel : IDisposable
@@ -41,7 +40,7 @@ public sealed class DeathrollTournamentPanel : IDisposable
     public DeathrollTournamentPanel(
         PluginConfiguration config,
         DeathrollTournamentService deathrollService,
-        DeathrollDiscordWebhookService discordService,
+        DeathrollWebhookService discordService,
         ChatQueueService chatQueue,
         SessionService sessionService,
         IPluginLog log,
@@ -128,10 +127,10 @@ public sealed class DeathrollTournamentPanel : IDisposable
 
     private void DrawStartDoor()
     {
-        var bar777Session = this.sessionService.GetActiveSession();
-        if (bar777Session != null && Bar777GameIds.Matches(bar777Session.GameName))
+        var blocking = this.sessionService.GetBlockingGameName("Deathroll Tournament");
+        if (blocking != null)
         {
-            DrawBar777BlockingDoor(bar777Session);
+            DrawActiveBlockingDoor(blocking);
             return;
         }
         DrawGameInfoCard();
@@ -144,27 +143,26 @@ public sealed class DeathrollTournamentPanel : IDisposable
             DrawStartDoorBody);
     }
 
-    private void DrawBar777BlockingDoor(ActiveSessionState session)
+    private void DrawActiveBlockingDoor(string blockingGameName)
     {
         GameSessionDoorHost.Draw(
             KnownGameDoorModules.DeathrollTournament,
             DoorSurfaceBlocking,
             ref this.trackedBlockingDoorSpanPx,
             GameSessionDoorStyles.DeathrollTournamentBlockingDoor,
-            () => DrawBar777BlockingDoorBody(session));
+            () => DrawActiveBlockingDoorBody(blockingGameName));
     }
 
-    private void DrawBar777BlockingDoorBody(ActiveSessionState session)
+    private void DrawActiveBlockingDoorBody(string blockingGameName)
     {
         var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
         ImGui.PushTextWrapPos(wrapEnd);
-        ImGui.TextColored(
-            EmporiumNeonTheme.WarningPanel,
-            $"A BAR 777 session is currently active ({session.PlayerName}). Stop it before starting a Deathroll Tournament.");
+        ImGui.TextColored(EmporiumNeonTheme.WarningPanel,
+            $"{blockingGameName} is currently running. Please end or discard the game to play Deathroll Tournament.");
         ImGui.PopTextWrapPos();
         ImGui.Spacing();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard BAR 777 Session", "##DiscardBar777Session"))
-            this.sessionService.CancelSession();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Session", "##DRDiscardSession"))
+            this.sessionService.CancelActiveGame();
     }
 
     private float trackedGameInfoCardSpanPx = 80f;

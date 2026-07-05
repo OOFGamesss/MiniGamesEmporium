@@ -3,7 +3,7 @@ using MiniGamesEmporium.UI.Components;
 using System;
 using System.Numerics;
 
-/// <summary>Placeholder panel for the Darts game, displaying a centred coming-soon message scaled to fill the available panel area.</summary>
+/// <summary>Placeholder panel for the Darts game, showing a coming-soon message.</summary>
 
 namespace MiniGamesEmporium.Games.Darts.UI;
 public sealed class DartsPanel

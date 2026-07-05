@@ -4,7 +4,7 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.UI.Components;
 using System;
 
-/// <summary>Renders the game name, entry cost, boosted pot, roll count, winning number, and entry type fields shared between the pre-session door and the settings tab.</summary>
+/// <summary>Renders the BAR 777 pre-session settings fields shared by the door and settings tab.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI.Components;
 public static class Bar777PreSessionSettingsFields
@@ -15,7 +15,7 @@ public static class Bar777PreSessionSettingsFields
         DrawBoostedPotSetting(config);
         DrawRollCountSetting(config);
         DrawWinNumberSetting(config);
-        DrawAddTradesToPotToggle(config);
+        DrawTradesToPotPercentSetting(config);
         DrawEntryTypeToggle(config);
     }
     private static float ResolvedFieldWidth()
@@ -95,19 +95,15 @@ public static class Bar777PreSessionSettingsFields
             config.Save();
         }
     }
-    private static void DrawAddTradesToPotToggle(PluginConfiguration config)
+    private static void DrawTradesToPotPercentSetting(PluginConfiguration config)
     {
         ImGui.Spacing();
-        ImGui.TextDisabled("Add Trades to Pot");
-        if (ImGui.RadioButton("Yes##AddTradesToPotYes", config.Bar777.AddTradesToPot))
+        var pct = config.Bar777.TradesToPotPercent;
+        ImGui.TextDisabled("Trades to Pot (%)");
+        ImGui.SetNextItemWidth(ResolvedFieldWidth());
+        if (ImGui.SliderInt("##TradesToPotPercent", ref pct, 0, 100, "%d%%"))
         {
-            config.Bar777.AddTradesToPot = true;
-            config.Save();
-        }
-        ImGui.SameLine();
-        if (ImGui.RadioButton("No##AddTradesToPotNo", !config.Bar777.AddTradesToPot))
-        {
-            config.Bar777.AddTradesToPot = false;
+            config.Bar777.TradesToPotPercent = Math.Clamp(pct, 0, 100);
             config.Save();
         }
     }

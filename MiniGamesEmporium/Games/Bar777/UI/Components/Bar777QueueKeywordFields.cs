@@ -2,9 +2,8 @@ using Dalamud.Bindings.ImGui;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.UI.Components;
 using System;
-using System.Text;
 
-/// <summary>Renders the queue join keyword text input and the listened chat channel selection combo, shared between the pre-session door and the settings tab.</summary>
+/// <summary>Renders the queue keyword and channel fields shared by the door and settings tab.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.UI.Components;
 public static class Bar777QueueKeywordFields
@@ -38,61 +37,7 @@ public static class Bar777QueueKeywordFields
     {
         ImGui.TextDisabled("Listen on chats");
         ImGui.SetNextItemWidth(ResolvedFieldWidth());
-        var ch = config.QueueJoinChannels;
-        if (!ImGui.BeginCombo($"##Bar777QueueListen_{imguiTrimSuffix}", FormatChannelPreview(ch)))
-            return;
-        SayRow(config, ch, imguiTrimSuffix);
-        ShoutRow(config, ch, imguiTrimSuffix);
-        YellRow(config, ch, imguiTrimSuffix);
-        TellIncomingRow(config, ch, imguiTrimSuffix);
-        ImGui.EndCombo();
-    }
-    private static void SayRow(PluginConfiguration cfg, QueueJoinChannelsConfig ch, string su)
-    {
-        bool v = ch.Say;
-        if (!ImGui.Checkbox($"/say##ql_{su}s", ref v))
-            return;
-        ch.Say = v;
-        cfg.Save();
-    }
-    private static void ShoutRow(PluginConfiguration cfg, QueueJoinChannelsConfig ch, string su)
-    {
-        bool v = ch.Shout;
-        if (!ImGui.Checkbox($"/shout##ql_{su}sh", ref v))
-            return;
-        ch.Shout = v;
-        cfg.Save();
-    }
-    private static void YellRow(PluginConfiguration cfg, QueueJoinChannelsConfig ch, string su)
-    {
-        bool v = ch.Yell;
-        if (!ImGui.Checkbox($"/yell##ql_{su}y", ref v))
-            return;
-        ch.Yell = v;
-        cfg.Save();
-    }
-    private static void TellIncomingRow(PluginConfiguration cfg, QueueJoinChannelsConfig ch, string su)
-    {
-        bool v = ch.TellIncoming;
-        if (!ImGui.Checkbox($"/tell (incoming only)##ql_{su}t", ref v))
-            return;
-        ch.TellIncoming = v;
-        cfg.Save();
-    }
-    private static string FormatChannelPreview(QueueJoinChannelsConfig c)
-    {
-        if (!c.AnyEnabled())
-            return "(none selected)";
-        var sb = new StringBuilder(48);
-        if (c.Say) Append(sb, "/say");
-        if (c.Shout) Append(sb, "/shout");
-        if (c.Yell) Append(sb, "/yell");
-        if (c.TellIncoming) Append(sb, "/tell");
-        return sb.ToString();
-        static void Append(StringBuilder sb, string part)
-        {
-            if (sb.Length > 0) sb.Append(", ");
-            sb.Append(part);
-        }
+        if (QueueChannelCombo.Draw($"Bar777QueueListen_{imguiTrimSuffix}", config.QueueJoinChannels))
+            config.Save();
     }
 }

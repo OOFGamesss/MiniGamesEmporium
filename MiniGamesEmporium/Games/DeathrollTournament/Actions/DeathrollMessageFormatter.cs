@@ -1,11 +1,8 @@
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Services;
 using MiniGamesEmporium.Utility;
 
-/// <summary>Formats Deathroll Tournament chat message templates by substituting placeholders with live session values.</summary>
-/// <remarks>
-/// Available placeholders: {player1}, {player2}, {winner}, {totalpot}, {entrycost}, {boostedpot}, {playercount}, {round},
-/// {random10}, {firstplayer}, {roundwinner}, {matchwinner}, {matchloser}, {roundscore}, {roundsleft}.
-/// </remarks>
+/// <summary>Fills Deathroll Tournament message templates with live session values.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.Actions;
 public static class DeathrollMessageFormatter
@@ -32,21 +29,23 @@ public static class DeathrollMessageFormatter
         var entryCost     = tournament?.EntryCostAtStart  ?? activeSession?.EntryCost  ?? cfg.EntryCost;
         var boostedPot    = tournament?.BoostedPotAtStart ?? activeSession?.BoostedPot ?? cfg.BoostedPot;
         var playerCount   = tournament?.PlayerCountAtStart ?? cfg.RegisteredPlayers.Count;
-        var round         = ComputeRoundLabel(tournament);
+        var round         = tournament == null || tournament.Rounds.Count == 0
+            ? string.Empty
+            : tournament.CurrentRoundLabel();
         return template
-            .Replace("{player1}",     PlayerNameHelper.StripWorld(player1))
-            .Replace("{player2}",     PlayerNameHelper.StripWorld(player2))
-            .Replace("{winner}",      PlayerNameHelper.StripWorld(winner))
+            .Replace("{player1}",     PlayerInfoService.StripWorld(player1))
+            .Replace("{player2}",     PlayerInfoService.StripWorld(player2))
+            .Replace("{winner}",      PlayerInfoService.StripWorld(winner))
             .Replace("{totalpot}",    pot.ToString("N0"))
             .Replace("{entrycost}",   entryCost.ToString("N0"))
             .Replace("{boostedpot}",  boostedPot.ToString("N0"))
             .Replace("{playercount}", playerCount.ToString())
             .Replace("{round}",       round)
             .Replace("{random10}",    random10.ToString())
-            .Replace("{firstplayer}", PlayerNameHelper.StripWorld(firstPlayer))
-            .Replace("{roundwinner}", PlayerNameHelper.StripWorld(roundWinner))
-            .Replace("{matchwinner}", PlayerNameHelper.StripWorld(matchWinner))
-            .Replace("{matchloser}",  PlayerNameHelper.StripWorld(matchLoser))
+            .Replace("{firstplayer}", PlayerInfoService.StripWorld(firstPlayer))
+            .Replace("{roundwinner}", PlayerInfoService.StripWorld(roundWinner))
+            .Replace("{matchwinner}", PlayerInfoService.StripWorld(matchWinner))
+            .Replace("{matchloser}",  PlayerInfoService.StripWorld(matchLoser))
             .Replace("{roundscore}",  roundScore)
             .Replace("{roundsleft}",  roundsLeft.ToString());
     }
@@ -61,14 +60,6 @@ public static class DeathrollMessageFormatter
         var entryCost  = activeSession?.EntryCost  ?? cfg.EntryCost;
         var boostedPot = activeSession?.BoostedPot ?? cfg.BoostedPot;
         return entryCost * cfg.RegisteredPlayers.Count + boostedPot;
-    }
-
-    private static string ComputeRoundLabel(Games.DeathrollTournament.State.DeathrollTournamentState? tournament)
-    {
-        if (tournament == null || tournament.Rounds.Count == 0) return string.Empty;
-        var idx   = tournament.CurrentRoundIndex;
-        var count = tournament.Rounds.Count;
-        return idx == count - 1 ? "The Final" : $"Round {idx + 1}";
     }
 
 }

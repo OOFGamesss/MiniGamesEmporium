@@ -4,7 +4,7 @@ using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 using MiniGamesEmporium.UI;
 
-/// <summary>Notifies GambaWhere (IPC v2) in real time whenever the Mini Games Emporium window opens, so it can offer to start a session. Replaces the legacy MiniGamesEmporium.WindowOpened provider gate.</summary>
+/// <summary>Notifies GambaWhere over IPC whenever the main window opens.</summary>
 
 namespace MiniGamesEmporium.IPC;
 

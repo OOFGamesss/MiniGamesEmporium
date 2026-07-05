@@ -9,13 +9,12 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using MiniGamesEmporium.Actions;
 using System;
 
-/// <summary>Automates sequential winner payouts in 1,000,000 gil chunks, interacting with the Trade, InputNumeric, and SelectYesno addons via ECommons callbacks. Cancels automatically if the trade is declined.</summary>
+/// <summary>Pays out winners in 1,000,000 gil chunks.</summary>
 
 namespace MiniGamesEmporium.Services;
 public sealed unsafe class AutoPayoutService : IDisposable
 {
     private const long MaxChunkGil = 1_000_000L;
-    private const int ChunkTimeoutSeconds = 120;
 
     private readonly ChatQueueService chatQueue;
     private readonly IPluginLog log;
@@ -24,12 +23,13 @@ public sealed unsafe class AutoPayoutService : IDisposable
     private string _targetName = string.Empty;
     private Func<long>? _getRemainingFn;
     private Func<bool>? _isSessionActiveFn;
-    private volatile bool _tradeCompleted;
-    private volatile bool _tradeCancelled;
-    private DateTime _chunkDeadline;
+    private volatile bool _awaitingResult;
     private int _gilTick;
 
     public bool IsRunning { get; private set; }
+
+    public bool IsRunningFor(string targetName) =>
+        IsRunning && _targetName.Equals(targetName, StringComparison.OrdinalIgnoreCase);
 
     public AutoPayoutService(ChatQueueService chatQueue, IPluginLog log)
     {
@@ -51,10 +51,9 @@ public sealed unsafe class AutoPayoutService : IDisposable
     public void Stop()
     {
         if (IsRunning)
-            log.Information("[AutoPayout] Stopped.");
+            log.Information("[AutoPayout] Stopped - no further chunks will be sent.");
         IsRunning = false;
-        _tradeCompleted = false;
-        _tradeCancelled = false;
+        _awaitingResult = false;
         taskManager.Abort();
     }
 
@@ -62,21 +61,18 @@ public sealed unsafe class AutoPayoutService : IDisposable
     {
         log.Information("[AutoPayout] {Message}", logMessage);
         IsRunning = false;
-        _tradeCompleted = false;
-        _tradeCancelled = false;
+        _awaitingResult = false;
     }
 
     private void EnqueueChunk()
     {
         if (_isSessionActiveFn?.Invoke() == false) { Finish("Session is no longer active - stopping payout."); return; }
         var remaining = _getRemainingFn?.Invoke() ?? 0L;
-        if (remaining <= 0L) { Stop(); return; }
+        if (remaining <= 0L) { Finish("Payout complete - all gil transferred."); return; }
 
         var chunk = (int)Math.Min(remaining, MaxChunkGil);
-        _tradeCompleted = false;
-        _tradeCancelled = false;
         _gilTick = 0;
-        _chunkDeadline = DateTime.UtcNow.AddSeconds(ChunkTimeoutSeconds);
+        _awaitingResult = true;
 
         log.Information("[AutoPayout] Sending trade request to '{Target}' for {Chunk} gil ({Remaining} remaining).", _targetName, chunk, remaining);
         SendTradeRequest.Execute(_targetName, this.chatQueue);
@@ -84,13 +80,11 @@ public sealed unsafe class AutoPayoutService : IDisposable
         taskManager.EnqueueDelay(300);
         taskManager.Enqueue(() => ClickTradeAccept());
         taskManager.Enqueue(() => AwaitAndConfirmSelectYesno());
-        taskManager.Enqueue(() => AwaitTradeEnd());
-        taskManager.Enqueue(() => OnChunkComplete());
     }
 
     private bool? SetGilAmount(int chunk)
     {
-        if (_tradeCancelled || IsExpired()) return true;
+        if (!_awaitingResult) return true;
 
         var inAddon = Svc.GameGui.GetAddonByName("InputNumeric", 1);
         if (!inAddon.IsNull && ((AtkUnitBase*)inAddon.Address)->IsVisible)
@@ -101,7 +95,7 @@ public sealed unsafe class AutoPayoutService : IDisposable
 
         var tradeAddon = Svc.GameGui.GetAddonByName("Trade", 1);
         if (tradeAddon.IsNull || !((AtkUnitBase*)tradeAddon.Address)->IsVisible) return false;
-        
+
         if (++_gilTick % 60 == 1)
             Callback.Fire((AtkUnitBase*)tradeAddon.Address, true, 2);
 
@@ -110,7 +104,7 @@ public sealed unsafe class AutoPayoutService : IDisposable
 
     private bool? ClickTradeAccept()
     {
-        if (_tradeCancelled || IsExpired()) return true;
+        if (!_awaitingResult) return true;
         var tradeAddon = Svc.GameGui.GetAddonByName("Trade", 1);
         if (tradeAddon.IsNull) return false;
         var trade = (AtkUnitBase*)tradeAddon.Address;
@@ -121,7 +115,7 @@ public sealed unsafe class AutoPayoutService : IDisposable
 
     private bool? AwaitAndConfirmSelectYesno()
     {
-        if (_tradeCancelled || IsExpired()) return true;
+        if (!_awaitingResult) return true;
         var yesnoAddon = Svc.GameGui.GetAddonByName("SelectYesno", 1);
         if (yesnoAddon.IsNull) return false;
         var addon = (AtkUnitBase*)yesnoAddon.Address;
@@ -130,55 +124,42 @@ public sealed unsafe class AutoPayoutService : IDisposable
         return true;
     }
 
-    private bool? AwaitTradeEnd()
+    private void OnTradeEnd(IPlayerCharacter? counterparty, TradeDetectionManager.TradeDescriptor? result)
     {
-        if (_tradeCancelled || _tradeCompleted || IsExpired()) return true;
-        return false;
-    }
+        if (!_awaitingResult) return;
+        if (counterparty != null && !counterparty.Name.TextValue.Equals(_targetName, StringComparison.OrdinalIgnoreCase)) return;
 
-    private bool? OnChunkComplete()
-    {
-        if (!IsRunning) return true;
+        _awaitingResult = false;
+        if (!IsRunning) return;
 
-        if (_tradeCancelled)
+        if (result == null)
         {
-            Finish("Trade was cancelled by the other party - stopping payout.");
-            return true;
+            Finish("Trade was cancelled or declined - stopping payout.");
+            return;
         }
 
-        if (IsExpired())
+        var given = result.ReceivedGil < 0 ? -(long)result.ReceivedGil : 0L;
+        if (given <= 0L)
         {
-            Finish($"Chunk timed out after {ChunkTimeoutSeconds}s - stopping payout.");
-            return true;
+            Finish("Trade completed but no gil was sent - stopping payout.");
+            return;
         }
 
         if (_isSessionActiveFn?.Invoke() == false)
         {
             Finish("Session is no longer active - stopping payout.");
-            return true;
+            return;
         }
 
         var remaining = _getRemainingFn?.Invoke() ?? 0L;
         if (remaining <= 0L)
         {
             Finish("Payout complete - all gil transferred.");
-            return true;
+            return;
         }
 
         taskManager.EnqueueDelay(1500);
         taskManager.Enqueue(() => { EnqueueChunk(); return true; });
-        return true;
-    }
-
-    private bool IsExpired() => DateTime.UtcNow >= _chunkDeadline;
-
-    private void OnTradeEnd(IPlayerCharacter? counterparty, TradeDetectionManager.TradeDescriptor? result)
-    {
-        if (!IsRunning) return;
-        if (result == null)
-            _tradeCancelled = true;
-        else
-            _tradeCompleted = true;
     }
 
     public void Dispose()

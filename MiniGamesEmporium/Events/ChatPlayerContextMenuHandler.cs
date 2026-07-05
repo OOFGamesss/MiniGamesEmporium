@@ -5,7 +5,7 @@ using Dalamud.Plugin.Services;
 using System;
 using System.Collections.Generic;
 
-/// <summary>Subscribes to the Dalamud context menu and adds custom items for each registered entry when the target is a player named in the chat log.</summary>
+/// <summary>Adds custom right-click menu items for players named in chat.</summary>
 
 namespace MiniGamesEmporium.Events;
 public sealed class ChatPlayerContextMenuHandler : IDisposable

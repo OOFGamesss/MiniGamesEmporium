@@ -1,7 +1,7 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
-/// <summary>Sends the configured queue-join keyword announcement to the /yell channel so players know what to type to enter the BAR 777 queue.</summary>
+/// <summary>Yells the queue-join keyword so players know how to enter the BAR 777 queue.</summary>
 
 namespace MiniGamesEmporium.Games.Bar777.Actions;
 public static class AnnounceKeyword

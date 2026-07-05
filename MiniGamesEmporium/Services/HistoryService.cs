@@ -1,13 +1,13 @@
 using Dalamud.Plugin;
 using LiteDB;
 using MiniGamesEmporium.Config;
-using MiniGamesEmporium.State;
+using MiniGamesEmporium.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-/// <summary>Manages persistent session and transaction history in a LiteDB database, maintaining in-memory caches so UI draw loops never hit the database directly.</summary>
+/// <summary>Manages persistent session and transaction history in LiteDB with in-memory caches.</summary>
 
 namespace MiniGamesEmporium.Services;
 public sealed class HistoryService : IDisposable
