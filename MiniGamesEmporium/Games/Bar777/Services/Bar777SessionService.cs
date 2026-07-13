@@ -23,7 +23,6 @@ public sealed class Bar777SessionService
     public event Action<string>? PaymentVerified;
     public event Action<string>? PlayerEnqueued;
 
-    public bool IsPaused { get; private set; }
     public bool IsQueuePaused { get; private set; }
 
     public Bar777SessionService(PluginConfiguration config, HistoryService historyService)
@@ -72,7 +71,6 @@ public sealed class Bar777SessionService
         if (this.config.ActiveSession != null) return;
         if (string.IsNullOrWhiteSpace(playerName)) return;
         var (name, world) = PlayerInfoService.SplitNameAndWorld(playerName.Trim());
-        IsPaused = false;
         IsQueuePaused = false;
         this.config.ActiveSession = new ActiveSession
         {
@@ -203,18 +201,6 @@ public sealed class Bar777SessionService
         SessionUpdated?.Invoke();
     }
 
-    public void PauseSession()
-    {
-        IsPaused = true;
-        SessionUpdated?.Invoke();
-    }
-
-    public void ResumeSession()
-    {
-        IsPaused = false;
-        SessionUpdated?.Invoke();
-    }
-
     public void PauseQueue()
     {
         IsQueuePaused = true;
@@ -234,9 +220,12 @@ public sealed class Bar777SessionService
         if (!session.WinTriggered) return;
         if (!session.PlayerName.Equals(partnerName, StringComparison.OrdinalIgnoreCase)) return;
         session.WinnerPayoutGil += amountSent;
+        session.PayoutTransactionId = PayoutTransactionRecorder.Record(this.historyService, this.config.Bar777.CustomName, session.PlayerName, session.WinnerPayoutGil, session.PayoutTransactionId);
         this.config.Save();
         SessionUpdated?.Invoke();
     }
+
+    public bool IsSessionActive() => this.config.ActiveSession != null;
 
     public ActiveSession? GetActiveSession() => this.config.ActiveSession;
 
@@ -293,7 +282,6 @@ public sealed class Bar777SessionService
 
     public void CancelSession()
     {
-        IsPaused = false;
         IsQueuePaused = false;
         RecordSessionHistory();
         ClearGameStats();
@@ -312,7 +300,6 @@ public sealed class Bar777SessionService
 
     public void EndWalkInAndReset()
     {
-        IsPaused = false;
         this.config.ActiveSession = new ActiveSession
         {
             GameName = Bar777GameIds.DisplayName,
@@ -411,19 +398,33 @@ public sealed class Bar777SessionService
         return true;
     }
 
+    public long ComputeTotalPot() => ComputeTotalPot(this.config);
+
+    public static long ComputeTotalPot(PluginConfiguration config)
+    {
+        var bar = config.Bar777;
+        return bar.BoostedPot + (bar.SessionTradedTotal * bar.TradesToPotPercent / 100);
+    }
+
+    public static long ComputeTradesHeldBack(PluginConfiguration config)
+    {
+        var bar = config.Bar777;
+        return bar.SessionTradedTotal - (bar.SessionTradedTotal * bar.TradesToPotPercent / 100);
+    }
+
     private void RecordSessionHistory()
     {
         var session = this.config.ActiveSession;
         if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
         var amountInTrades = this.config.Bar777.SessionTradedTotal;
-        var totalPot = this.config.Bar777.ComputeTotalPot();
+        var totalPot = ComputeTotalPot(this.config);
         this.historyService.AddSession(new SessionRecord
         {
             GameName = session.GameName,
             Winner = session.WinTriggered && !Bar777GameIds.IsAnyPlaceholder(session.PlayerName) ? session.PlayerName : string.Empty,
             BoostedPot = this.config.Bar777.BoostedPot,
             AmountInTrades = amountInTrades,
-            KeptFromTrades = this.config.Bar777.ComputeTradesHeldBack(),
+            KeptFromTrades = ComputeTradesHeldBack(this.config),
             TotalPot = totalPot,
             PlayersPlayed = this.config.Bar777.PlayersPlayed,
             Timestamp = DateTime.UtcNow,

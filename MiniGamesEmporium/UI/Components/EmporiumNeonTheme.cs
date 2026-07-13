@@ -31,6 +31,8 @@ public static class EmporiumNeonTheme
     public static readonly Vector4 DealOrNoDealGoldDim = new(0.55f, 0.40f, 0.03f, 1f);
     public static readonly Vector4 VotingMadnessLime = new(0.72f, 1f, 0.08f, 1f);
     public static readonly Vector4 VotingMadnessLimeDim = new(0.40f, 0.55f, 0.04f, 1f);
+    public static readonly Vector4 RaffleTeal = new(0.10f, 0.85f, 0.72f, 1f);
+    public static readonly Vector4 RaffleTealDim = new(0.05f, 0.46f, 0.40f, 1f);
     public static readonly Vector4 NeonCyan = new(0.2f, 0.98f, 0.95f, 1f);
     public static readonly Vector4 NeonMagenta = new(0.95f, 0.25f, 0.85f, 1f);
     public static readonly Vector4 WinGold = new(1f, 0.92f, 0.2f, 1f);
@@ -107,6 +109,11 @@ public static class EmporiumNeonTheme
     private static readonly Vector4 VotingMadnessTabActive = new(0.22f, 0.42f, 0.04f, 1f);
     private static readonly Vector4 VotingMadnessTabUnfocused = new(0.03f, 0.06f, 0.01f, 1f);
     private static readonly Vector4 VotingMadnessTabUnfocusedActive = new(0.16f, 0.32f, 0.03f, 1f);
+    private static readonly Vector4 RaffleTabBase = new(0.02f, 0.08f, 0.07f, 1f);
+    private static readonly Vector4 RaffleTabHovered = new(0.04f, 0.26f, 0.23f, 1f);
+    private static readonly Vector4 RaffleTabActive = new(0.04f, 0.40f, 0.35f, 1f);
+    private static readonly Vector4 RaffleTabUnfocused = new(0.02f, 0.06f, 0.05f, 1f);
+    private static readonly Vector4 RaffleTabUnfocusedActive = new(0.04f, 0.30f, 0.27f, 1f);
     public readonly struct Scope : IDisposable
     {
         private readonly int colours;
@@ -317,6 +324,32 @@ public static class EmporiumNeonTheme
             ImGui.PushStyleColor(ImGuiCol.TabActive,         HigherLowerTabActive);
             ImGui.PushStyleColor(ImGuiCol.TabUnfocused,      HigherLowerTabUnfocused);
             ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, HigherLowerTabUnfocusedActive);
+        }
+        public void Dispose() => ImGui.PopStyleColor(ColourCount);
+    }
+    public readonly struct RaffleTabItemScope : IDisposable
+    {
+        private const int ColourCount = 5;
+        public RaffleTabItemScope()
+        {
+            ImGui.PushStyleColor(ImGuiCol.Tab, RaffleTabBase);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered, RaffleTabHovered);
+            ImGui.PushStyleColor(ImGuiCol.TabActive, RaffleTabActive);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocused, RaffleTabUnfocused);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, RaffleTabUnfocusedActive);
+        }
+        public void Dispose() => ImGui.PopStyleColor(ColourCount);
+    }
+    public readonly struct RaffleNestedTabChromeScope : IDisposable
+    {
+        private const int ColourCount = 5;
+        public RaffleNestedTabChromeScope()
+        {
+            ImGui.PushStyleColor(ImGuiCol.Tab, RaffleTabBase);
+            ImGui.PushStyleColor(ImGuiCol.TabHovered, RaffleTabHovered);
+            ImGui.PushStyleColor(ImGuiCol.TabActive, RaffleTabActive);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocused, RaffleTabUnfocused);
+            ImGui.PushStyleColor(ImGuiCol.TabUnfocusedActive, RaffleTabUnfocusedActive);
         }
         public void Dispose() => ImGui.PopStyleColor(ColourCount);
     }

@@ -6,6 +6,7 @@ using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.IPC;
 
 /// <summary>Pushes live BAR 777 session state to GambaWhere over IPC.</summary>
@@ -69,14 +70,15 @@ public sealed class Bar777Rules : IDisposable
     {
         if (_config.ActiveSession == null) return null;
 
-        var bar = _config.Bar777;
-        var totalPot = bar.ComputeTotalPot();
+        var bar      = _config.Bar777;
+        var totalPot = Bar777SessionService.ComputeTotalPot(_config);
 
         var payload = new GambaWhereRulesPayload();
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Game", Value = bar.CustomName });
-        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Boosted Pot", Value = bar.BoostedPot });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Total Pot", Value = totalPot });
-        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Cost Per Roll", Value = bar.CostPerRoll });
+        if (bar.BoostedPot > 0)
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Boosted Pot", Value = bar.BoostedPot });
+        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Cost Per Roll", Value = bar.CostPerRoll == 0 ? "Free" : bar.CostPerRoll });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Max Rolls", Value = bar.MaxRolls });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Players Played", Value = bar.PlayersPlayed });
         if (bar.UseQueue)

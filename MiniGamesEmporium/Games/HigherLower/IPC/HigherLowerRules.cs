@@ -86,10 +86,10 @@ public sealed class HigherLowerRules : IDisposable
 
         var payload = new GambaWhereRulesPayload();
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Game",              Value = HigherLowerGameIds.DisplayName });
-        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Entry Cost",        Value = hl.EntryCost });
+        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Total Pot",         Value = totalPot });
         if (hl.BoostedPot > 0)
             payload.Rules.Add(new GambaWhereRuleEntry { Label = "Boosted Pot",  Value = hl.BoostedPot });
-        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Total Pot",         Value = totalPot });
+        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Entry Cost",        Value = hl.EntryCost == 0 ? "Free" : hl.EntryCost });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Players Played",    Value = hl.PlayersPlayed });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Highest Rounds",    Value = topRounds });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Currently Winning", Value = currentlyWinning });

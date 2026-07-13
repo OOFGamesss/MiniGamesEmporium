@@ -1,4 +1,5 @@
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.HigherLower.Services;
 using MiniGamesEmporium.Utility;
 
 /// <summary>Fills Higher/Lower message templates with live session values.</summary>
@@ -19,7 +20,7 @@ public static class HigherLowerMessageFormatter
         int highestRound = 0,
         long winningAmount = 0)
     {
-        var totalPot   = totalPotOverride ?? config.HigherLower.ComputeTotalPot();
+        var totalPot   = totalPotOverride ?? HigherLowerService.ComputeTotalPot(config);
         var display    = MessageFormat.DisplayPlayer(template, playerName);
         return template
             .Replace("{buyername}",    buyerName)

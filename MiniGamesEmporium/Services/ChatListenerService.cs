@@ -5,7 +5,6 @@ using Dalamud.Plugin.Services;
 using System;
 using System.Collections.Generic;
 using MiniGamesEmporium.Config;
-using MiniGamesEmporium.Games.Bar777.Services;
 
 /// <summary>Dispatches chat roll and keyword events to the registered per-game handlers.</summary>
 
@@ -14,7 +13,7 @@ public sealed class ChatListenerService : IDisposable
 {
     private readonly IChatGui chatGui;
     private readonly PluginConfiguration config;
-    private readonly Bar777SessionService bar777SessionService;
+    private readonly SessionService sessionService;
     private readonly IReadOnlyList<IChatRollHandler> rollHandlers;
     private readonly IReadOnlyList<IChatKeywordHandler> keywordHandlers;
     private readonly RollService rollService;
@@ -23,7 +22,7 @@ public sealed class ChatListenerService : IDisposable
     public ChatListenerService(
         IChatGui chatGui,
         PluginConfiguration config,
-        Bar777SessionService bar777SessionService,
+        SessionService sessionService,
         IReadOnlyList<IChatRollHandler> rollHandlers,
         IReadOnlyList<IChatKeywordHandler> keywordHandlers,
         RollService rollService,
@@ -31,7 +30,7 @@ public sealed class ChatListenerService : IDisposable
     {
         this.chatGui         = chatGui;
         this.config          = config;
-        this.bar777SessionService  = bar777SessionService;
+        this.sessionService  = sessionService;
         this.rollHandlers    = rollHandlers;
         this.keywordHandlers = keywordHandlers;
         this.rollService     = rollService;
@@ -46,7 +45,7 @@ public sealed class ChatListenerService : IDisposable
 
     private void OnChatMessage(IHandleableChatMessage message)
     {
-        if (this.bar777SessionService.IsPaused) return;
+        if (this.sessionService.IsPaused) return;
         var messageText = message.Message?.TextValue ?? string.Empty;
         var kind = message.LogKind;
         if (string.IsNullOrEmpty(messageText)) return;

@@ -45,7 +45,7 @@ public sealed class DeathrollSettingsTab
     {
         var cost = (int)this.config.DeathrollTournament.EntryCost;
         ImGui.TextDisabled("Entry Cost (Gil)");
-        ImGui.SetNextItemWidth(-1f);
+        ImGui.SetNextItemWidth(FancyWidth());
         if (ImGuiEx.InputFancyNumeric("##DREntryCostSettings", ref cost, 100_000))
         {
             this.config.DeathrollTournament.EntryCost = Math.Max(0, cost);
@@ -57,13 +57,16 @@ public sealed class DeathrollSettingsTab
     {
         var pot = (int)this.config.DeathrollTournament.BoostedPot;
         ImGui.TextDisabled("Boosted Pot (Gil)");
-        ImGui.SetNextItemWidth(-1f);
+        ImGui.SetNextItemWidth(FancyWidth());
         if (ImGuiEx.InputFancyNumeric("##DRBoostedPotSettings", ref pot, 100_000))
         {
             this.config.DeathrollTournament.BoostedPot = Math.Max(0, pot);
             this.config.Save();
         }
     }
+
+    private static float FancyWidth() =>
+        MathF.Max(80f, ImGui.GetContentRegionAvail().X - ImGui.GetFrameHeight() * 2f - 2f);
 
     private void DrawAutoJoinSection()
         => DeathrollAutoJoinFields.Draw(this.config, "Settings", -1f);
@@ -87,9 +90,9 @@ public sealed class DeathrollSettingsTab
             var delay = this.config.DeathrollTournament.AutoNextMatchDelaySeconds;
             ImGui.TextDisabled("Delay (seconds)");
             ImGui.SetNextItemWidth(200f);
-            if (ImGui.SliderInt("##DRAutoNextDelay", ref delay, 0, 60))
+            if (ImGui.InputInt("##DRAutoNextDelay", ref delay, 1, 5))
             {
-                this.config.DeathrollTournament.AutoNextMatchDelaySeconds = delay;
+                this.config.DeathrollTournament.AutoNextMatchDelaySeconds = Math.Clamp(delay, 0, 60);
                 this.config.Save();
             }
             ImGui.Unindent();

@@ -53,8 +53,8 @@ public sealed class DeathrollStatsTab
         ImGui.TableSetupColumn("##DSAction", ImGuiTableColumnFlags.WidthFixed, 130f);
         ImGui.TableSetupColumn("##DSValue",  ImGuiTableColumnFlags.WidthFixed, 180f);
         DrawPotRow(totalPot);
-        DrawRow("Entry Cost",  $"{entryCost:N0} Gil",              EmporiumNeonTheme.DeathrollTournamentPink);
         DrawRow("Boosted Pot", $"{boostedPot:N0} Gil",             EmporiumNeonTheme.WinGold);
+        DrawRow("Entry Cost",  $"{entryCost:N0} Gil",              EmporiumNeonTheme.DeathrollTournamentPink);
         var players = tournament?.PlayerCountAtStart ?? cfg.PaidPlayers.Count;
         DrawRow("Players",     players.ToString(),                  EmporiumNeonTheme.NeonCyan);
         var roundLabel = tournament != null

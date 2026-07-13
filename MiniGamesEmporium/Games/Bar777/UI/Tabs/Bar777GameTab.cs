@@ -118,7 +118,7 @@ public sealed class Bar777GameTab
         ImGui.Separator();
         ImGui.Spacing();
 
-        var pot       = this.config.Bar777.ComputeTotalPot();
+        var pot       = Bar777SessionService.ComputeTotalPot(this.config);
         var paid      = session.WinnerPayoutGil;
         var remaining = Math.Max(0L, pot - paid);
 
@@ -202,7 +202,7 @@ public sealed class Bar777GameTab
                     playerName,
                     () =>
                     {
-                        var p = this.config.Bar777.ComputeTotalPot();
+                        var p = Bar777SessionService.ComputeTotalPot(this.config);
                         var w = this.bar777SessionService.GetActiveSession()?.WinnerPayoutGil ?? 0L;
                         return Math.Max(0L, p - w);
                     },

@@ -9,6 +9,8 @@ using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.UI;
 using MiniGamesEmporium.Games.HigherLower.Services;
+using MiniGamesEmporium.Games.Raffle.Services;
+using MiniGamesEmporium.Games.Raffle.UI;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.Games.MinefieldGambit.UI;
 using MiniGamesEmporium.Games.GamblerDerby.UI;
@@ -32,6 +34,7 @@ public sealed class MiniGamesTab : IDisposable
     private readonly PluginConfiguration config;
     private readonly Bar777Panel bar777Panel;
     private readonly DeathrollTournamentPanel deathrollTournamentPanel;
+    private readonly RafflePanel rafflePanel;
     private readonly MinefieldGambitPanel minefieldGambitPanel;
     private readonly GamblerDerbyPanel gamblerDerbyPanel;
     private readonly HigherLowerPanel higherLowerPanel;
@@ -59,7 +62,8 @@ public sealed class MiniGamesTab : IDisposable
         HistoryService historyService,
         AutoPayoutService autoPayoutService,
         HigherLowerService higherLowerService,
-        PlayerInfoService playerInfoService)
+        PlayerInfoService playerInfoService,
+        RaffleService raffleService)
     {
         this.config                   = config;
         this.deathrollService         = deathrollService;
@@ -67,9 +71,10 @@ public sealed class MiniGamesTab : IDisposable
         this.sessionService           = sessionService;
         this.bar777Panel              = new Bar777Panel(config, bar777SessionService, sessionService, chatQueue, historyService, autoPayoutService);
         this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log, historyService, autoPayoutService);
+        this.rafflePanel              = new RafflePanel(config, raffleService, chatQueue, sessionService, historyService, autoPayoutService);
         this.minefieldGambitPanel = new MinefieldGambitPanel();
         this.gamblerDerbyPanel = new GamblerDerbyPanel();
-        this.higherLowerPanel = new HigherLowerPanel(config, higherLowerService, chatQueue, autoPayoutService, sessionService, playerInfoService);
+        this.higherLowerPanel = new HigherLowerPanel(config, higherLowerService, chatQueue, autoPayoutService, sessionService, playerInfoService, historyService);
         this.beerPongPanel = new BeerPongPanel();
         this.dartsPanel = new DartsPanel();
         this.eightBallPoolPanel = new EightBallPoolPanel();
@@ -90,6 +95,7 @@ public sealed class MiniGamesTab : IDisposable
         this.bar777SessionService.WinDetected -= OnWinDetected;
         this.bar777Panel.Dispose();
         this.deathrollTournamentPanel.Dispose();
+        this.rafflePanel.Dispose();
         this.higherLowerPanel.Dispose();
     }
     public void Draw()
@@ -100,6 +106,7 @@ public sealed class MiniGamesTab : IDisposable
         if (!tabBar.Success) return;
         DrawBar777Tab();
         DrawDeathrollTournamentTab();
+        DrawRaffleTab();
         DrawHigherLowerTab();
         DrawMinefieldGambitTab();
         DrawGamblerDerbyTab();
@@ -124,6 +131,13 @@ public sealed class MiniGamesTab : IDisposable
         using var tab = ImRaii.TabItem("Deathroll Tournament");
         if (!tab.Success) return;
         this.deathrollTournamentPanel.Draw();
+    }
+    private void DrawRaffleTab()
+    {
+        using var chrome = new EmporiumNeonTheme.RaffleTabItemScope();
+        using var tab = ImRaii.TabItem("Raffle");
+        if (!tab.Success) return;
+        this.rafflePanel.Draw();
     }
     private void DrawMinefieldGambitTab()
     {

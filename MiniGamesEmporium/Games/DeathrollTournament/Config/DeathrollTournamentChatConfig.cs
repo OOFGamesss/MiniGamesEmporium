@@ -16,6 +16,9 @@ public class DeathrollTournamentChatConfig
     public bool AutoAnnounceWinner { get; set; } = false;
     public string AnnouncePotMessage { get; set; } =
         "/yell Deathroll Tournament Pot: {totalpot} Gil! ({playercount} players x {entrycost} Gil + {boostedpot} Gil boosted)";
+    public bool UseCustomTurnReminderMessage { get; set; } = false;
+    public string TurnReminderMessage { get; set; } =
+        "/tell {player} it's your turn, please stop erping!";
     public string RequestGilMessage { get; set; } =
         "/tell {player} Please pay {entrycost} Gil to enter the Deathroll Tournament!";
     public string RequestGilBuyerMessage { get; set; } =

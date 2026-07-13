@@ -17,6 +17,4 @@ public class Bar777Config
     public bool AutoCatchRoll { get; set; } = false;
     public int PlayersPlayed { get; set; } = 0;
     public Bar777ChatConfig Chat { get; set; } = new();
-    public long ComputeTotalPot() => BoostedPot + (SessionTradedTotal * TradesToPotPercent / 100);
-    public long ComputeTradesHeldBack() => SessionTradedTotal - (SessionTradedTotal * TradesToPotPercent / 100);
 }

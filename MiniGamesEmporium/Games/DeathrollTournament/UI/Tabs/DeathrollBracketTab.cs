@@ -741,7 +741,7 @@ public sealed class DeathrollBracketTab
         DrawSwapPopup(state, match, roundIdx, matchIdx, false);
     }
 
-    private static void DrawTellBellButton(string playerNameWithWorld)
+    private void DrawTellBellButton(string playerNameWithWorld)
     {
         ImGui.PushFont(UiBuilder.IconFont);
         ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.85f, 0.1f, 1f));
@@ -749,11 +749,24 @@ public sealed class DeathrollBracketTab
         ImGui.PopStyleColor();
         ImGui.PopFont();
 
+        var chat = this.config.DeathrollTournament.Chat;
         if (ImGui.IsItemClicked())
-            MessageFormat.CopyTellToClipboard(playerNameWithWorld, MiniGamesEmporium.ChatGui);
+        {
+            if (chat.UseCustomTurnReminderMessage)
+            {
+                var player = MessageFormat.DisplayPlayer(chat.TurnReminderMessage, playerNameWithWorld);
+                this.chatQueue.Enqueue(chat.TurnReminderMessage.Replace("{player}", player));
+            }
+            else
+            {
+                MessageFormat.CopyTellToClipboard(playerNameWithWorld, MiniGamesEmporium.ChatGui);
+            }
+        }
         if (ImGui.IsItemHovered())
         {
-            ImGui.SetTooltip("Copy /tell command to clipboard");
+            ImGui.SetTooltip(chat.UseCustomTurnReminderMessage
+                ? "Send turn reminder message"
+                : "Copy /tell command to clipboard");
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
     }

@@ -2,6 +2,7 @@ using System;
 using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.HigherLower.Config;
+using MiniGamesEmporium.Games.Raffle.Config;
 
 /// <summary>A named snapshot of game rules, chat messages, and queue settings.</summary>
 
@@ -15,5 +16,6 @@ public sealed class PluginPreset
     public QueueConfig QueueJoinChannels { get; set; } = new();
     public Bar777Config Bar777 { get; set; } = new();
     public DeathrollTournamentConfig DeathrollTournament { get; set; } = new();
+    public RaffleConfig Raffle { get; set; } = new();
     public HigherLowerConfig HigherLower { get; set; } = new();
 }

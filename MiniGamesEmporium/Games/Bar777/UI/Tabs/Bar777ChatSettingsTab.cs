@@ -115,7 +115,7 @@ public sealed class Bar777ChatSettingsTab
         ImGui.Spacing();
         DrawMessageField(
             "Request Gil (Buyer)",
-            "Button: 'Request Gil (Buyer)' - sent to the buyer paying for another player. Use {buyername} for the buyer and {player} for who they are paying for.",
+            "Button: 'Request Gil (Buyer)' - sent to the buyer paying for another player.",
             "##TellBuyerMsg",
             () => this.config.Bar777.Chat.TellBuyerRequestMessage,
             v => { this.config.Bar777.Chat.TellBuyerRequestMessage = v; this.config.Save(); });

@@ -78,12 +78,33 @@ public static class GameSessionDoorStyles
         SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
         ShellInsetBottom = 8f,
     };
+    public static GameSessionDoorStyle RaffleStartDoor => new()
+    {
+        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
+        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
+        MinOuterContainerHeight = 220f,
+        MinTrackedContentSpan = 200f,
+        ContentBottomBleedPx = 12f,
+        SeedTrackedContentSpanPx = 220f,
+        ShellInsetBottom = 8f,
+    };
+    public static GameSessionDoorStyle RaffleBlockingDoor => new()
+    {
+        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
+        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
+        MinOuterContainerHeight = 120f,
+        MinTrackedContentSpan = 96f,
+        ContentBottomBleedPx = 8f,
+        SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
+        ShellInsetBottom = 8f,
+    };
 }
 public static class KnownGameDoorModules
 {
     public const string Bar777              = "Bar777";
     public const string DeathrollTournament = "DeathrollTournament";
     public const string HigherLower         = "HigherLower";
+    public const string Raffle              = "Raffle";
 }
 public static class GameSessionDoorHost
 {

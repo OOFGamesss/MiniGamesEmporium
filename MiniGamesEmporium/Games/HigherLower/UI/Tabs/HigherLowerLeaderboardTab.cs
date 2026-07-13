@@ -28,20 +28,24 @@ public sealed class HigherLowerLeaderboardTab
     private readonly PluginConfiguration config;
     private readonly HigherLowerService higherLowerService;
     private readonly ChatQueueService chatQueue;
+    private readonly HistoryService historyService;
+    private int donationInput = 0;
 
-    public HigherLowerLeaderboardTab(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue)
+    public HigherLowerLeaderboardTab(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, HistoryService historyService)
     {
         this.config             = config;
         this.higherLowerService = higherLowerService;
         this.chatQueue          = chatQueue;
+        this.historyService     = historyService;
     }
 
     private static float ChildHeight(bool showKept)
     {
-        var rowH = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
+        var rowH   = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
+        var inputH = ImGui.GetFrameHeight()    + ImGui.GetStyle().CellPadding.Y * 2f;
         var extraWinnerLines = MaxWinnerNamesShown * (ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y);
         var rows = 6 + (showKept ? 1 : 0);
-        return rows * rowH + extraWinnerLines + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
+        return rows * rowH + inputH + extraWinnerLines + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
     }
 
     public static float GetInlineHeight() => GetInlineHeight(showKept: false);
@@ -51,8 +55,8 @@ public sealed class HigherLowerLeaderboardTab
     {
         var hl       = this.config.HigherLower;
         var totalPot = this.higherLowerService.GetTotalPot();
-        var keptFromTrades = hl.ComputeTradesHeldBack();
-        var showKept = keptFromTrades > 0;
+        var keptFromTrades = HigherLowerService.ComputeTradesHeldBack(this.config);
+        var showKept = this.config.HigherLower.TradesToPotPercent < 100;
         var board    = hl.SessionLeaderboard;
         var topScore = board.Count > 0 ? board.Max(e => e.RoundsCorrect) : 0;
         var topRounds = board.Count > 0 ? topScore.ToString() : "--";
@@ -67,19 +71,45 @@ public sealed class HigherLowerLeaderboardTab
 
         var targetX = ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X;
 
-        using var table = ImRaii.Table("##HLStatsTable", 2, ImGuiTableFlags.None, new Vector2(-1, 0));
+        using var table = ImRaii.Table("##HLStatsTable", 3, ImGuiTableFlags.None, new Vector2(-1, 0));
         if (!table.Success) return;
-        ImGui.TableSetupColumn("##HLStatsLabel", ImGuiTableColumnFlags.WidthFixed, 130f);
-        ImGui.TableSetupColumn("##HLStatsValue", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn("##HLStatsLabel",  ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn("##HLStatsAction", ImGuiTableColumnFlags.WidthFixed, 130f);
+        ImGui.TableSetupColumn("##HLStatsValue",  ImGuiTableColumnFlags.WidthFixed, 180f);
 
-        DrawTotalPotRow(totalPot, targetX);
-        DrawRow("Boosted Pot",       $"{hl.BoostedPot:N0} Gil",         EmporiumNeonTheme.WinGold,    targetX);
-        DrawRow("Taken in Trades",   $"{hl.SessionTradedTotal:N0} Gil", EmporiumNeonTheme.NeonCyan,   targetX);
+        DrawTotalPotRow(totalPot);
+        DrawRow("Boosted Pot",       $"{hl.BoostedPot:N0} Gil",         EmporiumNeonTheme.WinGold);
+        DrawRow("Taken in Trades",   $"{hl.SessionTradedTotal:N0} Gil", EmporiumNeonTheme.NeonCyan);
         if (showKept)
-            DrawRow("Kept from Trades", $"{keptFromTrades:N0} Gil",     EmporiumNeonTheme.WarnAmber,  targetX);
-        DrawRow("Players Played",    hl.PlayersPlayed.ToString(),        EmporiumNeonTheme.NeonMagenta, targetX);
-        DrawRow("Highest Rounds",    topRounds,                          EmporiumNeonTheme.NeonCyan,   targetX);
-        DrawMultiLineRow("Currently Winning", winnerLines,               EmporiumNeonTheme.WinGold,    targetX);
+            DrawRow("Kept from Trades", $"{keptFromTrades:N0} Gil",     EmporiumNeonTheme.WarnAmber);
+        DrawRow("Players Played",    hl.PlayersPlayed.ToString(),        EmporiumNeonTheme.NeonMagenta);
+        DrawRow("Highest Rounds",    topRounds,                          EmporiumNeonTheme.NeonCyan);
+        DrawMultiLineRow("Currently Winning", winnerLines,               EmporiumNeonTheme.WinGold, targetX, rightAlign: leaders.Count > 0);
+        DrawDonationRow();
+    }
+
+    private void DrawDonationRow()
+    {
+        ImGui.TableNextRow();
+        ImGui.TableSetColumnIndex(0);
+        ImGui.TextDisabled("Adjust Pot (Gil)");
+        ImGui.TableSetColumnIndex(1);
+        ImGui.SetNextItemWidth(-1f);
+        ImGui.InputInt("##HLDonation", ref this.donationInput, 0, 0);
+        ImGui.TableSetColumnIndex(2);
+        using (UIHelper.PushGreenButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Plus, "Add", "##HLAddDonation") && this.donationInput > 0)
+            {
+                AddDonation.Execute(this.config, this.historyService, this.donationInput);
+                this.donationInput = 0;
+            }
+        ImGui.SameLine();
+        using (UIHelper.PushRedButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Minus, "Remove", "##HLRemoveDonation") && this.donationInput > 0)
+            {
+                RemoveDonation.Execute(this.config, this.historyService, this.donationInput);
+                this.donationInput = 0;
+            }
     }
 
     public void DrawFullLeaderboard()
@@ -129,22 +159,14 @@ public sealed class HigherLowerLeaderboardTab
         }
     }
 
-    private void DrawTotalPotRow(long totalPot, float targetX)
+    private void DrawTotalPotRow(long totalPot)
     {
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         ImGui.TextDisabled("Total Pot");
         ImGui.TableSetColumnIndex(1);
-
-        var potText = $"{totalPot:N0} Gil";
-        var valueW  = ImGui.CalcTextSize(potText).X;
-        var sp      = ImGui.GetStyle().ItemSpacing.X;
-
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(4f, 0f));
-        var buttonW = UIHelper.CalcButtonSize(FontAwesomeIcon.Bullhorn, "Announce Pot").X;
-        ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), targetX - buttonW - sp - valueW));
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2f);
-
+        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(4f, 0f));
         ImGui.PushStyleColor(ImGuiCol.Button,        YellColour);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, YellColourHovered);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive,  YellColourActive);
@@ -155,29 +177,29 @@ public sealed class HigherLowerLeaderboardTab
         {
             AnnouncePot.Execute(totalPot, this.config, this.chatQueue);
         }
-        ImGui.SameLine();
-        ImGui.TextColored(EmporiumNeonTheme.WinGold, potText);
+        ImGui.TableSetColumnIndex(2);
+        ImGui.TextColored(EmporiumNeonTheme.WinGold, $"{totalPot:N0} Gil");
     }
 
-    private static void DrawRow(string label, string value, Vector4 valueColour, float targetX)
+    private static void DrawRow(string label, string value, Vector4 valueColour)
     {
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         ImGui.TextDisabled(label);
-        ImGui.TableSetColumnIndex(1);
-        PositionValueAt(targetX, value);
+        ImGui.TableSetColumnIndex(2);
         ImGui.TextColored(valueColour, value);
     }
 
-    private static void DrawMultiLineRow(string label, IReadOnlyList<string> lines, Vector4 valueColour, float targetX)
+    private static void DrawMultiLineRow(string label, IReadOnlyList<string> lines, Vector4 valueColour, float targetX, bool rightAlign)
     {
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         ImGui.TextDisabled(label);
-        ImGui.TableSetColumnIndex(1);
+        ImGui.TableSetColumnIndex(2);
         foreach (var line in lines)
         {
-            PositionValueAt(targetX, line);
+            if (rightAlign)
+                PositionValueAt(targetX, line);
             ImGui.TextColored(valueColour, line);
         }
     }

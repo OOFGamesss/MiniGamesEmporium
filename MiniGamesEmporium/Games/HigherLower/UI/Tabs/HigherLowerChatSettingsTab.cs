@@ -76,49 +76,49 @@ public sealed class HigherLowerChatSettingsTab
         ImGui.Spacing();
         DrawMessageField(
             "Announce Pot",
-            "Button: 'Announce Pot' in the stats panel. Use {totalpot} for the current pot.",
+            "Button: 'Announce Pot' in the stats panel.",
             "##HLAnnouncePotMsg",
             () => chat.AnnouncePotMessage,
             v  => { chat.AnnouncePotMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Request Gil",
-            "Button: 'Request Gil' in the game tab. Use {player} for the player name and {cost} for the entry cost.",
+            "Button: 'Request Gil' in the game tab.",
             "##HLTellAmountMsg",
             () => chat.TellAmountRequestMessage,
             v  => { chat.TellAmountRequestMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Let's Play",
-            "Button: 'Let's Play' shown after payment is verified. Also auto-sent on payment (see toggles). Use {player}.",
+            "Button: 'Let's Play' shown after payment is verified. Also auto-sent on payment (see toggles).",
             "##HLLetsPlayMsg",
             () => chat.LetsPlayMessage,
             v  => { chat.LetsPlayMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Ask Guess",
-            "Button: 'Ask Guess' shown after each roll while waiting for the player's guess. Use {rollednumber}.",
+            "Button: 'Ask Guess' shown after each roll while waiting for the player's guess.",
             "##HLAskGuessMsg",
             () => chat.AskGuessMessage,
             v  => { chat.AskGuessMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Win Shout",
-            "Button: 'Announce Winner' on the session winner screen. Use {player}, {rounds}, {winningamount} (their share of the pot), {totalpot}.",
+            "Button: 'Announce Winner' on the session winner screen.",
             "##HLWinMsg",
             () => chat.WinShoutMessage,
             v  => { chat.WinShoutMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Score",
-            "Button: 'Announce Score' when player's turn ends and they are NOT currently leading. Use {player}, {rounds}, {highestround} (rounds needed to take the lead).",
+            "Button: 'Announce Score' when player's turn ends and they are NOT currently leading.",
             "##HLLossUnluckyMsg",
             () => chat.LossUnluckyMessage,
             v  => { chat.LossUnluckyMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Lead",
-            "Button: 'Announce Lead' when player's turn ends and they ARE currently in the lead. Use {player}, {rounds}.",
+            "Button: 'Announce Lead' when player's turn ends and they ARE currently in the lead.",
             "##HLLossWinningMsg",
             () => chat.LossWinningMessage,
             v  => { chat.LossWinningMessage = v; this.config.Save(); });

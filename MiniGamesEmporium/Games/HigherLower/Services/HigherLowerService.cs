@@ -231,6 +231,7 @@ public sealed class HigherLowerService : IDisposable
             .FirstOrDefault(w => PlayerInfoService.StripWorld(w.PlayerName).Equals(partnerName, StringComparison.OrdinalIgnoreCase));
         if (payout == null) return;
         payout.PaidGil += amountSent;
+        payout.PayoutTransactionId = PayoutTransactionRecorder.Record(this.historyService, HigherLowerGameIds.DisplayName, payout.PlayerName, payout.PaidGil, payout.PayoutTransactionId);
         this.config.Save();
         SessionUpdated?.Invoke();
     }
@@ -374,10 +375,18 @@ public sealed class HigherLowerService : IDisposable
         SessionUpdated?.Invoke();
     }
 
-    public long GetTotalPot()
+    public long GetTotalPot() => ComputeTotalPot(this.config);
+
+    public static long ComputeTotalPot(PluginConfiguration config)
     {
-        var hl = this.config.HigherLower;
-        return hl.ComputeTotalPot();
+        var hl = config.HigherLower;
+        return hl.BoostedPot + (hl.SessionTradedTotal * hl.TradesToPotPercent / 100);
+    }
+
+    public static long ComputeTradesHeldBack(PluginConfiguration config)
+    {
+        var hl = config.HigherLower;
+        return hl.SessionTradedTotal - (hl.SessionTradedTotal * hl.TradesToPotPercent / 100);
     }
 
     public int GetWinnerCount() =>
@@ -470,7 +479,7 @@ public sealed class HigherLowerService : IDisposable
             Winner         = winnerNames,
             BoostedPot     = this.config.HigherLower.BoostedPot,
             AmountInTrades = this.config.HigherLower.SessionTradedTotal,
-            KeptFromTrades = this.config.HigherLower.ComputeTradesHeldBack(),
+            KeptFromTrades = ComputeTradesHeldBack(this.config),
             TotalPot       = GetTotalPot(),
             PlayersPlayed  = this.config.HigherLower.PlayersPlayed,
             RoundsPlayed   = board.Max(e => e.RoundsCorrect),

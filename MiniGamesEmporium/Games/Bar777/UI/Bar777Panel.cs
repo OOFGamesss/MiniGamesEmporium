@@ -80,12 +80,17 @@ public sealed class Bar777Panel : IDisposable
         }
         if (!this.config.Bar777.UseQueue)
         {
-            this.gameTab.Draw(skipLeadingSpacing: true);
-            var statsHWalkIn = Bar777StatsTab.GetInlineHeight(showQueue: false, showKept: this.config.Bar777.ComputeTradesHeldBack() > 0);
-            var targetYWalkIn = ImGui.GetContentRegionMax().Y - statsHWalkIn;
-            if (targetYWalkIn > ImGui.GetCursorPosY())
-                ImGui.SetCursorPosY(targetYWalkIn);
-            this.bar777StatsTab.DrawInline(showQueue: false);
+            var walkInHeightPx = MathF.Max(140f, ImGui.GetContentRegionAvail().Y);
+            using var gamePane = ImRaii.Child("##Bar777_GamePane", new Vector2(-1, walkInHeightPx), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+            if (gamePane.Success)
+            {
+                this.gameTab.Draw(skipLeadingSpacing: true);
+                var statsHWalkIn = Bar777StatsTab.GetInlineHeight(showQueue: false, showKept: this.config.Bar777.TradesToPotPercent < 100);
+                var targetYWalkIn = ImGui.GetContentRegionMax().Y - statsHWalkIn;
+                if (targetYWalkIn > ImGui.GetCursorPosY())
+                    ImGui.SetCursorPosY(targetYWalkIn);
+                this.bar777StatsTab.DrawInline(showQueue: false);
+            }
             return;
         }
         var splitHeightPx = MathF.Max(140f, ImGui.GetContentRegionAvail().Y);
@@ -105,7 +110,7 @@ public sealed class Bar777Panel : IDisposable
             if (gamePane.Success)
             {
                 this.gameTab.Draw(skipLeadingSpacing: true);
-                var statsH = Bar777StatsTab.GetInlineHeight(showQueue: true, showKept: this.config.Bar777.ComputeTradesHeldBack() > 0);
+                var statsH = Bar777StatsTab.GetInlineHeight(showQueue: true, showKept: this.config.Bar777.TradesToPotPercent < 100);
                 var targetY = ImGui.GetContentRegionMax().Y - statsH;
                 if (targetY > ImGui.GetCursorPosY())
                     ImGui.SetCursorPosY(targetY);

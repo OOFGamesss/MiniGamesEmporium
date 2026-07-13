@@ -5,6 +5,7 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.HigherLower.Config;
+using MiniGamesEmporium.Games.Raffle.Config;
 
 /// <summary>Serialisable payload for exporting and importing presets as Base64 JSON.</summary>
 
@@ -16,22 +17,11 @@ public sealed class PresetExportPayload
     public int Version { get; set; } = 1;
     public Bar777ExportEntry? Bar777 { get; set; }
     public DeathrollExportEntry? DeathrollTournament { get; set; }
+    public RaffleExportEntry? Raffle { get; set; }
     public HigherLowerExportEntry? HigherLower { get; set; }
     public DiscordExportEntry? Discord { get; set; }
     public string? QueueKeyword { get; set; }
     public QueueConfig? QueueJoinChannels { get; set; }
-}
-
-[Serializable]
-public sealed class HigherLowerExportEntry
-{
-    public int EntryCost { get; set; } = 100_000;
-    public int DiceSides { get; set; } = 10;
-    public bool AutoWinCount { get; set; } = true;
-    public int TargetRounds { get; set; } = 5;
-    public bool AllowMultipleWinners { get; set; } = true;
-    public int TradesToPotPercent { get; set; } = 100;
-    public HigherLowerChatConfig Chat { get; set; } = new();
 }
 
 [Serializable]
@@ -58,6 +48,33 @@ public sealed class DeathrollExportEntry
     public string JoinKeyword { get; set; } = "!join";
     public QueueConfig JoinChannels { get; set; } = new();
     public DeathrollTournamentChatConfig Chat { get; set; } = new();
+}
+
+[Serializable]
+public sealed class RaffleExportEntry
+{
+    public long TicketCost { get; set; } = 100_000;
+    public int MaxTicketsPerPlayer { get; set; } = 999;
+    public long BoostedPot { get; set; } = 0L;
+    public int TradesToPotPercent { get; set; } = 100;
+    public int CloseHour { get; set; } = -1;
+    public int CloseMinute { get; set; } = 0;
+    public bool AutoJoinKeyword { get; set; } = false;
+    public string JoinKeyword { get; set; } = "!join";
+    public QueueConfig JoinChannels { get; set; } = new();
+    public RaffleChatConfig Chat { get; set; } = new();
+}
+
+[Serializable]
+public sealed class HigherLowerExportEntry
+{
+    public int EntryCost { get; set; } = 100_000;
+    public int DiceSides { get; set; } = 10;
+    public bool AutoWinCount { get; set; } = true;
+    public int TargetRounds { get; set; } = 5;
+    public bool AllowMultipleWinners { get; set; } = true;
+    public int TradesToPotPercent { get; set; } = 100;
+    public HigherLowerChatConfig Chat { get; set; } = new();
 }
 
 [Serializable]

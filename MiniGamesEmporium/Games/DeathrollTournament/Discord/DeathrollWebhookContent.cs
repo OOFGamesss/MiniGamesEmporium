@@ -51,9 +51,9 @@ internal static class DeathrollWebhookContent
         string imageFileName,
         bool applyProfile,
         string username,
-        string avatarUrl)
+        string avatarUrl,
+        long totalPot)
     {
-        var pot    = session.EntryCost * paidPlayers.Count + session.BoostedPot;
         var fields = new List<DiscordEmbedFieldDto>
         {
             new() { Name = "Entry Cost", Value = session.EntryCost == 0 ? "Free" : $"{session.EntryCost:N0} Gil", Inline = true },
@@ -61,7 +61,7 @@ internal static class DeathrollWebhookContent
         };
         if (session.BoostedPot > 0)
             fields.Add(new() { Name = "Boosted Pot", Value = $"{session.BoostedPot:N0} Gil", Inline = true });
-        fields.Add(new() { Name = "Current Pot", Value = $"{pot:N0} Gil", Inline = false });
+        fields.Add(new() { Name = "Current Pot", Value = $"{totalPot:N0} Gil", Inline = false });
 
         return new()
         {
@@ -88,7 +88,8 @@ internal static class DeathrollWebhookContent
         string imageFileName,
         bool applyProfile,
         string username,
-        string avatarUrl)
+        string avatarUrl,
+        long totalPot)
     {
         var hasWinner = state.TournamentWinner != null;
         var colour    = hasWinner ? ColourWinner : ColourActive;
@@ -105,7 +106,7 @@ internal static class DeathrollWebhookContent
                 new DiscordEmbedDto
                 {
                     Title       = title,
-                    Description = BuildDescription(state),
+                    Description = BuildDescription(state, totalPot),
                     Color       = colour,
                     Image       = new DiscordMediaDto($"attachment://{imageFileName}"),
                     Footer      = Footer,
@@ -115,10 +116,9 @@ internal static class DeathrollWebhookContent
         };
     }
 
-    private static string BuildDescription(DeathrollTournamentState state)
+    private static string BuildDescription(DeathrollTournamentState state, long pot)
     {
-        var sb  = new StringBuilder();
-        var pot = state.EntryCostAtStart * state.PlayerCountAtStart + state.BoostedPotAtStart;
+        var sb = new StringBuilder();
 
         if (state.TournamentWinner != null)
         {

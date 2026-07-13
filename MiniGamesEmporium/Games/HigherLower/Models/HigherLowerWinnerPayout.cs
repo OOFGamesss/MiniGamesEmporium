@@ -8,4 +8,5 @@ public class HigherLowerWinnerPayout
 {
     public string PlayerName { get; set; } = string.Empty;
     public long PaidGil { get; set; } = 0L;
+    public Guid? PayoutTransactionId { get; set; } = null;
 }

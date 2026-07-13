@@ -1,6 +1,7 @@
 using System;
 
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Utility;
 
 /// <summary>Fills BAR 777 message templates with live session values.</summary>
@@ -21,7 +22,7 @@ public static class Bar777MessageFormatter
         var session = config.ActiveSession;
         var rollsAllowed = session?.RollsAllowed ?? config.Bar777.MaxRolls;
         var boughtRolls  = session?.RollsAllowed ?? 0;
-        var totalPot = totalPotOverride ?? config.Bar777.ComputeTotalPot();
+        var totalPot = totalPotOverride ?? Bar777SessionService.ComputeTotalPot(config);
         var remaining = remainingOverride
             ?? (session != null
                 ? Math.Max(0, session.RollsAllowed - session.RollsUsed).ToString()

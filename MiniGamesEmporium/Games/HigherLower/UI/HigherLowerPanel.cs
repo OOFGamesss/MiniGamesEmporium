@@ -40,7 +40,7 @@ public sealed class HigherLowerPanel : IDisposable
     private readonly HigherLowerLeaderboardTab leaderboardTab;
     private readonly HigherLowerChatAutomation chatAutomation;
 
-    public HigherLowerPanel(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, SessionService sessionService, PlayerInfoService playerInfoService)
+    public HigherLowerPanel(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, SessionService sessionService, PlayerInfoService playerInfoService, HistoryService historyService)
     {
         this.config             = config;
         this.higherLowerService = higherLowerService;
@@ -49,7 +49,7 @@ public sealed class HigherLowerPanel : IDisposable
         this.gameTab            = new HigherLowerGameTab(config, higherLowerService, chatQueue, autoPayoutService, playerInfoService);
         this.settingsTab        = new HigherLowerSettingsTab(config);
         this.chatSettingsTab    = new HigherLowerChatSettingsTab(config);
-        this.leaderboardTab     = new HigherLowerLeaderboardTab(config, higherLowerService, chatQueue);
+        this.leaderboardTab     = new HigherLowerLeaderboardTab(config, higherLowerService, chatQueue, historyService);
         this.chatAutomation     = new HigherLowerChatAutomation(config, higherLowerService, chatQueue);
     }
 
@@ -76,7 +76,7 @@ public sealed class HigherLowerPanel : IDisposable
             return;
         }
 
-        var statsH = HigherLowerLeaderboardTab.GetInlineHeight(showKept: this.config.HigherLower.ComputeTradesHeldBack() > 0);
+        var statsH = HigherLowerLeaderboardTab.GetInlineHeight(showKept: this.config.HigherLower.TradesToPotPercent < 100);
         this.gameTab.Draw(skipLeadingSpacing: true, reserveBottom: statsH, drawBottomPanel: this.leaderboardTab.DrawInline);
     }
 

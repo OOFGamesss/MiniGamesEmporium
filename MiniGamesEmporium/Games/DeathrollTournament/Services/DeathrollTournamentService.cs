@@ -175,16 +175,19 @@ public sealed class DeathrollTournamentService
         return state.Rounds[r][m];
     }
 
-    public long ComputeTotalPot()
+    public long ComputeTotalPot() => ComputeTotalPot(this.config);
+
+    public static long ComputeTotalPot(PluginConfiguration config)
     {
-        var tournament = this.config.DeathrollTournamentSession;
+        var tournament = config.DeathrollTournamentSession;
         if (tournament != null)
             return tournament.EntryCostAtStart * tournament.PlayerCountAtStart + tournament.BoostedPotAtStart + tournament.PotAdjustment;
-        var activeSession = this.config.DeathrollSession;
-        var cfg        = this.config.DeathrollTournament;
-        var entryCost  = activeSession?.EntryCost  ?? cfg.EntryCost;
-        var boostedPot = activeSession?.BoostedPot ?? cfg.BoostedPot;
-        var adjustment = activeSession?.PotAdjustment ?? 0L;
+
+        var session    = config.DeathrollSession;
+        var cfg        = config.DeathrollTournament;
+        var entryCost  = session?.EntryCost  ?? cfg.EntryCost;
+        var boostedPot = session?.BoostedPot ?? cfg.BoostedPot;
+        var adjustment = session?.PotAdjustment ?? 0L;
         return entryCost * cfg.PaidPlayers.Count + boostedPot + adjustment;
     }
 
@@ -195,6 +198,7 @@ public sealed class DeathrollTournamentService
         if (state?.TournamentWinner == null) return;
         if (!PlayerInfoService.StripWorld(state.TournamentWinner).Equals(partnerName, StringComparison.OrdinalIgnoreCase)) return;
         state.WinnerPayoutGil += amountSent;
+        state.PayoutTransactionId = PayoutTransactionRecorder.Record(this.historyService, DeathrollGameIds.DisplayName, state.TournamentWinner, state.WinnerPayoutGil, state.PayoutTransactionId);
         Save();
         SessionUpdated?.Invoke();
     }

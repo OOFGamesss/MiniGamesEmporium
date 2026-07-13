@@ -3,6 +3,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Actions;
+using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using System.Linq;
@@ -37,9 +38,9 @@ public sealed class Bar777StatsTab
     public void DrawInline(bool showQueue)
     {
         var totalTraded = this.config.Bar777.SessionTradedTotal;
-        var totalPot    = this.config.Bar777.ComputeTotalPot();
-        var keptFromTrades = this.config.Bar777.ComputeTradesHeldBack();
-        var showKept    = keptFromTrades > 0;
+        var totalPot       = Bar777SessionService.ComputeTotalPot(this.config);
+        var keptFromTrades = Bar777SessionService.ComputeTradesHeldBack(this.config);
+        var showKept    = this.config.Bar777.TradesToPotPercent < 100;
         using var child = ImRaii.Child("##Bar777StatsPanel", new Vector2(-1, GetInlineHeight(showQueue, showKept)), true);
         if (!child.Success) return;
         using var table = ImRaii.Table("##Bar777StatsTable", 3, ImGuiTableFlags.None, new Vector2(-1, 0));

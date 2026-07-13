@@ -22,6 +22,4 @@ public class HigherLowerConfig
     public bool SessionFinished { get; set; } = false;
     public List<HigherLowerWinnerPayout> WinnerPayouts { get; set; } = [];
     public HigherLowerChatConfig Chat { get; set; } = new();
-    public long ComputeTotalPot() => BoostedPot + (SessionTradedTotal * TradesToPotPercent / 100);
-    public long ComputeTradesHeldBack() => SessionTradedTotal - (SessionTradedTotal * TradesToPotPercent / 100);
 }

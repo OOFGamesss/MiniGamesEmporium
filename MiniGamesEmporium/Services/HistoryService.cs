@@ -73,6 +73,12 @@ public sealed class HistoryService : IDisposable
         RefreshCaches();
     }
 
+    public void UpsertTransaction(TransactionRecord record)
+    {
+        this.transactions.Upsert(record);
+        RefreshCaches();
+    }
+
     public void DeleteSession(Guid id)
     {
         this.sessions.Delete(new BsonValue(id));

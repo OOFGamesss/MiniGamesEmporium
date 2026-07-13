@@ -4,6 +4,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 using MiniGamesEmporium.IPC;
 
@@ -77,21 +78,20 @@ public sealed class DeathrollTournamentRules : IDisposable
         var tournament = _config.DeathrollTournamentSession;
         var cfg = _config.DeathrollTournament;
 
-        var players = tournament?.PlayerCountAtStart ?? cfg.PaidPlayers.Count;
+        var players    = tournament?.PlayerCountAtStart ?? cfg.PaidPlayers.Count;
         var boostedPot = tournament?.BoostedPotAtStart ?? session.BoostedPot;
-        var entryCost = tournament?.EntryCostAtStart ?? session.EntryCost;
-        var totalPot = tournament != null
-            ? tournament.EntryCostAtStart * tournament.PlayerCountAtStart + tournament.BoostedPotAtStart
-            : entryCost * cfg.PaidPlayers.Count + boostedPot;
+        var entryCost  = tournament?.EntryCostAtStart  ?? session.EntryCost;
+        var totalPot   = DeathrollTournamentService.ComputeTotalPot(_config);
 
         var round = tournament == null ? "Registration" : tournament.CurrentRoundLabel();
 
         var payload = new GambaWhereRulesPayload();
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Game", Value = DeathrollGameIds.DisplayName });
-        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Round", Value = round });
-        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Boosted Pot", Value = boostedPot });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Total Pot", Value = totalPot });
+        if (boostedPot > 0)
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Boosted Pot", Value = boostedPot });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Entry Cost", Value = entryCost == 0 ? "Free" : entryCost });
+        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Round", Value = round });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Players Entered", Value = players });
         return payload;
     }

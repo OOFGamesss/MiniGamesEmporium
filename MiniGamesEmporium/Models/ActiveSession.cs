@@ -20,4 +20,5 @@ public class ActiveSession
     public List<int> RollLog { get; set; } = [];
     public string PaidByPlayerName { get; set; } = string.Empty;
     public long WinnerPayoutGil { get; set; } = 0;
+    public Guid? PayoutTransactionId { get; set; } = null;
 }

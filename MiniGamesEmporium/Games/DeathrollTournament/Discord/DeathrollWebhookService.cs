@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Utility;
 
 /// <summary>Manages the Deathroll Tournament Discord webhook posting and recovery.</summary>
@@ -206,14 +207,16 @@ public sealed class DeathrollWebhookService : IDisposable
 
         if (tournament != null)
         {
+            var totalPot     = DeathrollTournamentService.ComputeTotalPot(_config);
             var bracketBytes = Utility.DeathrollDiscordImageRenderer.RenderBracket(tournament);
             var dto          = DeathrollWebhookContent.ForActiveTournament(
-                tournament, BracketFileName, isFirstPost, username, avatarUrl);
+                tournament, BracketFileName, isFirstPost, username, avatarUrl, totalPot);
             return (bracketBytes, BracketFileName, Serialize(dto));
         }
 
         if (session != null)
         {
+            var totalPot     = DeathrollTournamentService.ComputeTotalPot(_config);
             var paidPlayers  = GetPaidPlayerNames();
             var playerBytes  = Utility.DeathrollDiscordImageRenderer.RenderPlayerList(
                 paidPlayers,
@@ -221,7 +224,7 @@ public sealed class DeathrollWebhookService : IDisposable
                 session.BoostedPot,
                 _config.DeathrollTournament.RegisteredPlayers.Count);
             var dto = DeathrollWebhookContent.ForRegistration(
-                paidPlayers, session, _config.DeathrollTournament, PlayersFileName, isFirstPost, username, avatarUrl);
+                paidPlayers, session, _config.DeathrollTournament, PlayersFileName, isFirstPost, username, avatarUrl, totalPot);
             return (playerBytes, PlayersFileName, Serialize(dto));
         }
 

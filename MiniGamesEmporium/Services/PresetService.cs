@@ -2,6 +2,7 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.HigherLower.Config;
+using MiniGamesEmporium.Games.Raffle.Config;
 using MiniGamesEmporium.Models;
 using System;
 using System.Collections.Generic;
@@ -62,6 +63,7 @@ public sealed class PresetService
         var preset = this.config.Presets[index];
         ApplyBar777Settings(preset.Bar777);
         ApplyDeathrollSettings(preset.DeathrollTournament);
+        ApplyRaffleSettings(preset.Raffle);
         ApplyHigherLowerSettings(preset.HigherLower);
         this.config.QueueKeyword = preset.QueueKeyword;
         this.config.QueueJoinChannels = DeepClone(preset.QueueJoinChannels);
@@ -103,6 +105,7 @@ public sealed class PresetService
         QueueJoinChannels = DeepClone(this.config.QueueJoinChannels),
         Bar777 = CaptureBar777(),
         DeathrollTournament = CaptureDeathroll(),
+        Raffle = CaptureRaffle(),
         HigherLower = CaptureHigherLower(),
     };
 
@@ -143,6 +146,24 @@ public sealed class PresetService
                 Url     = e.Url,
                 Enabled = e.Enabled,
             }).ToList(),
+        };
+    }
+
+    private RaffleConfig CaptureRaffle()
+    {
+        var s = this.config.Raffle;
+        return new RaffleConfig
+        {
+            TicketCost          = s.TicketCost,
+            MaxTicketsPerPlayer = s.MaxTicketsPerPlayer,
+            BoostedPot          = s.BoostedPot,
+            TradesToPotPercent  = s.TradesToPotPercent,
+            CloseHour           = s.CloseHour,
+            CloseMinute         = s.CloseMinute,
+            AutoJoinKeyword     = s.AutoJoinKeyword,
+            JoinKeyword         = s.JoinKeyword,
+            JoinChannels        = DeepClone(s.JoinChannels),
+            Chat                = DeepClone(s.Chat),
         };
     }
 
@@ -193,6 +214,20 @@ public sealed class PresetService
         }).ToList();
     }
 
+    private void ApplyRaffleSettings(RaffleConfig r)
+    {
+        this.config.Raffle.TicketCost          = r.TicketCost;
+        this.config.Raffle.MaxTicketsPerPlayer = r.MaxTicketsPerPlayer;
+        this.config.Raffle.BoostedPot          = r.BoostedPot;
+        this.config.Raffle.TradesToPotPercent  = r.TradesToPotPercent;
+        this.config.Raffle.CloseHour           = r.CloseHour;
+        this.config.Raffle.CloseMinute         = r.CloseMinute;
+        this.config.Raffle.AutoJoinKeyword     = r.AutoJoinKeyword;
+        this.config.Raffle.JoinKeyword         = r.JoinKeyword;
+        this.config.Raffle.JoinChannels        = DeepClone(r.JoinChannels);
+        this.config.Raffle.Chat                = DeepClone(r.Chat);
+    }
+
     private void ApplyHigherLowerSettings(HigherLowerConfig h)
     {
         this.config.HigherLower.EntryCost            = h.EntryCost;
@@ -204,12 +239,13 @@ public sealed class PresetService
         this.config.HigherLower.Chat                 = DeepClone(h.Chat);
     }
 
-    public string BuildExportString(bool bar777, bool deathroll, bool higherlower, bool discord, bool queue)
+    public string BuildExportString(bool bar777, bool deathroll, bool raffle, bool higherlower, bool discord, bool queue)
     {
         var payload = new PresetExportPayload
         {
             Bar777              = bar777      ? CaptureBar777Export()      : null,
             DeathrollTournament = deathroll   ? CaptureDeathrollExport()   : null,
+            Raffle              = raffle      ? CaptureRaffleExport()      : null,
             HigherLower         = higherlower ? CaptureHigherLowerExport() : null,
             Discord             = discord     ? CaptureDiscordExport()     : null,
             QueueKeyword        = queue       ? this.config.QueueKeyword   : null,
@@ -266,6 +302,7 @@ public sealed class PresetService
         Name                = name,
         Bar777              = BuildBar777FromPayload(payload.Bar777, def),
         DeathrollTournament = BuildDeathrollFromPayload(payload.DeathrollTournament, payload.Discord, def),
+        Raffle              = BuildRaffleFromPayload(payload.Raffle, def),
         HigherLower         = BuildHigherLowerFromPayload(payload.HigherLower, def),
         QueueKeyword        = payload.QueueKeyword        ?? def?.QueueKeyword        ?? "!join",
         QueueJoinChannels   = payload.QueueJoinChannels  != null
@@ -286,22 +323,6 @@ public sealed class PresetService
             UseQueue      = entry.UseQueue,
             AutoCatchRoll = entry.AutoCatchRoll,
             Chat          = DeepClone(entry.Chat),
-        };
-    }
-
-    private static HigherLowerConfig BuildHigherLowerFromPayload(HigherLowerExportEntry? entry, PluginPreset? def)
-    {
-        if (entry == null)
-            return def != null ? DeepClone(def.HigherLower) : new HigherLowerConfig();
-        return new HigherLowerConfig
-        {
-            EntryCost            = entry.EntryCost,
-            DiceSides            = entry.DiceSides,
-            AutoWinCount         = entry.AutoWinCount,
-            TargetRounds         = entry.TargetRounds,
-            AllowMultipleWinners = entry.AllowMultipleWinners,
-            TradesToPotPercent   = entry.TradesToPotPercent,
-            Chat                 = DeepClone(entry.Chat),
         };
     }
 
@@ -363,6 +384,41 @@ public sealed class PresetService
             "https://raw.githubusercontent.com/OOFGamesss/OOFGamesPlugins/main/images/deathrolltournament.png");
     }
 
+    private static RaffleConfig BuildRaffleFromPayload(RaffleExportEntry? entry, PluginPreset? def)
+    {
+        if (entry == null)
+            return def != null ? DeepClone(def.Raffle) : new RaffleConfig();
+        return new RaffleConfig
+        {
+            TicketCost          = entry.TicketCost,
+            MaxTicketsPerPlayer = entry.MaxTicketsPerPlayer,
+            BoostedPot          = entry.BoostedPot,
+            TradesToPotPercent  = entry.TradesToPotPercent,
+            CloseHour           = entry.CloseHour,
+            CloseMinute         = entry.CloseMinute,
+            AutoJoinKeyword     = entry.AutoJoinKeyword,
+            JoinKeyword         = entry.JoinKeyword,
+            JoinChannels        = DeepClone(entry.JoinChannels),
+            Chat                = DeepClone(entry.Chat),
+        };
+    }
+
+    private static HigherLowerConfig BuildHigherLowerFromPayload(HigherLowerExportEntry? entry, PluginPreset? def)
+    {
+        if (entry == null)
+            return def != null ? DeepClone(def.HigherLower) : new HigherLowerConfig();
+        return new HigherLowerConfig
+        {
+            EntryCost            = entry.EntryCost,
+            DiceSides            = entry.DiceSides,
+            AutoWinCount         = entry.AutoWinCount,
+            TargetRounds         = entry.TargetRounds,
+            AllowMultipleWinners = entry.AllowMultipleWinners,
+            TradesToPotPercent   = entry.TradesToPotPercent,
+            Chat                 = DeepClone(entry.Chat),
+        };
+    }
+
     private Bar777ExportEntry CaptureBar777Export()
     {
         var s = this.config.Bar777;
@@ -375,21 +431,6 @@ public sealed class PresetService
             UseQueue      = s.UseQueue,
             AutoCatchRoll = s.AutoCatchRoll,
             Chat          = DeepClone(s.Chat),
-        };
-    }
-
-    private HigherLowerExportEntry CaptureHigherLowerExport()
-    {
-        var s = this.config.HigherLower;
-        return new HigherLowerExportEntry
-        {
-            EntryCost            = s.EntryCost,
-            DiceSides            = s.DiceSides,
-            AutoWinCount         = s.AutoWinCount,
-            TargetRounds         = s.TargetRounds,
-            AllowMultipleWinners = s.AllowMultipleWinners,
-            TradesToPotPercent   = s.TradesToPotPercent,
-            Chat                 = DeepClone(s.Chat),
         };
     }
 
@@ -407,6 +448,39 @@ public sealed class PresetService
             JoinKeyword               = s.JoinKeyword,
             JoinChannels              = DeepClone(s.JoinChannels),
             Chat                      = DeepClone(s.Chat),
+        };
+    }
+
+    private RaffleExportEntry CaptureRaffleExport()
+    {
+        var s = this.config.Raffle;
+        return new RaffleExportEntry
+        {
+            TicketCost          = s.TicketCost,
+            MaxTicketsPerPlayer = s.MaxTicketsPerPlayer,
+            BoostedPot          = s.BoostedPot,
+            TradesToPotPercent  = s.TradesToPotPercent,
+            CloseHour           = s.CloseHour,
+            CloseMinute         = s.CloseMinute,
+            AutoJoinKeyword     = s.AutoJoinKeyword,
+            JoinKeyword         = s.JoinKeyword,
+            JoinChannels        = DeepClone(s.JoinChannels),
+            Chat                = DeepClone(s.Chat),
+        };
+    }
+
+    private HigherLowerExportEntry CaptureHigherLowerExport()
+    {
+        var s = this.config.HigherLower;
+        return new HigherLowerExportEntry
+        {
+            EntryCost            = s.EntryCost,
+            DiceSides            = s.DiceSides,
+            AutoWinCount         = s.AutoWinCount,
+            TargetRounds         = s.TargetRounds,
+            AllowMultipleWinners = s.AllowMultipleWinners,
+            TradesToPotPercent   = s.TradesToPotPercent,
+            Chat                 = DeepClone(s.Chat),
         };
     }
 

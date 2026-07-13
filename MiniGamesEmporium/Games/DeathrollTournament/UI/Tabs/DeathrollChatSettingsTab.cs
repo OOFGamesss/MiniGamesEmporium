@@ -62,7 +62,30 @@ public sealed class DeathrollChatSettingsTab
 
     private void DrawManualSection()
     {
+        var chat = this.config.DeathrollTournament.Chat;
         ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Manual Trigger Messages");
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Turn Reminder");
+        ImGui.TextDisabled("Bell button next to a player's name in the bracket. By default it copies a /tell command to your clipboard; enable this to send a custom message instead.");
+        ImGui.Spacing();
+        var useCustom = chat.UseCustomTurnReminderMessage;
+        if (ImGui.Checkbox("Use Custom Message##DRTurnReminderToggle", ref useCustom))
+        {
+            chat.UseCustomTurnReminderMessage = useCustom;
+            this.config.Save();
+        }
+        if (useCustom)
+        {
+            ImGui.Spacing();
+            ImGui.Indent();
+            DrawMessageField(
+                "Turn Reminder",
+                "Sent instead of copying to clipboard when 'Use Custom Message' above is enabled.",
+                "##DRTurnReminderMsg",
+                () => chat.TurnReminderMessage,
+                v  => { chat.TurnReminderMessage = v; this.config.Save(); });
+            ImGui.Unindent();
+        }
         ImGui.Spacing();
         DrawMessageField(
             "Request Gil",
@@ -73,7 +96,7 @@ public sealed class DeathrollChatSettingsTab
         ImGui.Spacing();
         DrawMessageField(
             "Request Gil (Buyer)",
-            "Button: 'Request Gil (Buyer)' in the buyer popup per player.\nUse {buyername} for the buyer (always includes @World) and {player} for the registered player being paid for.",
+            "Button: 'Request Gil (Buyer)' in the buyer popup per player.",
             "##DRRequestGilBuyerMsg",
             () => this.config.DeathrollTournament.Chat.RequestGilBuyerMessage,
             v  => { this.config.DeathrollTournament.Chat.RequestGilBuyerMessage = v; this.config.Save(); });
@@ -108,28 +131,28 @@ public sealed class DeathrollChatSettingsTab
         ImGui.Spacing();
         DrawMessageField(
             "Re-roll Random 10",
-            "Button: 'Re-roll Random 10' in the match tracker when both players tie their /random 10.  Also used for auto-announce below.\nUse {random10} for the tied value.",
+            "Button: 'Re-roll Random 10' in the match tracker when both players tie their /random 10.  Also used for auto-announce below.",
             "##DRRerollRandom10Msg",
             () => this.config.DeathrollTournament.Chat.RerollRandom10Message,
             v  => { this.config.DeathrollTournament.Chat.RerollRandom10Message = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "First Player",
-            "Button: 'First Player' in the match tracker after order rolls resolve.  Also used for auto-announce below.\nUse {firstplayer} for the player going first.",
+            "Button: 'First Player' in the match tracker after order rolls resolve.  Also used for auto-announce below.",
             "##DRFirstPlayerMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceFirstPlayerMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceFirstPlayerMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Round Win",
-            "Button: 'Announce Round Win' in the match tracker after a game ends but the series continues.  Also used for auto-announce below.\nUse {roundwinner}, {roundscore}, {roundsleft}.",
+            "Button: 'Announce Round Win' in the match tracker after a game ends but the series continues.  Also used for auto-announce below.",
             "##DRRoundWinMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceRoundWinMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceRoundWinMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Match Win",
-            "Button: 'Announce Match Win' in the match tracker when the series is decided.  Also used for auto-announce below.\nUse {matchwinner}, {matchloser}, {roundscore}.",
+            "Button: 'Announce Match Win' in the match tracker when the series is decided.  Also used for auto-announce below.",
             "##DRMatchWinMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceMatchWinMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceMatchWinMessage = v; this.config.Save(); });

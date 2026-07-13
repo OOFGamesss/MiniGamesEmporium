@@ -8,12 +8,29 @@ namespace MiniGamesEmporium.Services;
 public sealed class SessionService
 {
     private readonly List<GameRegistration> games = new();
+    private string? pausedGameName;
 
     public void RegisterGame(string displayName, Func<bool> isActive, Action cancel) =>
         this.games.Add(new GameRegistration(displayName, isActive, cancel));
 
     public string? GetActiveGameName() =>
         this.games.FirstOrDefault(g => g.IsActive())?.DisplayName;
+
+    public bool IsPaused
+    {
+        get
+        {
+            var active = GetActiveGameName();
+            if (active != null && string.Equals(active, this.pausedGameName, StringComparison.OrdinalIgnoreCase))
+                return true;
+            this.pausedGameName = null;
+            return false;
+        }
+    }
+
+    public void PauseActiveGame() => this.pausedGameName = GetActiveGameName();
+
+    public void ResumeActiveGame() => this.pausedGameName = null;
 
     public string? GetBlockingGameName(string ownGameName)
     {
@@ -22,8 +39,11 @@ public sealed class SessionService
             ? active : null;
     }
 
-    public void CancelActiveGame() =>
+    public void CancelActiveGame()
+    {
         this.games.FirstOrDefault(g => g.IsActive())?.Cancel();
+        this.pausedGameName = null;
+    }
 
     private sealed record GameRegistration(string DisplayName, Func<bool> IsActive, Action Cancel);
 }

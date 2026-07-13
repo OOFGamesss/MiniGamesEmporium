@@ -45,6 +45,7 @@ public class DeathrollTournamentState
 
     public string? TournamentWinner { get; set; } = null;
     public long WinnerPayoutGil { get; set; } = 0;
+    public Guid? PayoutTransactionId { get; set; } = null;
 
     public string CurrentRoundLabel() =>
         CurrentRoundIndex == Rounds.Count - 1 ? "The Final" : $"Round {CurrentRoundIndex + 1}";

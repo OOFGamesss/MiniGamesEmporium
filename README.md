@@ -23,6 +23,7 @@ The plugin lives inside FFXIV via the [Dalamud](https://github.com/goatcorp/Dala
 | **BAR 777** | ✅ Live |
 | **Deathroll Tournament** | ✅ Live |
 | **Higher/Lower** | ✅ Live |
+| **Raffle** | ✅ Live |
 | Minefield Gambit | 🔜 Coming Soon |
 | Gambler Derby | 🔜 Coming Soon |
 | Beer Pong | 🔜 Coming Soon |
@@ -341,6 +342,90 @@ When the session finishes, the winner screen shows each winner's share of the po
 > **Session Complete: Winner Payout**
 >
 > ![Session Complete: Winner Payout](MiniGamesEmporium/Images/Screenshots/HL-winner.png)
+
+---
+
+## Raffle
+
+Raffle is a numbered-ticket draw. Players buy tickets at a fixed Gil cost and each ticket claims the next number in an ever-growing pool. When the host is ready, they roll `/random` up to the highest number sold, and whoever holds the rolled number takes the whole pot.
+
+### How It Works
+
+1. The host opens the Raffle door, sets the ticket cost, boosted pot, max tickets per player, and optionally a closing time, then clicks **Start Session**.
+2. Players are added to the list manually, via the nearby-player search, or automatically by typing a join keyword in chat (if enabled) - joining alone does not grant tickets.
+3. The host collects Gil by trade. A completed trade auto-calculates tickets as `floor(Gil received / ticket cost)` and grants the next free numbers automatically. Any leftover Gil under the cost of one ticket is held as credit and combines with the player's next trade.
+4. Tickets can also be granted or removed manually from each player's row, which is how free raffles (ticket cost set to 0) hand out numbers.
+5. When ready to draw, the host clicks **Draw Winner** to arm the draw, then rolls `/random <highest number sold>` in game. The plugin captures the host's own roll and resolves the winner from the ticket ranges.
+6. If the rolled number falls in a gap (numbers freed by a removed player), no winner is found and the host clears the draw to roll again. The host can also set the winning number manually.
+7. Once a winner is resolved, the host announces the win, trades the pot to the winner (or uses Auto Payout), then clears the draw to start a fresh raffle.
+
+### Ticket Numbering
+
+Tickets are issued as numbered blocks in purchase order. Each purchase claims the next free numbers: first any gaps left behind by removed players, then new numbers extending the pool upward. A player who buys tickets across multiple trades can end up owning several separate number ranges. Removing a player frees their numbers as a permanent gap - existing players keep their numbers and are never renumbered. The ticket pool is capped at 999.
+
+### Closing Time
+
+The host can optionally set a closing time in Server Time on the door. This purely drives the countdown display shown on the Game tab and the closing-time chat announcement - it does not lock ticket sales or trigger an automatic draw. The raffle stays open until the host manually arms and rolls the draw.
+
+### Statistics Panel
+
+The Statistics panel at the bottom of the Game tab shows the live pot and ticket figures:
+
+| Row | Description |
+|---|---|
+| **Total Pot** | Boosted Pot + the configured share of ticket revenue; the **Announce Pot** button shouts it on demand |
+| **Boosted Pot** | Extra Gil added by the venue on top of ticket revenue |
+| **Kept from Trades** | Portion of ticket revenue held back for the venue (shown only when Trades to Pot is below 100%) |
+| **Ticket Cost** | Gil per ticket, or "Free" when set to 0 |
+| **Players** | Number of players who currently hold at least one ticket |
+| **Tickets Sold** | Total tickets sold this session |
+
+**Trades to Pot (%)**, set on the door, controls how much of the ticket revenue feeds the pot; whatever is not fed to the pot shows as Kept from Trades. The **Adjust Pot (Gil)** row lets the host add or remove Gil from the pot directly at any time.
+
+### Automated Chat
+
+Raffle includes a full set of customisable message templates, each editable in the Chat tab with toggleable auto-send where noted:
+
+| Template | Trigger |
+|---|---|
+| Request Gil | Manually from the Game tab |
+| Request Gil (Buyer) | Manually, when someone else is paying for a player's tickets |
+| Tickets Sold | Manually, shouts the current number of tickets sold |
+| Closing Time | Manually, shouts the closing time and time remaining |
+| Join Reminder | Manually, invites players to join with the keyword (keyword join mode only) |
+| Ticket Numbers | Tells a player their ticket number(s), manually or automatically when tickets are granted by trade (auto-send toggle) |
+| Announce Winner | On the draw result, includes the winning number and the pot (auto-send toggle) |
+| Announce Pot | Posts the current pot on demand |
+
+All outbound messages are queued with a one-second gap between each to stay within FFXIV's chat rate limits.
+
+### Winner Payout
+
+Once a winner is drawn, the winner screen shows the pot, the amount traded to the winner so far, and the remaining balance. The host can **Announce Winner**, **Trade Winner** to pay them by hand, or use **Auto Payout** to send their share automatically. A progress bar tracks how much of the pot has been paid out.
+
+### Screenshots
+
+> **Session Tab (Pre-Session)**
+>
+> ![Session Tab (Pre-Session)](MiniGamesEmporium/Images/Screenshots/raffle-session.png)
+
+---
+
+> **Game Tab: Lobby**
+>
+> ![Game Tab: Lobby](MiniGamesEmporium/Images/Screenshots/raffle-lobby.png)
+
+---
+
+> **Game Tab: Draw**
+>
+> ![Game Tab: Draw](MiniGamesEmporium/Images/Screenshots/raffle-draw.png)
+
+---
+
+> **Session Complete: Winner**
+>
+> ![Session Complete: Winner](MiniGamesEmporium/Images/Screenshots/raffle-win.png)
 
 ---
 
