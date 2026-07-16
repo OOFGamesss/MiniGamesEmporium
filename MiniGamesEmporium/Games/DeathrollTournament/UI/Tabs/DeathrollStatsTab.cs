@@ -30,11 +30,14 @@ public sealed class DeathrollStatsTab
         this.historyService   = historyService;
     }
 
-    public static float GetInlineHeight()
+    public static float GetInlineHeight(bool isGilPrize)
     {
-        var rowH   = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
-        var inputH = ImGui.GetFrameHeight()    + ImGui.GetStyle().CellPadding.Y * 2f;
-        return 5 * rowH + inputH + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
+        var rowH     = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
+        var inputH   = ImGui.GetFrameHeight()    + ImGui.GetStyle().CellPadding.Y * 2f;
+        var rowCount = isGilPrize ? 5 : 4;
+        var height   = rowCount * rowH + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
+        if (isGilPrize) height += inputH;
+        return height;
     }
 
     public void DrawInline()
@@ -45,15 +48,17 @@ public sealed class DeathrollStatsTab
         var tournament    = this.config.DeathrollTournamentSession;
         var entryCost  = tournament?.EntryCostAtStart  ?? activeSession?.EntryCost  ?? cfg.EntryCost;
         var boostedPot = tournament?.BoostedPotAtStart ?? activeSession?.BoostedPot ?? cfg.BoostedPot;
-        using var child = ImRaii.Child("##DeathrollStatsPanel", new Vector2(-1, GetInlineHeight()), true);
+        var isGilPrize = this.deathrollService.IsGilPrize();
+        using var child = ImRaii.Child("##DeathrollStatsPanel", new Vector2(-1, GetInlineHeight(isGilPrize)), true);
         if (!child.Success) return;
         using var table = ImRaii.Table("##DeathrollStatsTable", 3, ImGuiTableFlags.None, new Vector2(-1, 0));
         if (!table.Success) return;
         ImGui.TableSetupColumn("##DSLabel",  ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("##DSAction", ImGuiTableColumnFlags.WidthFixed, 130f);
         ImGui.TableSetupColumn("##DSValue",  ImGuiTableColumnFlags.WidthFixed, 180f);
-        DrawPotRow(totalPot);
-        DrawRow("Boosted Pot", $"{boostedPot:N0} Gil",             EmporiumNeonTheme.WinGold);
+        DrawPotOrPrizeRow(totalPot, isGilPrize);
+        if (isGilPrize)
+            DrawRow("Boosted Pot", $"{boostedPot:N0} Gil",         EmporiumNeonTheme.WinGold);
         DrawRow("Entry Cost",  $"{entryCost:N0} Gil",              EmporiumNeonTheme.DeathrollTournamentPink);
         var players = tournament?.PlayerCountAtStart ?? cfg.PaidPlayers.Count;
         DrawRow("Players",     players.ToString(),                  EmporiumNeonTheme.NeonCyan);
@@ -61,26 +66,35 @@ public sealed class DeathrollStatsTab
             ? $"Round {tournament.CurrentRoundIndex + 1} of {tournament.Rounds.Count}"
             : "Not started";
         DrawRow("Round",       roundLabel,                          EmporiumNeonTheme.NeonMagenta);
-        DrawDonationRow();
+        if (isGilPrize)
+            DrawDonationRow();
     }
 
-    private void DrawPotRow(long totalPot)
+    private void DrawPotOrPrizeRow(long totalPot, bool isGilPrize)
     {
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
-        ImGui.TextDisabled("Total Pot");
+        ImGui.TextDisabled(isGilPrize ? "Total Pot" : "Prize");
         ImGui.TableSetColumnIndex(1);
         ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2f);
         ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(4f, 0f));
         ImGui.PushStyleColor(ImGuiCol.Button,        YellButtonColour);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, YellButtonColourHovered);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive,  YellButtonColourActive);
-        var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Pot", "##DRYellPot");
+        var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Prize", "##DRYellPrize");
         ImGui.PopStyleColor(3);
         ImGui.PopStyleVar();
-        if (clicked) AnnouncePot.Execute(this.config, this.chatQueue, totalPot);
+        if (clicked) AnnouncePrize.Execute(this.config, this.chatQueue);
         ImGui.TableSetColumnIndex(2);
-        ImGui.TextColored(EmporiumNeonTheme.WinGold, $"{totalPot:N0} Gil");
+        if (isGilPrize)
+        {
+            ImGui.TextColored(EmporiumNeonTheme.WinGold, $"{totalPot:N0} Gil");
+        }
+        else
+        {
+            var prizeLabel = this.deathrollService.GetPrizeLabel();
+            ImGui.TextColored(EmporiumNeonTheme.WinGold, string.IsNullOrWhiteSpace(prizeLabel) ? "(not set)" : prizeLabel);
+        }
     }
 
     private void DrawDonationRow()

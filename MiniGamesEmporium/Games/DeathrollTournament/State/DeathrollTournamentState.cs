@@ -23,6 +23,9 @@ public class DeathrollTournamentState
     public long BoostedPotAtStart { get; set; } = 0;
     public int PlayerCountAtStart { get; set; } = 0;
     public long PotAdjustment { get; set; } = 0L;
+    public DeathrollPrizeType PrizeTypeAtStart { get; set; } = DeathrollPrizeType.Gil;
+    public string PrizeItemNameAtStart { get; set; } = string.Empty;
+    public string PrizeCustomTextAtStart { get; set; } = string.Empty;
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
 
     public List<List<BracketMatch>> Rounds { get; set; } = new();
@@ -46,6 +49,12 @@ public class DeathrollTournamentState
     public string? TournamentWinner { get; set; } = null;
     public long WinnerPayoutGil { get; set; } = 0;
     public Guid? PayoutTransactionId { get; set; } = null;
+
+    public bool BettingEnabledAtStart { get; set; } = false;
+    public long BetUnitAtStart { get; set; } = 0;
+    public List<DeathrollBetSnapshot> ConfirmedBets { get; set; } = new();
+    public long BettingPotAtStart { get; set; } = 0;
+    public List<DeathrollBetPayout> BetPayouts { get; set; } = new();
 
     public string CurrentRoundLabel() =>
         CurrentRoundIndex == Rounds.Count - 1 ? "The Final" : $"Round {CurrentRoundIndex + 1}";

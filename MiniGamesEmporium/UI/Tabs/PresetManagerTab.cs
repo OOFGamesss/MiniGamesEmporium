@@ -4,6 +4,7 @@ using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.HigherLower.Config;
 using MiniGamesEmporium.Games.Raffle.Config;
 using MiniGamesEmporium.Models;
@@ -544,6 +545,16 @@ public sealed class PresetManagerTab
         if (!t.Success) return;
         SetupPreviewColumns();
         DrawRow("Entry Cost",           d.EntryCost.ToString("N0") + " gil");
+        DrawRow("Prize Type",           d.PrizeType == DeathrollPrizeType.Gil ? "Gil Pot" : d.PrizeType.ToString());
+        switch (d.PrizeType)
+        {
+            case DeathrollPrizeType.Item:
+                DrawRow("Prize Item", string.IsNullOrWhiteSpace(d.PrizeItemName) ? "(not set)" : d.PrizeItemName);
+                break;
+            case DeathrollPrizeType.Custom:
+                DrawRow("Prize Text", string.IsNullOrWhiteSpace(d.PrizeCustomText) ? "(not set)" : d.PrizeCustomText);
+                break;
+        }
         DrawRow("Best-Of Per Round",    string.Join(", ", d.BestOfPerRound));
         DrawBoolRow("Auto Next Match",  d.AutoNextMatch);
         DrawRow("Auto Next Delay",      d.AutoNextMatchDelaySeconds + "s");
@@ -551,6 +562,14 @@ public sealed class PresetManagerTab
         DrawBoolRow("Auto Join Keyword", d.AutoJoinKeyword);
         DrawRow("Join Keyword",         d.JoinKeyword);
         DrawRow("Join Channels",        SummariseChannels(d.JoinChannels));
+        DrawBoolRow("Betting Enabled",  d.BettingEnabled);
+        if (d.BettingEnabled)
+        {
+            DrawRow("Bet Unit",             d.BetUnit.ToString("N0") + " gil");
+            DrawBoolRow("Auto Bet Keyword", d.AutoBetKeyword);
+            DrawRow("Bet Keyword",          d.BetKeyword);
+            DrawRow("Bet Channels",         SummariseChannels(d.BetChannels));
+        }
     }
 
     private static string SummariseChannels(QueueConfig c)
@@ -569,6 +588,7 @@ public sealed class PresetManagerTab
         if (!t.Success) return;
         SetupPreviewColumns();
         DrawBoolRow("Auto Announce Matchup",   c.AutoAnnounceMatchup);
+        DrawBoolRow("Auto Announce Prize",     c.AutoAnnouncePrize);
         DrawBoolRow("Auto Announce Winner",    c.AutoAnnounceWinner);
         DrawBoolRow("Auto Reroll Rand 10",     c.AutoAnnounceRerollRandom10);
         DrawBoolRow("Auto First Player",       c.AutoAnnounceFirstPlayer);
@@ -577,8 +597,8 @@ public sealed class PresetManagerTab
         DrawBoolRow("Custom Turn Reminder",    c.UseCustomTurnReminderMessage);
         DrawRow("Announce Bracket",       c.AnnounceBracketMessage);
         DrawRow("Announce Matchup",       c.AnnounceMatchupMessage);
+        DrawRow("Announce Prize",         c.AnnouncePrizeMessage);
         DrawRow("Tournament Winner",      c.AnnounceTournamentWinnerMessage);
-        DrawRow("Announce Pot",           c.AnnouncePotMessage);
         DrawRow("Turn Reminder",          c.TurnReminderMessage);
         DrawRow("Request Gil",            c.RequestGilMessage);
         DrawRow("Request Gil (Buyer)",    c.RequestGilBuyerMessage);

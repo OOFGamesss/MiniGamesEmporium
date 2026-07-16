@@ -15,18 +15,20 @@ public sealed class TradeListenerService : IDisposable
     private readonly Bar777SessionService bar777SessionService;
     private readonly SessionService sessionService;
     private readonly DeathrollTournamentService deathrollService;
+    private readonly DeathrollBettingService deathrollBettingService;
     private readonly HigherLowerService higherLowerService;
     private readonly RaffleService raffleService;
     private readonly IPluginLog log;
 
-    public TradeListenerService(Bar777SessionService bar777SessionService, SessionService sessionService, DeathrollTournamentService deathrollService, HigherLowerService higherLowerService, RaffleService raffleService, IPluginLog log)
+    public TradeListenerService(Bar777SessionService bar777SessionService, SessionService sessionService, DeathrollTournamentService deathrollService, DeathrollBettingService deathrollBettingService, HigherLowerService higherLowerService, RaffleService raffleService, IPluginLog log)
     {
-        this.bar777SessionService   = bar777SessionService;
-        this.sessionService   = sessionService;
-        this.deathrollService = deathrollService;
-        this.higherLowerService = higherLowerService;
-        this.raffleService    = raffleService;
-        this.log              = log;
+        this.bar777SessionService     = bar777SessionService;
+        this.sessionService           = sessionService;
+        this.deathrollService         = deathrollService;
+        this.deathrollBettingService  = deathrollBettingService;
+        this.higherLowerService       = higherLowerService;
+        this.raffleService            = raffleService;
+        this.log                      = log;
         TradeDetectionManager.OnTradeEnd += OnTradeEnd;
     }
 
@@ -52,6 +54,7 @@ public sealed class TradeListenerService : IDisposable
             this.log.Information($"Trade complete: {name}@{world} gave {result.ReceivedGil:N0} gil.");
             this.bar777SessionService.VerifyPayment(name, result.ReceivedGil, world);
             this.deathrollService.TryAutoMarkPaid(name, result.ReceivedGil);
+            this.deathrollBettingService.TryAutoApplyBetTrade(name, result.ReceivedGil);
             this.higherLowerService.TryVerifyPayment(name, result.ReceivedGil, world);
             this.raffleService.TryAutoAddTickets(name, result.ReceivedGil, world);
         }
@@ -61,6 +64,7 @@ public sealed class TradeListenerService : IDisposable
             this.log.Information($"Payout trade: sent {amountSent:N0} gil to {name}@{world}.");
             this.bar777SessionService.TryRecordWinnerPayout(name, amountSent);
             this.deathrollService.TryRecordWinnerPayout(name, amountSent);
+            this.deathrollBettingService.TryRecordBetPayout(name, amountSent);
             this.higherLowerService.TryRecordWinnerPayout(name, amountSent);
             this.raffleService.TryRecordWinnerPayout(name, amountSent);
         }

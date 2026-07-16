@@ -12,6 +12,7 @@ using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.DeathrollTournament.State;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
+using MiniGamesEmporium.Games.DeathrollTournament.Webview;
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.Utility;
 using System;
@@ -44,8 +45,10 @@ public sealed class DeathrollBracketTab
     private const float TrophySide  = 140f;
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
+    private readonly DeathrollBettingService bettingService;
     private readonly ChatQueueService chatQueue;
     private readonly AutoPayoutService autoPayoutService;
+    private readonly DrtWebviewService webviewService;
     private readonly ISharedImmediateTexture? _trophyTexture;
     private static string comboFilter = string.Empty;
     private string swapFilter = string.Empty;
@@ -55,13 +58,18 @@ public sealed class DeathrollBracketTab
     private List<string> unpaidModalPlayers = new();
     private bool openUnlinkedModal = false;
     private List<string> unlinkedModalPlayers = new();
+    private bool openUnresolvedBetsModal = false;
+    private List<DeathrollBet> unresolvedBetsModalBets = new();
+    private bool viewingBracketAfterWin = false;
 
-    public DeathrollBracketTab(PluginConfiguration config, DeathrollTournamentService deathrollService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService)
+    public DeathrollBracketTab(PluginConfiguration config, DeathrollTournamentService deathrollService, DeathrollBettingService bettingService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, DrtWebviewService webviewService)
     {
         this.config            = config;
         this.deathrollService  = deathrollService;
+        this.bettingService    = bettingService;
         this.chatQueue         = chatQueue;
         this.autoPayoutService = autoPayoutService;
+        this.webviewService    = webviewService;
         var path = Path.Combine(
             MiniGamesEmporium.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty,
             "Images", "trophy.png");
@@ -77,10 +85,13 @@ public sealed class DeathrollBracketTab
             DrawPreTournamentSetup(reserveBottom, drawStatsInline);
             DrawUnpaidPlayersModal();
             DrawUnlinkedPlayersModal();
+            DrawUnresolvedBetsModal();
             return;
         }
         var state = this.config.DeathrollTournamentSession!;
-        if (state.TournamentWinner != null)
+        if (state.TournamentWinner == null)
+            this.viewingBracketAfterWin = false;
+        else if (!this.viewingBracketAfterWin)
         {
             DrawTournamentComplete(state);
             return;
@@ -158,6 +169,7 @@ public sealed class DeathrollBracketTab
             this.deathrollService.ShufflePlayers();
         ImGui.PopStyleColor(3);
         DrawPreSignUpInput();
+        DrawWebRequests();
         ImGui.Spacing();
         var tableH = MathF.Max(24f, availH - (ImGui.GetCursorPosY() - startY));
         if (list.Count == 0)
@@ -479,7 +491,16 @@ public sealed class DeathrollBracketTab
                 }
                 else
                 {
-                    this.deathrollService.StartTournament();
+                    var unresolvedBets = this.bettingService.GetUnresolvedBets();
+                    if (unresolvedBets.Count > 0)
+                    {
+                        this.unresolvedBetsModalBets = unresolvedBets;
+                        this.openUnresolvedBetsModal = true;
+                    }
+                    else
+                    {
+                        this.deathrollService.StartTournament();
+                    }
                 }
             }
         }
@@ -552,6 +573,30 @@ public sealed class DeathrollBracketTab
             ImGui.CloseCurrentPopup();
     }
 
+    private void DrawUnresolvedBetsModal()
+    {
+        if (this.openUnresolvedBetsModal)
+        {
+            ImGui.OpenPopup("Unresolved Bets##DRUnresolvedBetsModal");
+            this.openUnresolvedBetsModal = false;
+        }
+        using var modal = ImRaii.PopupModal("Unresolved Bets##DRUnresolvedBetsModal", ImGuiWindowFlags.AlwaysAutoResize);
+        if (!modal.Success) return;
+        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "The following bets are unpaid or unresolved and will not count toward the pot:");
+        ImGui.Spacing();
+        foreach (var bet in this.unresolvedBetsModalBets)
+            ImGui.BulletText($"{PlayerInfoService.StripWorld(bet.BettorName)} -> {bet.TargetName}");
+        ImGui.Spacing();
+        ImGui.TextDisabled("Mark them as paid, fix the target, or remove them from the Betting tab before starting.");
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        const float closeW = 80f;
+        ImGui.SetCursorPosX((ImGui.GetContentRegionAvail().X - closeW) * 0.5f);
+        if (ImGui.Button("Close##DRUnresolvedBetsClose", new Vector2(closeW, 0f)))
+            ImGui.CloseCurrentPopup();
+    }
+
     private void DrawPreSignUpInput()
     {
         var addBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.UserPlus, "Add").X;
@@ -573,6 +618,51 @@ public sealed class DeathrollBracketTab
             }
         }
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Pre-sign-up a player who is not currently nearby");
+    }
+
+    private void DrawWebRequests()
+    {
+        if (this.webviewService.SessionId == null) return;
+        var pending = this.webviewService.PendingJoins;
+        if (pending.Count == 0) return;
+
+        ImGui.Spacing();
+        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, $"Web Requests ({pending.Count})");
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Join requests submitted from the website. Accepted names are added as unlinked players.");
+        ImGui.Spacing();
+        var acceptW = UIHelper.CalcButtonSize(FontAwesomeIcon.Check, "Accept").X;
+        var rejectW = UIHelper.CalcButtonSize(FontAwesomeIcon.Times, "Reject").X;
+        var actColW = acceptW + rejectW + ImGui.GetStyle().ItemSpacing.X * 2f;
+        var tableH  = MathF.Min(pending.Count, 4) * (ImGui.GetFrameHeight() + ImGui.GetStyle().CellPadding.Y * 2f) + 4f;
+        using var table = ImRaii.Table("##DRWebRequests", 2,
+            ImGuiTableFlags.BordersOuter | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY,
+            new Vector2(-1f, tableH));
+        if (!table.Success) return;
+        ImGui.TableSetupColumn("##DRWebReqName", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn("##DRWebReqAct",  ImGuiTableColumnFlags.WidthFixed, actColW);
+        foreach (var request in pending.ToArray())
+        {
+            ImGui.TableNextRow();
+            ImGui.TableSetColumnIndex(0);
+            ImGui.AlignTextToFramePadding();
+            ImGui.TextUnformatted(request.CharacterName);
+            if (this.webviewService.NameCollides(request.CharacterName))
+            {
+                ImGui.SameLine();
+                ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "[already registered]");
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("A player with this name is already on the roster. Accepting will not add a duplicate.");
+            }
+            ImGui.TableSetColumnIndex(1);
+            ImGui.PushStyleColor(ImGuiCol.Button,        GreenButton);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, GreenButtonHovered);
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  GreenButtonActive);
+            var accepted = UIHelper.IconTextButton(FontAwesomeIcon.Check, "Accept", $"##DRWebAccept{request.Id}");
+            ImGui.PopStyleColor(3);
+            ImGui.SameLine();
+            var rejected = UIHelper.IconTextButton(FontAwesomeIcon.Times, "Reject", $"##DRWebReject{request.Id}");
+            if (accepted) this.webviewService.Accept(request);
+            else if (rejected) this.webviewService.Reject(request);
+        }
     }
 
     private void DrawLinkPlayerPopup(int idx, string entry)
@@ -635,6 +725,12 @@ public sealed class DeathrollBracketTab
 
         using var pane = ImRaii.Child("##DRBracketPane", new Vector2(-1f, height), false, ImGuiWindowFlags.HorizontalScrollbar);
         if (!pane.Success) return;
+        if (state.TournamentWinner != null)
+        {
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Trophy, "View Winner", "##DRViewWinner"))
+                this.viewingBracketAfterWin = false;
+            ImGui.SameLine();
+        }
         DrawAnnounceBracketButton(state);
         ImGui.Spacing();
         DrawAllRounds(state, matchBoxH, colW);
@@ -1048,6 +1144,9 @@ public sealed class DeathrollBracketTab
 
     private void DrawTournamentComplete(DeathrollTournamentState state)
     {
+        if (UIHelper.IconTextButton(FontAwesomeIcon.ChevronLeft, "Back to Bracket", "##DRBackToBracket"))
+            this.viewingBracketAfterWin = true;
+
         ImGui.Spacing();
         var avail  = ImGui.GetContentRegionAvail().X;
         var startX = ImGui.GetCursorPosX();
@@ -1080,31 +1179,51 @@ public sealed class DeathrollBracketTab
         ImGui.Separator();
         ImGui.Spacing();
 
-        var pot       = this.deathrollService.ComputeTotalPot();
-        var paid      = state.WinnerPayoutGil;
-        var remaining = Math.Max(0L, pot - paid);
+        var isGilPrize = this.deathrollService.IsGilPrize();
+        var pot        = this.deathrollService.ComputeTotalPot();
+        var paid       = state.WinnerPayoutGil;
+        var remaining  = Math.Max(0L, pot - paid);
 
-        var labelColW  = MathF.Max(ImGui.CalcTextSize("Pot:").X, MathF.Max(ImGui.CalcTextSize("Traded:").X, ImGui.CalcTextSize("Remaining:").X));
-        var valueColW  = MathF.Max(ImGui.CalcTextSize($"{pot:N0} Gil").X, MathF.Max(ImGui.CalcTextSize($"{paid:N0} Gil").X, ImGui.CalcTextSize($"{remaining:N0} Gil").X));
-        var spacing    = ImGui.GetStyle().ItemSpacing.X;
-        var blockW     = labelColW + spacing + valueColW;
-        var rowX       = startX + MathF.Max(0f, (avail - blockW) * 0.5f);
-        var valueX     = rowX + labelColW + spacing;
+        if (isGilPrize)
+        {
+            var labelColW  = MathF.Max(ImGui.CalcTextSize("Pot:").X, MathF.Max(ImGui.CalcTextSize("Traded:").X, ImGui.CalcTextSize("Remaining:").X));
+            var valueColW  = MathF.Max(ImGui.CalcTextSize($"{pot:N0} Gil").X, MathF.Max(ImGui.CalcTextSize($"{paid:N0} Gil").X, ImGui.CalcTextSize($"{remaining:N0} Gil").X));
+            var spacing    = ImGui.GetStyle().ItemSpacing.X;
+            var blockW     = labelColW + spacing + valueColW;
+            var rowX       = startX + MathF.Max(0f, (avail - blockW) * 0.5f);
+            var valueX     = rowX + labelColW + spacing;
 
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(GoldColour, "Pot:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(GoldColour, $"{pot:N0} Gil");
+            ImGui.SetCursorPosX(rowX);
+            ImGui.TextColored(GoldColour, "Pot:");
+            ImGui.SameLine(valueX);
+            ImGui.TextColored(GoldColour, $"{pot:N0} Gil");
 
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, "Traded:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, $"{paid:N0} Gil");
+            ImGui.SetCursorPosX(rowX);
+            ImGui.TextColored(EmporiumNeonTheme.SuccessMint, "Traded:");
+            ImGui.SameLine(valueX);
+            ImGui.TextColored(EmporiumNeonTheme.SuccessMint, $"{paid:N0} Gil");
 
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Remaining:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, $"{remaining:N0} Gil");
+            ImGui.SetCursorPosX(rowX);
+            ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Remaining:");
+            ImGui.SameLine(valueX);
+            ImGui.TextColored(EmporiumNeonTheme.WarnAmber, $"{remaining:N0} Gil");
+        }
+        else
+        {
+            var prizeLabel = this.deathrollService.GetPrizeLabel();
+            if (string.IsNullOrWhiteSpace(prizeLabel)) prizeLabel = "(not set)";
+
+            var labelW = ImGui.CalcTextSize("Prize:").X;
+            var valueW = ImGui.CalcTextSize(prizeLabel).X;
+            var spacing = ImGui.GetStyle().ItemSpacing.X;
+            var blockW  = labelW + spacing + valueW;
+            var rowX    = startX + MathF.Max(0f, (avail - blockW) * 0.5f);
+
+            ImGui.SetCursorPosX(rowX);
+            ImGui.TextColored(GoldColour, "Prize:");
+            ImGui.SameLine(rowX + labelW + spacing);
+            ImGui.TextColored(GoldColour, prizeLabel);
+        }
 
         ImGui.Spacing();
 
@@ -1131,16 +1250,20 @@ public sealed class DeathrollBracketTab
 
         ImGui.Spacing();
 
-        DrawAutoPayoutButton(state, winnerName, remaining, avail, startX);
+        if (isGilPrize)
+            DrawAutoPayoutButton(state, winnerName, remaining, avail, startX);
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
-        var progress   = pot > 0 ? MathF.Min(1f, (float)paid / pot) : 1f;
-        var pctOverlay = $"{progress * 100f:F0}% paid out";
-        ImGui.SetCursorPosX(startX);
-        ImGui.ProgressBar(progress, new Vector2(avail, ImGui.GetFrameHeight()), pctOverlay);
+        if (isGilPrize)
+        {
+            var progress   = pot > 0 ? MathF.Min(1f, (float)paid / pot) : 1f;
+            var pctOverlay = $"{progress * 100f:F0}% paid out";
+            ImGui.SetCursorPosX(startX);
+            ImGui.ProgressBar(progress, new Vector2(avail, ImGui.GetFrameHeight()), pctOverlay);
+        }
     }
 
     private void DrawAutoPayoutButton(DeathrollTournamentState state, string winnerName, long remaining, float avail, float startX)

@@ -30,7 +30,7 @@ public sealed class Bar777KeywordHandler : IChatKeywordHandler
         if (!this.config.Bar777.UseQueue) return;
         if (this.bar777SessionService.IsQueuePaused) return;
 
-        var queueName = QueueKeywordMatcher.TryResolveJoiner(
+        var queueName = KeywordMatcher.TryResolveJoiner(
             this.config.QueueJoinChannels, this.config.QueueKeyword, kind, sender, message, this.playerInfo);
         if (queueName == null) return;
 

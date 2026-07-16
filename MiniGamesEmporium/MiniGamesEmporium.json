@@ -4,7 +4,7 @@
   "InternalName": "MiniGamesEmporium",
   "Punchline": "Four live gambling games under one roof, with more on the way.",
   "Description": "The all-in-one hosting tool for FFXIV gambling venues, with four live games: BAR 777, Deathroll Tournament, Higher/Lower, and Raffle. Handles player queues, trade verification, boosted pots, ticket draws, automated chat, and a full transaction ledger.",
-  "Changelog": "- Added the Raffle game: numbered tickets, boosted pot, per-player limit, closing timer and a /random winner draw.\n- Bug fixed on total pot showing incorrectly when adding/removing from it.\n- Added new chat setting option to Deathroll Tournament to have a custom tell message when waiting for a player to roll.",
+  "Changelog": "- There is now a webview for deathroll tournament! See video in announcements. - Boosters only while in Beta.\n- You can now bet on who will win the deathroll tournament! Hosts can enable this at the start of the session, set a bet cost and optionally a bet keyword to auto capture bets from chat. Whoever bets correctly on the winner takes the betting pool!\n- You can now set in-game items or custom items as a prize for winning deathroll tournament. - Due to the change in prize format, custom chat messages for DRT will be reset.",
   "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
   "ApplicableVersion": "any",
   "Tags": [

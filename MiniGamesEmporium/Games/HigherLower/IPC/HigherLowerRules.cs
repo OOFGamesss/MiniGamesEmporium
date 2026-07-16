@@ -24,7 +24,7 @@ public sealed class HigherLowerRules : IDisposable
     private const string Gate        = "GambaWhere.SubmitRules";
     private const int    MaxStrLen   = 50;
 
-    private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(5);
 
     private readonly ICallGateSubscriber<string, string, object, bool> _submitRules;
     private readonly IFramework            _framework;

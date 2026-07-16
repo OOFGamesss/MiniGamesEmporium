@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Actions;
@@ -12,15 +13,18 @@ public sealed class DeathrollChatAutomation : IDisposable
 {
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
+    private readonly DeathrollBettingService bettingService;
     private readonly ChatQueueService chatQueue;
 
     public DeathrollChatAutomation(
         PluginConfiguration config,
         DeathrollTournamentService deathrollService,
+        DeathrollBettingService bettingService,
         ChatQueueService chatQueue)
     {
         this.config           = config;
         this.deathrollService = deathrollService;
+        this.bettingService   = bettingService;
         this.chatQueue        = chatQueue;
         deathrollService.MatchStarted      += OnMatchStarted;
         deathrollService.TournamentWon     += OnTournamentWon;
@@ -28,6 +32,8 @@ public sealed class DeathrollChatAutomation : IDisposable
         deathrollService.OrderRollResolved += OnOrderRollResolved;
         deathrollService.GameWon           += OnGameWon;
         deathrollService.MatchWon          += OnMatchWon;
+        deathrollService.SessionStarted    += OnSessionStarted;
+        bettingService.BetPayoutsResolved  += OnBetPayoutsResolved;
     }
 
     private void OnMatchStarted(string player1, string player2)
@@ -66,6 +72,21 @@ public sealed class DeathrollChatAutomation : IDisposable
         AnnounceMatchWin.Execute(matchWinner, matchLoser, winnerWins, loserWins, this.config, this.chatQueue);
     }
 
+    private void OnSessionStarted()
+    {
+        if (this.config.DeathrollTournament.Chat.AutoAnnouncePrize)
+            AnnouncePrize.Execute(this.config, this.chatQueue);
+        if (!this.config.DeathrollTournament.Chat.AutoAnnounceBettingOpen) return;
+        if (!this.bettingService.IsBettingEnabledForSession()) return;
+        AnnounceBettingOpen.Execute(this.config, this.chatQueue);
+    }
+
+    private void OnBetPayoutsResolved(string winner, long bettingPot, List<string> betWinners)
+    {
+        if (!this.config.DeathrollTournament.Chat.AutoAnnounceBetWinners) return;
+        AnnounceBetWinners.Execute(winner, bettingPot, betWinners, this.config, this.chatQueue);
+    }
+
     public void Dispose()
     {
         this.deathrollService.MatchStarted      -= OnMatchStarted;
@@ -74,5 +95,7 @@ public sealed class DeathrollChatAutomation : IDisposable
         this.deathrollService.OrderRollResolved -= OnOrderRollResolved;
         this.deathrollService.GameWon           -= OnGameWon;
         this.deathrollService.MatchWon          -= OnMatchWon;
+        this.deathrollService.SessionStarted    -= OnSessionStarted;
+        this.bettingService.BetPayoutsResolved  -= OnBetPayoutsResolved;
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.HigherLower.Config;
 using MiniGamesEmporium.Games.Raffle.Config;
 
@@ -40,6 +41,10 @@ public sealed class Bar777ExportEntry
 public sealed class DeathrollExportEntry
 {
     public long EntryCost { get; set; } = 100_000;
+    public DeathrollPrizeType PrizeType { get; set; } = DeathrollPrizeType.Gil;
+    public uint PrizeItemId { get; set; } = 0;
+    public string PrizeItemName { get; set; } = string.Empty;
+    public string PrizeCustomText { get; set; } = string.Empty;
     public List<int> BestOfPerRound { get; set; } = new() { 1, 3, 5, 7, 9 };
     public bool AutoNextMatch { get; set; } = false;
     public int AutoNextMatchDelaySeconds { get; set; } = 5;
@@ -47,6 +52,11 @@ public sealed class DeathrollExportEntry
     public bool AutoJoinKeyword { get; set; } = false;
     public string JoinKeyword { get; set; } = "!join";
     public QueueConfig JoinChannels { get; set; } = new();
+    public bool BettingEnabled { get; set; } = false;
+    public long BetUnit { get; set; } = 50_000;
+    public bool AutoBetKeyword { get; set; } = false;
+    public string BetKeyword { get; set; } = "!bet";
+    public QueueConfig BetChannels { get; set; } = new();
     public DeathrollTournamentChatConfig Chat { get; set; } = new();
 }
 

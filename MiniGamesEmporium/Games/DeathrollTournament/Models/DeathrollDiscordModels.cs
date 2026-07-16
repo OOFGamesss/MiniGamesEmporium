@@ -18,6 +18,33 @@ internal sealed class DiscordOutboundPayloadDto
 
     [JsonPropertyName("attachments")]
     public List<DiscordAttachmentDto>? Attachments { get; init; }
+
+    [JsonPropertyName("components")]
+    public List<DiscordComponentRowDto> Components { get; init; } = [];
+}
+
+internal sealed class DiscordComponentRowDto
+{
+    [JsonPropertyName("type")]
+    public int Type { get; init; } = 1;
+
+    [JsonPropertyName("components")]
+    public List<DiscordLinkButtonDto> Components { get; init; } = [];
+}
+
+internal sealed class DiscordLinkButtonDto
+{
+    [JsonPropertyName("type")]
+    public int Type { get; init; } = 2;
+
+    [JsonPropertyName("style")]
+    public int Style { get; init; } = 5;
+
+    [JsonPropertyName("label")]
+    public required string Label { get; init; }
+
+    [JsonPropertyName("url")]
+    public required string Url { get; init; }
 }
 
 internal sealed class DiscordEmbedDto

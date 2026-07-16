@@ -18,6 +18,8 @@ public sealed class DeathrollTournamentService
     private readonly PluginConfiguration config;
     private readonly HistoryService historyService;
     public event Action? SessionUpdated;
+    public event Action? SessionStarted;
+    public event Action<DeathrollTournamentState>? TournamentStarted;
     public event Action<string, string>? MatchStarted;
     public event Action? MatchCompleted;
     public event Action<string, long>? TournamentWon;
@@ -45,12 +47,18 @@ public sealed class DeathrollTournamentService
         cfg.PaidPlayers.Clear();
         this.config.DeathrollSession = new DeathrollSessionInfo
         {
-            EntryCost  = cfg.EntryCost,
-            BoostedPot = cfg.BoostedPot,
-            StartedAt  = DateTime.UtcNow,
+            EntryCost       = cfg.EntryCost,
+            BoostedPot      = cfg.BoostedPot,
+            PrizeType       = cfg.PrizeType,
+            PrizeItemName   = cfg.PrizeItemName,
+            PrizeCustomText = cfg.PrizeCustomText,
+            BettingEnabled  = cfg.BettingEnabled,
+            BetUnit         = cfg.BetUnit,
+            StartedAt       = DateTime.UtcNow,
         };
         Save();
         SessionUpdated?.Invoke();
+        SessionStarted?.Invoke();
     }
 
     public void StopSession()
@@ -62,6 +70,8 @@ public sealed class DeathrollTournamentService
         this.config.DeathrollTournament.PaidPlayers.Clear();
         this.config.DeathrollTournament.UnverifiedPlayers.Clear();
         this.config.DeathrollTournament.PlayerBuyers.Clear();
+        this.config.DeathrollTournament.Bets.Clear();
+        this.config.DeathrollTournament.BettorCredit.Clear();
         Save();
         SessionUpdated?.Invoke();
     }
@@ -135,6 +145,23 @@ public sealed class DeathrollTournamentService
         if (!IsSessionActive()) return;
         var entryCost = this.config.DeathrollSession?.EntryCost ?? this.config.DeathrollTournament.EntryCost;
         if (gilReceived < entryCost) return;
+        var (match, buyerName) = ResolvePayingEntrant(tradePartner);
+        if (match == null || IsPaid(match)) return;
+        var transactionName = string.IsNullOrEmpty(buyerName)
+            ? PlayerInfoService.StripWorld(match)
+            : $"{PlayerInfoService.StripWorld(match)} (Paid by {buyerName})";
+        this.historyService.AddTransaction(new TransactionRecord
+        {
+            PlayerName = transactionName,
+            Amount     = (int)entryCost,
+            Timestamp  = DateTime.UtcNow,
+            GameName   = DeathrollGameIds.DisplayName,
+        });
+        MarkAsPaid(match);
+    }
+
+    private (string? match, string buyerName) ResolvePayingEntrant(string tradePartner)
+    {
         var registered = this.config.DeathrollTournament.RegisteredPlayers;
         var match = registered.FirstOrDefault(p => NamesMatch(p, tradePartner));
         var buyerName = string.Empty;
@@ -151,18 +178,17 @@ public sealed class DeathrollTournamentService
                 break;
             }
         }
-        if (match == null || IsPaid(match)) return;
-        var transactionName = string.IsNullOrEmpty(buyerName)
-            ? PlayerInfoService.StripWorld(match)
-            : $"{PlayerInfoService.StripWorld(match)} (Paid by {buyerName})";
-        this.historyService.AddTransaction(new TransactionRecord
-        {
-            PlayerName = transactionName,
-            Amount     = (int)entryCost,
-            Timestamp  = DateTime.UtcNow,
-            GameName   = DeathrollGameIds.DisplayName,
-        });
-        MarkAsPaid(match);
+        return (match, buyerName);
+    }
+
+    public long GetEntryCostReservation(string tradePartner, long gilReceived)
+    {
+        if (!IsSessionActive()) return 0;
+        var entryCost = this.config.DeathrollSession?.EntryCost ?? this.config.DeathrollTournament.EntryCost;
+        if (gilReceived < entryCost) return 0;
+        var (match, _) = ResolvePayingEntrant(tradePartner);
+        if (match == null || IsPaid(match)) return 0;
+        return entryCost;
     }
 
     public BracketMatch? GetCurrentMatch()
@@ -192,10 +218,38 @@ public sealed class DeathrollTournamentService
     }
 
 
+    public bool IsGilPrize() => IsGilPrize(this.config);
+
+    public static bool IsGilPrize(PluginConfiguration config)
+    {
+        var tournament = config.DeathrollTournamentSession;
+        if (tournament != null) return tournament.PrizeTypeAtStart == DeathrollPrizeType.Gil;
+        var session = config.DeathrollSession;
+        var cfg     = config.DeathrollTournament;
+        return (session?.PrizeType ?? cfg.PrizeType) == DeathrollPrizeType.Gil;
+    }
+
+    public string GetPrizeLabel() => GetPrizeLabel(this.config);
+
+    public static string GetPrizeLabel(PluginConfiguration config, long? totalPotOverride = null)
+    {
+        var tournament = config.DeathrollTournamentSession;
+        var session    = config.DeathrollSession;
+        var cfg        = config.DeathrollTournament;
+        var prizeType  = tournament?.PrizeTypeAtStart ?? session?.PrizeType ?? cfg.PrizeType;
+        return prizeType switch
+        {
+            DeathrollPrizeType.Item   => (tournament?.PrizeItemNameAtStart   ?? session?.PrizeItemName   ?? cfg.PrizeItemName).Trim(),
+            DeathrollPrizeType.Custom => (tournament?.PrizeCustomTextAtStart ?? session?.PrizeCustomText ?? cfg.PrizeCustomText).Trim(),
+            _                         => $"{totalPotOverride ?? ComputeTotalPot(config):N0} Gil",
+        };
+    }
+
     public void TryRecordWinnerPayout(string partnerName, long amountSent)
     {
         var state = this.config.DeathrollTournamentSession;
         if (state?.TournamentWinner == null) return;
+        if (state.PrizeTypeAtStart != DeathrollPrizeType.Gil) return;
         if (!PlayerInfoService.StripWorld(state.TournamentWinner).Equals(partnerName, StringComparison.OrdinalIgnoreCase)) return;
         state.WinnerPayoutGil += amountSent;
         state.PayoutTransactionId = PayoutTransactionRecorder.Record(this.historyService, DeathrollGameIds.DisplayName, state.TournamentWinner, state.WinnerPayoutGil, state.PayoutTransactionId);
@@ -353,14 +407,18 @@ public sealed class DeathrollTournamentService
         var bestOf = cfg.BestOfPerRound.ToList();
         var state = new DeathrollTournamentState
         {
-            EntryCostAtStart   = activeSession?.EntryCost  ?? cfg.EntryCost,
-            BoostedPotAtStart  = activeSession?.BoostedPot ?? cfg.BoostedPot,
-            PlayerCountAtStart = players.Count,
-            StartedAt          = DateTime.UtcNow,
-            Rounds             = rounds,
-            BestOfPerRound     = bestOf,
+            EntryCostAtStart        = activeSession?.EntryCost  ?? cfg.EntryCost,
+            BoostedPotAtStart       = activeSession?.BoostedPot ?? cfg.BoostedPot,
+            PrizeTypeAtStart        = activeSession?.PrizeType       ?? cfg.PrizeType,
+            PrizeItemNameAtStart    = activeSession?.PrizeItemName   ?? cfg.PrizeItemName,
+            PrizeCustomTextAtStart  = activeSession?.PrizeCustomText ?? cfg.PrizeCustomText,
+            PlayerCountAtStart      = players.Count,
+            StartedAt               = DateTime.UtcNow,
+            Rounds                  = rounds,
+            BestOfPerRound          = bestOf,
         };
         PositionToNextActiveMatch(state);
+        TournamentStarted?.Invoke(state);
         this.config.DeathrollTournamentSession = state;
         Save();
         SessionUpdated?.Invoke();
@@ -769,7 +827,7 @@ public sealed class DeathrollTournamentService
         return state.Rounds[r][m];
     }
 
-    private static bool NamesMatch(string a, string b)
+    internal static bool NamesMatch(string a, string b)
     {
         var parsedA = PlayerInfoService.StripWorld(a);
         var parsedB = PlayerInfoService.StripWorld(b);

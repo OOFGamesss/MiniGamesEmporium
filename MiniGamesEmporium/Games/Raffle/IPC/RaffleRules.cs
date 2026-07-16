@@ -18,7 +18,7 @@ public sealed class RaffleRules : IDisposable
     private const string Category = "Mini Games";
     private const string Gate = "GambaWhere.SubmitRules";
 
-    private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(5);
 
     private readonly ICallGateSubscriber<string, string, object, bool> _submitRules;
     private readonly IFramework _framework;

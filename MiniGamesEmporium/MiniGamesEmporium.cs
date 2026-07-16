@@ -4,6 +4,7 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using ECommons;
+using MiniGamesEmporium.API;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Events;
 using MiniGamesEmporium.Games.Bar777.Config;
@@ -11,10 +12,12 @@ using MiniGamesEmporium.Games.Bar777.Events;
 using MiniGamesEmporium.Games.Bar777.IPC;
 using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Games.Bar777.Utility;
+using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Events;
 using MiniGamesEmporium.Games.DeathrollTournament.IPC;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Webview;
 using MiniGamesEmporium.Games.HigherLower.Events;
 using MiniGamesEmporium.Games.HigherLower.IPC;
 using MiniGamesEmporium.Games.HigherLower.Services;
@@ -44,6 +47,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
+    [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
     private const string MainCommandFull = "/minigamesemporium";
     private const string MainCommandShort = "/mge";
     private const string ConfigCommand = "/mgeconfig";
@@ -57,7 +61,10 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly RollService rollService;
     private readonly PresetService presetService;
     private readonly DeathrollTournamentService deathrollService;
+    private readonly DeathrollBettingService deathrollBettingService;
     private readonly DeathrollWebhookService deathrollDiscordService;
+    private readonly MgeApiClient mgeApiClient;
+    private readonly DrtWebviewService drtWebviewService;
     private readonly HigherLowerService higherLowerService;
     private readonly RaffleService raffleService;
     private readonly ChatListenerService chatListener;
@@ -84,7 +91,9 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         Configuration.Raffle.Chat ??= new();
         Configuration.Raffle.JoinChannels ??= new QueueConfig();
         Configuration.SessionHistory ??= new();
+        Configuration.Webview ??= new();
         Configuration.Transactions ??= new();
+        MigrateDeathrollChatConfig();
         historyService = new HistoryService(PluginInterface, Configuration);
         chatQueueService = new ChatQueueService();
         bar777SessionService = new Bar777SessionService(Configuration, historyService);
@@ -94,6 +103,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         higherLowerService = new HigherLowerService(Configuration, historyService, ChatGui);
         presetService = new PresetService(Configuration);
         deathrollService = new DeathrollTournamentService(Configuration, historyService);
+        deathrollBettingService = new DeathrollBettingService(Configuration, historyService, deathrollService);
         raffleService = new RaffleService(Configuration, historyService);
         deathrollDiscordService = new DeathrollWebhookService(Log, Configuration, PluginInterface.AssemblyLocation.DirectoryName!);
         deathrollService.SessionUpdated += deathrollDiscordService.TriggerSync;
@@ -103,6 +113,9 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         deathrollService.MatchWon      += _onMatchWon;
         deathrollService.GameWon       += _onGameWon;
         deathrollService.TournamentWon += _onTournamentWon;
+        mgeApiClient = new MgeApiClient(() => Configuration.Webview.ApiHostKey, Log);
+        drtWebviewService = new DrtWebviewService(Configuration, deathrollService, mgeApiClient, Framework, Log);
+        drtWebviewService.WebSessionChanged += deathrollDiscordService.TriggerSync;
         sessionService.RegisterGame(Bar777GameIds.DisplayName, bar777SessionService.IsActive, bar777SessionService.CancelSession);
         sessionService.RegisterGame(HigherLowerGameIds.DisplayName, higherLowerService.IsSessionActive, higherLowerService.CancelSession);
         sessionService.RegisterGame("Deathroll Tournament", deathrollService.IsSessionActive, deathrollService.StopSession);
@@ -150,16 +163,16 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
             Configuration,
             sessionService,
             new IChatRollHandler[]    { new Bar777RollHandler(Configuration, bar777SessionService), new DeathrollRollHandler(deathrollService, playerInfoService), new HigherLowerRollHandler(Configuration, higherLowerService, playerInfoService), new RaffleRollHandler(raffleService, playerInfoService) },
-            new IChatKeywordHandler[] { new Bar777KeywordHandler(Configuration, bar777SessionService, playerInfoService), new DeathrollKeywordHandler(Configuration, deathrollService, playerInfoService), new HigherLowerKeywordHandler(), new RaffleKeywordHandler(Configuration, raffleService, playerInfoService) },
+            new IChatKeywordHandler[] { new Bar777KeywordHandler(Configuration, bar777SessionService, playerInfoService), new DeathrollKeywordHandler(Configuration, deathrollService, playerInfoService), new DeathrollBetKeywordHandler(Configuration, deathrollService, deathrollBettingService, playerInfoService), new HigherLowerKeywordHandler(), new RaffleKeywordHandler(Configuration, raffleService, playerInfoService) },
             rollService,
             Log);
-        tradeListenerService  = new TradeListenerService(bar777SessionService, sessionService, deathrollService, higherLowerService, raffleService, Log);
+        tradeListenerService  = new TradeListenerService(bar777SessionService, sessionService, deathrollService, deathrollBettingService, higherLowerService, raffleService, Log);
         autoPayoutService     = new AutoPayoutService(chatQueueService, Log);
-        mainWindow = new MainWindow(Configuration, bar777SessionService, sessionService, chatQueueService, deathrollService, deathrollDiscordService, presetService, Log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService);
+        mainWindow = new MainWindow(Configuration, bar777SessionService, sessionService, chatQueueService, deathrollService, deathrollBettingService, deathrollDiscordService, drtWebviewService, presetService, Log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService);
         windowSystem.AddWindow(mainWindow);
         windowOpenedIpc = new WindowOpenedIpc(PluginInterface, Log, mainWindow);
         bar777Rules = new Bar777Rules(PluginInterface, Framework, Log, Configuration);
-        deathrollRules = new DeathrollTournamentRules(PluginInterface, Framework, Log, Configuration);
+        deathrollRules = new DeathrollTournamentRules(PluginInterface, Framework, Log, Configuration, deathrollBettingService);
         higherLowerRules = new HigherLowerRules(PluginInterface, Framework, Log, Configuration, higherLowerService);
         raffleRules = new RaffleRules(PluginInterface, Framework, Log, Configuration);
 
@@ -180,6 +193,16 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         PluginInterface.UiBuilder.OpenConfigUi += OpenConfigUi;
         Log.Information("Plugin loaded.");
     }
+
+    private void MigrateDeathrollChatConfig()
+    {
+        const int currentVersion = 2;
+        var cfg = Configuration.DeathrollTournament;
+        if (cfg.Chat.ConfigVersion >= currentVersion) return;
+        cfg.Chat = new DeathrollTournamentChatConfig { ConfigVersion = currentVersion };
+        Configuration.Save();
+    }
+
     public void Dispose()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
@@ -189,7 +212,11 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         deathrollService.MatchWon      -= _onMatchWon;
         deathrollService.GameWon       -= _onGameWon;
         deathrollService.TournamentWon -= _onTournamentWon;
+        deathrollBettingService.Dispose();
+        drtWebviewService.WebSessionChanged -= deathrollDiscordService.TriggerSync;
         deathrollDiscordService.Dispose();
+        drtWebviewService.Dispose();
+        mgeApiClient.Dispose();
         playerContextMenuHandler.Dispose();
         chatPlayerContextMenuHandler.Dispose();
         windowOpenedIpc.Dispose();

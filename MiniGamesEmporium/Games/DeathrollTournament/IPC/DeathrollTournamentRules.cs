@@ -18,12 +18,13 @@ public sealed class DeathrollTournamentRules : IDisposable
     private const string Category = "Mini Games";
     private const string Gate = "GambaWhere.SubmitRules";
 
-    private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(5);
 
     private readonly ICallGateSubscriber<string, string, object, bool> _submitRules;
     private readonly IFramework _framework;
     private readonly IPluginLog _log;
     private readonly PluginConfiguration _config;
+    private readonly DeathrollBettingService _bettingService;
 
     private DateTime _nextPushUtc;
 
@@ -31,11 +32,13 @@ public sealed class DeathrollTournamentRules : IDisposable
         IDalamudPluginInterface pluginInterface,
         IFramework framework,
         IPluginLog log,
-        PluginConfiguration config)
+        PluginConfiguration config,
+        DeathrollBettingService bettingService)
     {
         _framework = framework;
         _log = log;
         _config = config;
+        _bettingService = bettingService;
         _submitRules = pluginInterface.GetIpcSubscriber<string, string, object, bool>(Gate);
 
         _framework.Update += OnFrameworkUpdate;
@@ -85,14 +88,33 @@ public sealed class DeathrollTournamentRules : IDisposable
 
         var round = tournament == null ? "Registration" : tournament.CurrentRoundLabel();
 
+        var isGilPrize = DeathrollTournamentService.IsGilPrize(_config);
+
         var payload = new GambaWhereRulesPayload();
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Game", Value = DeathrollGameIds.DisplayName });
-        payload.Rules.Add(new GambaWhereRuleEntry { Label = "Total Pot", Value = totalPot });
-        if (boostedPot > 0)
-            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Boosted Pot", Value = boostedPot });
+        if (isGilPrize)
+        {
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Total Pot", Value = totalPot });
+            if (boostedPot > 0)
+                payload.Rules.Add(new GambaWhereRuleEntry { Label = "Boosted Pot", Value = boostedPot });
+        }
+        else
+        {
+            var prizeLabel = DeathrollTournamentService.GetPrizeLabel(_config);
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Prize", Value = string.IsNullOrWhiteSpace(prizeLabel) ? "(not set)" : prizeLabel });
+        }
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Entry Cost", Value = entryCost == 0 ? "Free" : entryCost });
+        if (tournament == null && cfg.AutoJoinKeyword)
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Join Keyword", Value = cfg.JoinKeyword });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Round", Value = round });
         payload.Rules.Add(new GambaWhereRuleEntry { Label = "Players Entered", Value = players });
+
+        if (_bettingService.IsBettingEnabledForSession())
+        {
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Betting Pot", Value = _bettingService.ComputeBettingPot() });
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Bet Cost", Value = _bettingService.GetBetUnit() });
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Bets Placed", Value = cfg.Bets.Count });
+        }
         return payload;
     }
 }

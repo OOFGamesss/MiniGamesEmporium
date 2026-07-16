@@ -200,37 +200,42 @@ public sealed class DeathrollWebhookService : IDisposable
 
     private (byte[]? bytes, string fileName, byte[] payloadJson) BuildPayload(bool isFirstPost)
     {
-        var tournament = _config.DeathrollTournamentSession;
-        var session    = _config.DeathrollSession;
-        var username   = _config.DeathrollTournament.WebhookUsername;
-        var avatarUrl  = _config.DeathrollTournament.WebhookAvatarUrl;
+        var tournament   = _config.DeathrollTournamentSession;
+        var session      = _config.DeathrollSession;
+        var username     = _config.DeathrollTournament.WebhookUsername;
+        var avatarUrl    = _config.DeathrollTournament.WebhookAvatarUrl;
+        var spectatorUrl = GetSpectatorUrl();
 
         if (tournament != null)
         {
             var totalPot     = DeathrollTournamentService.ComputeTotalPot(_config);
             var bracketBytes = Utility.DeathrollDiscordImageRenderer.RenderBracket(tournament);
             var dto          = DeathrollWebhookContent.ForActiveTournament(
-                tournament, BracketFileName, isFirstPost, username, avatarUrl, totalPot);
+                tournament, BracketFileName, isFirstPost, username, avatarUrl, totalPot, spectatorUrl);
             return (bracketBytes, BracketFileName, Serialize(dto));
         }
 
         if (session != null)
         {
             var totalPot     = DeathrollTournamentService.ComputeTotalPot(_config);
+            var isGilPrize   = DeathrollTournamentService.IsGilPrize(_config);
+            var prizeLabel   = DeathrollTournamentService.GetPrizeLabel(_config);
             var paidPlayers  = GetPaidPlayerNames();
             var playerBytes  = Utility.DeathrollDiscordImageRenderer.RenderPlayerList(
                 paidPlayers,
                 session.EntryCost,
-                session.BoostedPot,
-                _config.DeathrollTournament.RegisteredPlayers.Count);
+                _config.DeathrollTournament.RegisteredPlayers.Count,
+                isGilPrize,
+                totalPot,
+                prizeLabel);
             var dto = DeathrollWebhookContent.ForRegistration(
-                paidPlayers, session, _config.DeathrollTournament, PlayersFileName, isFirstPost, username, avatarUrl, totalPot);
+                paidPlayers, session, _config.DeathrollTournament, PlayersFileName, isFirstPost, username, avatarUrl, totalPot, spectatorUrl);
             return (playerBytes, PlayersFileName, Serialize(dto));
         }
 
         if (!string.IsNullOrWhiteSpace(avatarUrl))
         {
-            var idleDto = DeathrollWebhookContent.ForIdle(avatarUrl, isFirstPost, username, avatarUrl);
+            var idleDto = DeathrollWebhookContent.ForIdle(avatarUrl, isFirstPost, username, avatarUrl, spectatorUrl);
             return (Array.Empty<byte>(), string.Empty, Serialize(idleDto));
         }
 
@@ -242,8 +247,18 @@ public sealed class DeathrollWebhookService : IDisposable
         }
         var bannerBytes = File.ReadAllBytes(bannerPath);
         var fallbackDto = DeathrollWebhookContent.ForIdle(
-            $"attachment://{BannerFileName}", isFirstPost, username, avatarUrl);
+            $"attachment://{BannerFileName}", isFirstPost, username, avatarUrl, spectatorUrl);
         return (bannerBytes, BannerFileName, Serialize(fallbackDto));
+    }
+
+    private string? GetSpectatorUrl()
+    {
+        var drt = _config.DeathrollTournament;
+        return drt.WebMirrorEnabled
+               && !string.IsNullOrWhiteSpace(drt.WebSessionId)
+               && !string.IsNullOrWhiteSpace(drt.WebSpectatorUrl)
+            ? drt.WebSpectatorUrl
+            : null;
     }
 
     private List<string> GetPaidPlayerNames()

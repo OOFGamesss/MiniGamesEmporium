@@ -21,7 +21,19 @@ internal static class DeathrollWebhookContent
 
     private static readonly DiscordFooterDto Footer = new() { Text = FooterText, IconUrl = FooterIconUrl };
 
-    internal static DiscordOutboundPayloadDto ForIdle(string imageUrl, bool applyProfile, string username, string avatarUrl)
+    private static List<DiscordComponentRowDto> BuildComponents(string? spectatorUrl)
+    {
+        if (string.IsNullOrWhiteSpace(spectatorUrl)) return [];
+        return
+        [
+            new DiscordComponentRowDto
+            {
+                Components = [new DiscordLinkButtonDto { Label = "View Live Bracket", Url = spectatorUrl }],
+            }
+        ];
+    }
+
+    internal static DiscordOutboundPayloadDto ForIdle(string imageUrl, bool applyProfile, string username, string avatarUrl, string? spectatorUrl = null)
     {
         var isAttachment = imageUrl.StartsWith("attachment://", StringComparison.Ordinal);
         return new()
@@ -41,6 +53,7 @@ internal static class DeathrollWebhookContent
         Attachments = isAttachment
                 ? [new DiscordAttachmentDto { Id = 0, Filename = imageUrl["attachment://".Length..] }]
                 : [],
+            Components = BuildComponents(spectatorUrl),
         };
     }
 
@@ -52,16 +65,25 @@ internal static class DeathrollWebhookContent
         bool applyProfile,
         string username,
         string avatarUrl,
-        long totalPot)
+        long totalPot,
+        string? spectatorUrl = null)
     {
         var fields = new List<DiscordEmbedFieldDto>
         {
             new() { Name = "Entry Cost", Value = session.EntryCost == 0 ? "Free" : $"{session.EntryCost:N0} Gil", Inline = true },
             new() { Name = "Players",    Value = $"{paidPlayers.Count}",                                           Inline = true },
         };
-        if (session.BoostedPot > 0)
-            fields.Add(new() { Name = "Boosted Pot", Value = $"{session.BoostedPot:N0} Gil", Inline = true });
-        fields.Add(new() { Name = "Current Pot", Value = $"{totalPot:N0} Gil", Inline = false });
+        if (session.PrizeType == DeathrollPrizeType.Gil)
+        {
+            if (session.BoostedPot > 0)
+                fields.Add(new() { Name = "Boosted Pot", Value = $"{session.BoostedPot:N0} Gil", Inline = true });
+            fields.Add(new() { Name = "Current Pot", Value = $"{totalPot:N0} Gil", Inline = false });
+        }
+        else
+        {
+            var prizeLabel = session.PrizeType == DeathrollPrizeType.Item ? session.PrizeItemName.Trim() : session.PrizeCustomText.Trim();
+            fields.Add(new() { Name = "Prize", Value = string.IsNullOrWhiteSpace(prizeLabel) ? "(not set)" : prizeLabel, Inline = false });
+        }
 
         return new()
         {
@@ -80,6 +102,7 @@ internal static class DeathrollWebhookContent
                 }
             ],
             Attachments = [new DiscordAttachmentDto { Id = 0, Filename = imageFileName }],
+            Components  = BuildComponents(spectatorUrl),
         };
     }
 
@@ -89,7 +112,8 @@ internal static class DeathrollWebhookContent
         bool applyProfile,
         string username,
         string avatarUrl,
-        long totalPot)
+        long totalPot,
+        string? spectatorUrl = null)
     {
         var hasWinner = state.TournamentWinner != null;
         var colour    = hasWinner ? ColourWinner : ColourActive;
@@ -113,6 +137,7 @@ internal static class DeathrollWebhookContent
                 }
             ],
             Attachments = [new DiscordAttachmentDto { Id = 0, Filename = imageFileName }],
+            Components  = BuildComponents(spectatorUrl),
         };
     }
 
@@ -120,12 +145,23 @@ internal static class DeathrollWebhookContent
     {
         var sb = new StringBuilder();
 
+        string prizeLine;
+        if (state.PrizeTypeAtStart == DeathrollPrizeType.Gil)
+        {
+            prizeLine = $"**Pot Size:** {pot:N0} Gil";
+        }
+        else
+        {
+            var prizeLabel = state.PrizeTypeAtStart == DeathrollPrizeType.Item ? state.PrizeItemNameAtStart.Trim() : state.PrizeCustomTextAtStart.Trim();
+            prizeLine = $"**Prize:** {(string.IsNullOrWhiteSpace(prizeLabel) ? "(not set)" : prizeLabel)}";
+        }
+
         if (state.TournamentWinner != null)
         {
             sb.AppendLine($"**Round:** Tournament Complete");
             sb.AppendLine($"**Players:** {state.PlayerCountAtStart}");
             sb.AppendLine($"**Winner:** {PlayerInfoService.StripWorld(state.TournamentWinner)}");
-            sb.AppendLine($"**Pot Size:** {pot:N0} Gil");
+            sb.AppendLine(prizeLine);
             return sb.ToString().TrimEnd();
         }
 
@@ -150,7 +186,7 @@ internal static class DeathrollWebhookContent
             sb.AppendLine($"**Rolling:** {p1} vs {p2}{score}");
         }
 
-        sb.Append($"**Pot Size:** {pot:N0} Gil");
+        sb.Append(prizeLine);
 
         return sb.ToString().TrimEnd();
     }

@@ -51,8 +51,10 @@ public static class DeathrollDiscordImageRenderer
     public static byte[] RenderPlayerList(
         IReadOnlyList<string> paidPlayers,
         long entryCost,
-        long boostedPot,
-        int registeredCount)
+        int registeredCount,
+        bool isGilPrize,
+        long totalPot,
+        string prizeLabel)
     {
         var twoCol     = paidPlayers.Count > 10;
         var rowsDrawn  = twoCol ? (int)Math.Ceiling(paidPlayers.Count / 2.0) : paidPlayers.Count;
@@ -64,7 +66,7 @@ public static class DeathrollDiscordImageRenderer
         {
             ctx.Fill(BgColor);
             DrawPlayerListHeader(ctx);
-            DrawStatsBar(ctx, entryCost, boostedPot, paidPlayers.Count, registeredCount);
+            DrawStatsBar(ctx, entryCost, paidPlayers.Count, registeredCount, isGilPrize, totalPot, prizeLabel);
             ctx.Fill(SeparatorColor, new RectangleF(0, HeaderHeight + StatsHeight, CanvasWidth, 2));
             DrawPlayerRows(ctx, paidPlayers, HeaderHeight + StatsHeight + 2);
             DrawFooter(ctx, height);
@@ -110,21 +112,24 @@ public static class DeathrollDiscordImageRenderer
 
     private static void DrawStatsBar(
         IImageProcessingContext ctx,
-        long entryCost, long boostedPot,
-        int paidCount, int registeredCount)
+        long entryCost,
+        int paidCount, int registeredCount,
+        bool isGilPrize, long totalPot, string prizeLabel)
     {
         var y         = HeaderHeight + 2f;
         var statFont  = GetFont(13, FontStyle.Regular);
         var boldFont  = GetFont(13, FontStyle.Bold);
-        var pot       = entryCost * paidCount + boostedPot;
 
         float[] xs  = { CanvasWidth * 0.17f, CanvasWidth * 0.50f, CanvasWidth * 0.83f };
-        string[] labels = { "Entry Cost", "Players", "Current Pot" };
+        string[] labels = { "Entry Cost", "Players", isGilPrize ? "Current Pot" : "Prize" };
+        var thirdValue = isGilPrize
+            ? $"{totalPot:N0} Gil"
+            : TruncateName(string.IsNullOrWhiteSpace(prizeLabel) ? "(not set)" : prizeLabel, boldFont, 240f);
         string[] values =
         {
             entryCost == 0 ? "Free" : $"{entryCost:N0} Gil",
             $"{paidCount}",
-            $"{pot:N0} Gil",
+            thirdValue,
         };
         Color[] valueColors = { AccentCyan, AccentPink, AccentGold };
 

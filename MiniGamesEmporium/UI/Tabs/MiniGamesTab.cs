@@ -8,6 +8,7 @@ using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.UI;
+using MiniGamesEmporium.Games.DeathrollTournament.Webview;
 using MiniGamesEmporium.Games.HigherLower.Services;
 using MiniGamesEmporium.Games.Raffle.Services;
 using MiniGamesEmporium.Games.Raffle.UI;
@@ -57,7 +58,9 @@ public sealed class MiniGamesTab : IDisposable
         SessionService sessionService,
         ChatQueueService chatQueue,
         DeathrollTournamentService deathrollService,
+        DeathrollBettingService bettingService,
         DeathrollWebhookService deathrollDiscordService,
+        DrtWebviewService drtWebviewService,
         IPluginLog log,
         HistoryService historyService,
         AutoPayoutService autoPayoutService,
@@ -70,7 +73,7 @@ public sealed class MiniGamesTab : IDisposable
         this.bar777SessionService     = bar777SessionService;
         this.sessionService           = sessionService;
         this.bar777Panel              = new Bar777Panel(config, bar777SessionService, sessionService, chatQueue, historyService, autoPayoutService);
-        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, deathrollDiscordService, chatQueue, sessionService, log, historyService, autoPayoutService);
+        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, chatQueue, sessionService, log, historyService, autoPayoutService);
         this.rafflePanel              = new RafflePanel(config, raffleService, chatQueue, sessionService, historyService, autoPayoutService);
         this.minefieldGambitPanel = new MinefieldGambitPanel();
         this.gamblerDerbyPanel = new GamblerDerbyPanel();

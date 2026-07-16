@@ -32,8 +32,8 @@ internal static class DeathrollWebhookTransport
         var createsNewMessage = string.IsNullOrWhiteSpace(entry.MessageId);
 
         var uri = createsNewMessage
-            ? $"https://discord.com/api/webhooks/{webhookId}/{token}?wait=true"
-            : $"https://discord.com/api/webhooks/{webhookId}/{token}/messages/{Uri.EscapeDataString(entry.MessageId!.Trim())}";
+            ? $"https://discord.com/api/webhooks/{webhookId}/{token}?wait=true&with_components=true"
+            : $"https://discord.com/api/webhooks/{webhookId}/{token}/messages/{Uri.EscapeDataString(entry.MessageId!.Trim())}?with_components=true";
 
         HttpResponseMessage? pending = null;
         for (var attempt = 0; attempt < maxRetries; attempt++)

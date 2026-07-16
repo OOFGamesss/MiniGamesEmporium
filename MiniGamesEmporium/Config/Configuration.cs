@@ -20,6 +20,7 @@ public class PluginConfiguration : IPluginConfiguration
     public int Version { get; set; } = 2;
 
     public Bar777Config Bar777 { get; set; } = new();
+    public WebviewConfig Webview { get; set; } = new();
     public DeathrollTournamentConfig DeathrollTournament { get; set; } = new();
     public HigherLowerConfig HigherLower { get; set; } = new();
     public RaffleConfig Raffle { get; set; } = new();

@@ -8,6 +8,7 @@ using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Webview;
 using MiniGamesEmporium.Games.HigherLower.Services;
 using MiniGamesEmporium.Games.Raffle.Services;
 using MiniGamesEmporium.Games.Raffle.Utility;
@@ -58,7 +59,9 @@ public sealed class MainWindow : Window, IDisposable
         SessionService sessionService,
         ChatQueueService chatQueue,
         DeathrollTournamentService deathrollService,
+        DeathrollBettingService bettingService,
         DeathrollWebhookService deathrollDiscordService,
+        DrtWebviewService drtWebviewService,
         PresetService presetService,
         IPluginLog log,
         HistoryService historyService,
@@ -76,7 +79,7 @@ public sealed class MainWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         this.transactionHistoryTab = new TransactionHistoryTab(historyService);
         this.sessionHistoryTab     = new SessionHistoryTab(historyService);
-        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, sessionService, chatQueue, deathrollService, deathrollDiscordService, log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService);
+        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, sessionService, chatQueue, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService);
         this.presetManagerTab      = new PresetManagerTab(config, presetService);
         this.settingsTab           = new SettingsTab(config);
         this.supportTab            = new SupportTab();

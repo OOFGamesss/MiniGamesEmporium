@@ -130,6 +130,10 @@ public sealed class PresetService
         return new DeathrollTournamentConfig
         {
             EntryCost                 = s.EntryCost,
+            PrizeType                 = s.PrizeType,
+            PrizeItemId               = s.PrizeItemId,
+            PrizeItemName             = s.PrizeItemName,
+            PrizeCustomText           = s.PrizeCustomText,
             BestOfPerRound            = new List<int>(s.BestOfPerRound),
             AutoNextMatch             = s.AutoNextMatch,
             AutoNextMatchDelaySeconds = s.AutoNextMatchDelaySeconds,
@@ -137,6 +141,11 @@ public sealed class PresetService
             AutoJoinKeyword           = s.AutoJoinKeyword,
             JoinKeyword               = s.JoinKeyword,
             JoinChannels              = DeepClone(s.JoinChannels),
+            BettingEnabled            = s.BettingEnabled,
+            BetUnit                   = s.BetUnit,
+            AutoBetKeyword            = s.AutoBetKeyword,
+            BetKeyword                = s.BetKeyword,
+            BetChannels               = DeepClone(s.BetChannels),
             Chat                      = DeepClone(s.Chat),
             WebhookUsername           = s.WebhookUsername,
             WebhookAvatarUrl          = s.WebhookAvatarUrl,
@@ -196,6 +205,10 @@ public sealed class PresetService
     private void ApplyDeathrollSettings(DeathrollTournamentConfig d)
     {
         this.config.DeathrollTournament.EntryCost                 = d.EntryCost;
+        this.config.DeathrollTournament.PrizeType                 = d.PrizeType;
+        this.config.DeathrollTournament.PrizeItemId               = d.PrizeItemId;
+        this.config.DeathrollTournament.PrizeItemName             = d.PrizeItemName;
+        this.config.DeathrollTournament.PrizeCustomText           = d.PrizeCustomText;
         this.config.DeathrollTournament.BestOfPerRound            = new List<int>(d.BestOfPerRound);
         this.config.DeathrollTournament.AutoNextMatch             = d.AutoNextMatch;
         this.config.DeathrollTournament.AutoNextMatchDelaySeconds = d.AutoNextMatchDelaySeconds;
@@ -203,6 +216,11 @@ public sealed class PresetService
         this.config.DeathrollTournament.AutoJoinKeyword           = d.AutoJoinKeyword;
         this.config.DeathrollTournament.JoinKeyword               = d.JoinKeyword;
         this.config.DeathrollTournament.JoinChannels              = DeepClone(d.JoinChannels);
+        this.config.DeathrollTournament.BettingEnabled            = d.BettingEnabled;
+        this.config.DeathrollTournament.BetUnit                   = d.BetUnit;
+        this.config.DeathrollTournament.AutoBetKeyword            = d.AutoBetKeyword;
+        this.config.DeathrollTournament.BetKeyword                = d.BetKeyword;
+        this.config.DeathrollTournament.BetChannels               = DeepClone(d.BetChannels);
         this.config.DeathrollTournament.Chat                      = DeepClone(d.Chat);
         this.config.DeathrollTournament.WebhookUsername           = d.WebhookUsername;
         this.config.DeathrollTournament.WebhookAvatarUrl          = d.WebhookAvatarUrl;
@@ -341,6 +359,10 @@ public sealed class PresetService
         return new DeathrollTournamentConfig
         {
             EntryCost                 = entry.EntryCost,
+            PrizeType                 = entry.PrizeType,
+            PrizeItemId               = entry.PrizeItemId,
+            PrizeItemName             = entry.PrizeItemName,
+            PrizeCustomText           = entry.PrizeCustomText,
             BestOfPerRound            = new List<int>(entry.BestOfPerRound),
             AutoNextMatch             = entry.AutoNextMatch,
             AutoNextMatchDelaySeconds = entry.AutoNextMatchDelaySeconds,
@@ -348,6 +370,11 @@ public sealed class PresetService
             AutoJoinKeyword           = entry.AutoJoinKeyword,
             JoinKeyword               = entry.JoinKeyword,
             JoinChannels              = DeepClone(entry.JoinChannels),
+            BettingEnabled            = entry.BettingEnabled,
+            BetUnit                   = entry.BetUnit,
+            AutoBetKeyword            = entry.AutoBetKeyword,
+            BetKeyword                = entry.BetKeyword,
+            BetChannels               = DeepClone(entry.BetChannels),
             Chat                      = DeepClone(entry.Chat),
             WebhookUsername           = username,
             WebhookAvatarUrl          = avatarUrl,
@@ -440,6 +467,10 @@ public sealed class PresetService
         return new DeathrollExportEntry
         {
             EntryCost                 = s.EntryCost,
+            PrizeType                 = s.PrizeType,
+            PrizeItemId               = s.PrizeItemId,
+            PrizeItemName             = s.PrizeItemName,
+            PrizeCustomText           = s.PrizeCustomText,
             BestOfPerRound            = new List<int>(s.BestOfPerRound),
             AutoNextMatch             = s.AutoNextMatch,
             AutoNextMatchDelaySeconds = s.AutoNextMatchDelaySeconds,
@@ -447,6 +478,11 @@ public sealed class PresetService
             AutoJoinKeyword           = s.AutoJoinKeyword,
             JoinKeyword               = s.JoinKeyword,
             JoinChannels              = DeepClone(s.JoinChannels),
+            BettingEnabled            = s.BettingEnabled,
+            BetUnit                   = s.BetUnit,
+            AutoBetKeyword            = s.AutoBetKeyword,
+            BetKeyword                = s.BetKeyword,
+            BetChannels               = DeepClone(s.BetChannels),
             Chat                      = DeepClone(s.Chat),
         };
     }

@@ -8,6 +8,7 @@ using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.UI.Components;
 using MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
+using MiniGamesEmporium.Games.DeathrollTournament.Webview;
 using MiniGamesEmporium.Services;
 
 using MiniGamesEmporium.UI.Components;
@@ -33,14 +34,18 @@ public sealed class DeathrollTournamentPanel : IDisposable
     private readonly DeathrollChatSettingsTab chatSettingsTab;
     private readonly DeathrollSettingsTab settingsTab;
     private readonly DeathrollStatsTab statsTab;
+    private readonly DeathrollBetsTab betsTab;
     private readonly DeathrollDiscordWebhookTab discordTab;
+    private readonly DeathrollWebviewTab webviewTab;
     private readonly DeathrollChatAutomation chatAutomation;
     private readonly DeathrollNextMatchAutomation nextMatchAutomation;
 
     public DeathrollTournamentPanel(
         PluginConfiguration config,
         DeathrollTournamentService deathrollService,
+        DeathrollBettingService bettingService,
         DeathrollWebhookService discordService,
+        DrtWebviewService webviewService,
         ChatQueueService chatQueue,
         SessionService sessionService,
         IPluginLog log,
@@ -50,12 +55,14 @@ public sealed class DeathrollTournamentPanel : IDisposable
         this.config              = config;
         this.deathrollService    = deathrollService;
         this.sessionService      = sessionService;
-        this.bracketTab          = new DeathrollBracketTab(config, deathrollService, chatQueue, autoPayoutService);
+        this.bracketTab          = new DeathrollBracketTab(config, deathrollService, bettingService, chatQueue, autoPayoutService, webviewService);
         this.chatSettingsTab     = new DeathrollChatSettingsTab(config);
         this.settingsTab         = new DeathrollSettingsTab(config);
         this.statsTab            = new DeathrollStatsTab(config, deathrollService, chatQueue, historyService);
+        this.betsTab             = new DeathrollBetsTab(config, deathrollService, bettingService, chatQueue, autoPayoutService);
         this.discordTab          = new DeathrollDiscordWebhookTab(config, discordService, log);
-        this.chatAutomation      = new DeathrollChatAutomation(config, deathrollService, chatQueue);
+        this.webviewTab          = new DeathrollWebviewTab(config, webviewService);
+        this.chatAutomation      = new DeathrollChatAutomation(config, deathrollService, bettingService, chatQueue);
         this.nextMatchAutomation = new DeathrollNextMatchAutomation(config, deathrollService);
     }
 
@@ -69,12 +76,14 @@ public sealed class DeathrollTournamentPanel : IDisposable
     {
         ImGui.Spacing();
         using var chrome = new EmporiumNeonTheme.DeathrollTournamentNestedTabChromeScope();
-        using var tabBar = ImRaii.TabBar("##DR_TabBar_v1");
+        using var tabBar = ImRaii.TabBar("##DR_TabBar_v2");
         if (!tabBar.Success) return;
         DrawBracketTab();
+        DrawBetsTab();
         DrawChatTab();
         DrawSettingsTab();
         DrawDiscordTab();
+        DrawWebviewTab();
     }
 
     private void DrawBracketTab()
@@ -87,7 +96,7 @@ public sealed class DeathrollTournamentPanel : IDisposable
             return;
         }
         ImGui.Spacing();
-        var statsH          = DeathrollStatsTab.GetInlineHeight();
+        var statsH          = DeathrollStatsTab.GetInlineHeight(this.deathrollService.IsGilPrize());
         var isPreTournament = !this.deathrollService.HasActiveTournament();
         this.bracketTab.Draw(
             skipLeadingSpacing: true,
@@ -110,6 +119,13 @@ public sealed class DeathrollTournamentPanel : IDisposable
         if (scroll.Success) this.chatSettingsTab.Draw();
     }
 
+    private void DrawBetsTab()
+    {
+        using var tab = ImRaii.TabItem("Betting");
+        if (!tab.Success) return;
+        this.betsTab.Draw();
+    }
+
     private void DrawSettingsTab()
     {
         using var tab = ImRaii.TabItem("Settings");
@@ -123,6 +139,14 @@ public sealed class DeathrollTournamentPanel : IDisposable
         if (!tab.Success) return;
         using var scroll = ImRaii.Child("##DRDiscordScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.discordTab.Draw();
+    }
+
+    private void DrawWebviewTab()
+    {
+        using var tab = ImRaii.TabItem("Webview");
+        if (!tab.Success) return;
+        using var scroll = ImRaii.Child("##DRWebviewScroll", new Vector2(-1f, -1f), false);
+        if (scroll.Success) this.webviewTab.Draw();
     }
 
     private void DrawStartDoor()

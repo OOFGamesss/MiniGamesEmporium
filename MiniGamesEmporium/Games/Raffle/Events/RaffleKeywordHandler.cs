@@ -27,7 +27,7 @@ public sealed class RaffleKeywordHandler : IChatKeywordHandler
         if (!cfg.AutoJoinKeyword) return;
         if (!this.raffleService.IsSessionActive()) return;
 
-        var queueName = QueueKeywordMatcher.TryResolveJoiner(
+        var queueName = KeywordMatcher.TryResolveJoiner(
             cfg.JoinChannels, cfg.JoinKeyword, kind, sender, message, this.playerInfo);
         if (queueName == null) return;
 

@@ -6,13 +6,13 @@ using MiniGamesEmporium.Models;
 namespace MiniGamesEmporium.Services;
 public static class PayoutTransactionRecorder
 {
-    public static Guid Record(HistoryService historyService, string gameName, string winnerName, long totalPaid, Guid? existingId)
+    public static Guid Record(HistoryService historyService, string gameName, string winnerName, long totalPaid, Guid? existingId, string label = "Winner Payout")
     {
         var id = existingId ?? Guid.NewGuid();
         historyService.UpsertTransaction(new TransactionRecord
         {
             TransactionId = id,
-            PlayerName    = $"Winner Payout: {PlayerInfoService.StripWorld(winnerName)}",
+            PlayerName    = $"{label}: {PlayerInfoService.StripWorld(winnerName)}",
             Amount        = (int)Math.Max(-totalPaid, int.MinValue),
             Timestamp     = DateTime.UtcNow,
             GameName      = gameName,

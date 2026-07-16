@@ -29,7 +29,7 @@ public sealed class DeathrollKeywordHandler : IChatKeywordHandler
         if (!this.deathrollService.IsSessionActive()) return;
         if (this.deathrollService.HasActiveTournament()) return;
 
-        var queueName = QueueKeywordMatcher.TryResolveJoiner(
+        var queueName = KeywordMatcher.TryResolveJoiner(
             cfg.JoinChannels, cfg.JoinKeyword, kind, sender, message, this.playerInfo);
         if (queueName == null) return;
 

@@ -2,6 +2,7 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using ECommons.ImGuiMethods;
 using MiniGamesEmporium.Config;
+using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.DeathrollTournament.UI.Components;
 using MiniGamesEmporium.UI.Components;
 using System;
@@ -26,11 +27,23 @@ public sealed class DeathrollSettingsTab
         ImGui.Separator();
         ImGui.Spacing();
         DrawEntryCost();
-        DrawBoostedPot();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DeathrollPrizeFields.Draw(this.config, "Settings", -1f);
+        if (this.config.DeathrollTournament.PrizeType == DeathrollPrizeType.Gil)
+        {
+            ImGui.Spacing();
+            DrawBoostedPot();
+        }
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
         DrawAutoJoinSection();
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawBettingSection();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -70,6 +83,9 @@ public sealed class DeathrollSettingsTab
 
     private void DrawAutoJoinSection()
         => DeathrollAutoJoinFields.Draw(this.config, "Settings", -1f);
+
+    private void DrawBettingSection()
+        => DeathrollBettingFields.Draw(this.config, "Settings", -1f);
 
     private void DrawAutoNextMatchSection()
     {
