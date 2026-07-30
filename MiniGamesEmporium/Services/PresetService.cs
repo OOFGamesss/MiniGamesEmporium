@@ -3,6 +3,7 @@ using MiniGamesEmporium.Games.Bar777.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.HigherLower.Config;
 using MiniGamesEmporium.Games.Raffle.Config;
+using MiniGamesEmporium.Games.VotingMadness.Config;
 using MiniGamesEmporium.Models;
 using System;
 using System.Collections.Generic;
@@ -65,6 +66,7 @@ public sealed class PresetService
         ApplyDeathrollSettings(preset.DeathrollTournament);
         ApplyRaffleSettings(preset.Raffle);
         ApplyHigherLowerSettings(preset.HigherLower);
+        ApplyVotingMadnessSettings(preset.VotingMadness);
         this.config.QueueKeyword = preset.QueueKeyword;
         this.config.QueueJoinChannels = DeepClone(preset.QueueJoinChannels);
         this.config.ActivePresetIndex = index;
@@ -107,6 +109,7 @@ public sealed class PresetService
         DeathrollTournament = CaptureDeathroll(),
         Raffle = CaptureRaffle(),
         HigherLower = CaptureHigherLower(),
+        VotingMadness = CaptureVotingMadness(),
     };
 
     private Bar777Config CaptureBar777()
@@ -114,13 +117,15 @@ public sealed class PresetService
         var s = this.config.Bar777;
         return new Bar777Config
         {
-            CustomName    = s.CustomName,
-            CostPerRoll   = s.CostPerRoll,
-            MaxRolls      = s.MaxRolls,
-            WinNumber     = s.WinNumber,
-            UseQueue      = s.UseQueue,
-            AutoCatchRoll = s.AutoCatchRoll,
-            Chat          = DeepClone(s.Chat),
+            CustomName         = s.CustomName,
+            CostPerRoll        = s.CostPerRoll,
+            MaxRolls           = s.MaxRolls,
+            WinNumber          = s.WinNumber,
+            BoostedPot         = s.BoostedPot,
+            TradesToPotPercent = s.TradesToPotPercent,
+            UseQueue           = s.UseQueue,
+            AutoCatchRoll      = s.AutoCatchRoll,
+            Chat               = DeepClone(s.Chat),
         };
     }
 
@@ -130,6 +135,7 @@ public sealed class PresetService
         return new DeathrollTournamentConfig
         {
             EntryCost                 = s.EntryCost,
+            BoostedPot                = s.BoostedPot,
             PrizeType                 = s.PrizeType,
             PrizeItemId               = s.PrizeItemId,
             PrizeItemName             = s.PrizeItemName,
@@ -147,6 +153,8 @@ public sealed class PresetService
             BetKeyword                = s.BetKeyword,
             BetChannels               = DeepClone(s.BetChannels),
             Chat                      = DeepClone(s.Chat),
+            WebVenueName              = s.WebVenueName,
+            WebVenueImageUrl          = s.WebVenueImageUrl,
             WebhookUsername           = s.WebhookUsername,
             WebhookAvatarUrl          = s.WebhookAvatarUrl,
             DiscordWebhooks           = s.DiscordWebhooks.Select(e => new DeathrollTournamentDiscordEntry
@@ -182,6 +190,7 @@ public sealed class PresetService
         return new HigherLowerConfig
         {
             EntryCost            = s.EntryCost,
+            BoostedPot           = s.BoostedPot,
             DiceSides            = s.DiceSides,
             AutoWinCount         = s.AutoWinCount,
             TargetRounds         = s.TargetRounds,
@@ -191,20 +200,38 @@ public sealed class PresetService
         };
     }
 
+    private VotingMadnessConfig CaptureVotingMadness()
+    {
+        var s = this.config.VotingMadness;
+        return new VotingMadnessConfig
+        {
+            Options            = new List<string>(s.Options),
+            VoteChannels       = DeepClone(s.VoteChannels),
+            MultipleChoice     = s.MultipleChoice,
+            AllowMultipleVotes = s.AllowMultipleVotes,
+            CloseHour          = s.CloseHour,
+            CloseMinute        = s.CloseMinute,
+            Chat               = DeepClone(s.Chat),
+        };
+    }
+
     private void ApplyBar777Settings(Bar777Config b)
     {
-        this.config.Bar777.CustomName    = b.CustomName;
-        this.config.Bar777.CostPerRoll   = b.CostPerRoll;
-        this.config.Bar777.MaxRolls      = b.MaxRolls;
-        this.config.Bar777.WinNumber     = b.WinNumber;
-        this.config.Bar777.UseQueue      = b.UseQueue;
-        this.config.Bar777.AutoCatchRoll = b.AutoCatchRoll;
-        this.config.Bar777.Chat          = DeepClone(b.Chat);
+        this.config.Bar777.CustomName         = b.CustomName;
+        this.config.Bar777.CostPerRoll        = b.CostPerRoll;
+        this.config.Bar777.MaxRolls           = b.MaxRolls;
+        this.config.Bar777.WinNumber          = b.WinNumber;
+        this.config.Bar777.BoostedPot         = b.BoostedPot;
+        this.config.Bar777.TradesToPotPercent = b.TradesToPotPercent;
+        this.config.Bar777.UseQueue           = b.UseQueue;
+        this.config.Bar777.AutoCatchRoll      = b.AutoCatchRoll;
+        this.config.Bar777.Chat               = DeepClone(b.Chat);
     }
 
     private void ApplyDeathrollSettings(DeathrollTournamentConfig d)
     {
         this.config.DeathrollTournament.EntryCost                 = d.EntryCost;
+        this.config.DeathrollTournament.BoostedPot                = d.BoostedPot;
         this.config.DeathrollTournament.PrizeType                 = d.PrizeType;
         this.config.DeathrollTournament.PrizeItemId               = d.PrizeItemId;
         this.config.DeathrollTournament.PrizeItemName             = d.PrizeItemName;
@@ -222,6 +249,8 @@ public sealed class PresetService
         this.config.DeathrollTournament.BetKeyword                = d.BetKeyword;
         this.config.DeathrollTournament.BetChannels               = DeepClone(d.BetChannels);
         this.config.DeathrollTournament.Chat                      = DeepClone(d.Chat);
+        this.config.DeathrollTournament.WebVenueName              = d.WebVenueName;
+        this.config.DeathrollTournament.WebVenueImageUrl          = d.WebVenueImageUrl;
         this.config.DeathrollTournament.WebhookUsername           = d.WebhookUsername;
         this.config.DeathrollTournament.WebhookAvatarUrl          = d.WebhookAvatarUrl;
         this.config.DeathrollTournament.DiscordWebhooks           = d.DiscordWebhooks.Select(e => new DeathrollTournamentDiscordEntry
@@ -249,6 +278,7 @@ public sealed class PresetService
     private void ApplyHigherLowerSettings(HigherLowerConfig h)
     {
         this.config.HigherLower.EntryCost            = h.EntryCost;
+        this.config.HigherLower.BoostedPot           = h.BoostedPot;
         this.config.HigherLower.DiceSides            = h.DiceSides;
         this.config.HigherLower.AutoWinCount         = h.AutoWinCount;
         this.config.HigherLower.TargetRounds         = h.TargetRounds;
@@ -257,17 +287,29 @@ public sealed class PresetService
         this.config.HigherLower.Chat                 = DeepClone(h.Chat);
     }
 
-    public string BuildExportString(bool bar777, bool deathroll, bool raffle, bool higherlower, bool discord, bool queue)
+    private void ApplyVotingMadnessSettings(VotingMadnessConfig v)
+    {
+        this.config.VotingMadness.Options            = new List<string>(v.Options);
+        this.config.VotingMadness.VoteChannels       = DeepClone(v.VoteChannels);
+        this.config.VotingMadness.MultipleChoice     = v.MultipleChoice;
+        this.config.VotingMadness.AllowMultipleVotes = v.AllowMultipleVotes;
+        this.config.VotingMadness.CloseHour          = v.CloseHour;
+        this.config.VotingMadness.CloseMinute        = v.CloseMinute;
+        this.config.VotingMadness.Chat               = DeepClone(v.Chat);
+    }
+
+    public string BuildExportString(bool bar777, bool deathroll, bool raffle, bool higherlower, bool votingMadness, bool discord, bool queue)
     {
         var payload = new PresetExportPayload
         {
-            Bar777              = bar777      ? CaptureBar777Export()      : null,
-            DeathrollTournament = deathroll   ? CaptureDeathrollExport()   : null,
-            Raffle              = raffle      ? CaptureRaffleExport()      : null,
-            HigherLower         = higherlower ? CaptureHigherLowerExport() : null,
-            Discord             = discord     ? CaptureDiscordExport()     : null,
-            QueueKeyword        = queue       ? this.config.QueueKeyword   : null,
-            QueueJoinChannels   = queue       ? DeepClone(this.config.QueueJoinChannels) : null,
+            Bar777              = bar777        ? CaptureBar777Export()         : null,
+            DeathrollTournament = deathroll     ? CaptureDeathrollExport()      : null,
+            Raffle              = raffle        ? CaptureRaffleExport()         : null,
+            HigherLower         = higherlower   ? CaptureHigherLowerExport()    : null,
+            VotingMadness       = votingMadness ? CaptureVotingMadnessExport()  : null,
+            Discord             = discord       ? CaptureDiscordExport()        : null,
+            QueueKeyword        = queue         ? this.config.QueueKeyword      : null,
+            QueueJoinChannels   = queue         ? DeepClone(this.config.QueueJoinChannels) : null,
         };
         var json = JsonSerializer.Serialize(payload);
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
@@ -322,6 +364,7 @@ public sealed class PresetService
         DeathrollTournament = BuildDeathrollFromPayload(payload.DeathrollTournament, payload.Discord, def),
         Raffle              = BuildRaffleFromPayload(payload.Raffle, def),
         HigherLower         = BuildHigherLowerFromPayload(payload.HigherLower, def),
+        VotingMadness       = BuildVotingMadnessFromPayload(payload.VotingMadness, def),
         QueueKeyword        = payload.QueueKeyword        ?? def?.QueueKeyword        ?? "!join",
         QueueJoinChannels   = payload.QueueJoinChannels  != null
             ? DeepClone(payload.QueueJoinChannels)
@@ -334,13 +377,15 @@ public sealed class PresetService
             return def != null ? DeepClone(def.Bar777) : new Bar777Config();
         return new Bar777Config
         {
-            CustomName    = entry.CustomName,
-            CostPerRoll   = entry.CostPerRoll,
-            MaxRolls      = entry.MaxRolls,
-            WinNumber     = entry.WinNumber,
-            UseQueue      = entry.UseQueue,
-            AutoCatchRoll = entry.AutoCatchRoll,
-            Chat          = DeepClone(entry.Chat),
+            CustomName         = entry.CustomName,
+            CostPerRoll        = entry.CostPerRoll,
+            MaxRolls           = entry.MaxRolls,
+            WinNumber          = entry.WinNumber,
+            BoostedPot         = entry.BoostedPot,
+            TradesToPotPercent = entry.TradesToPotPercent,
+            UseQueue           = entry.UseQueue,
+            AutoCatchRoll      = entry.AutoCatchRoll,
+            Chat               = DeepClone(entry.Chat),
         };
     }
 
@@ -359,6 +404,7 @@ public sealed class PresetService
         return new DeathrollTournamentConfig
         {
             EntryCost                 = entry.EntryCost,
+            BoostedPot                = entry.BoostedPot,
             PrizeType                 = entry.PrizeType,
             PrizeItemId               = entry.PrizeItemId,
             PrizeItemName             = entry.PrizeItemName,
@@ -376,6 +422,8 @@ public sealed class PresetService
             BetKeyword                = entry.BetKeyword,
             BetChannels               = DeepClone(entry.BetChannels),
             Chat                      = DeepClone(entry.Chat),
+            WebVenueName              = entry.WebVenueName,
+            WebVenueImageUrl          = entry.WebVenueImageUrl,
             WebhookUsername           = username,
             WebhookAvatarUrl          = avatarUrl,
             DiscordWebhooks           = webhooks,
@@ -437,6 +485,7 @@ public sealed class PresetService
         return new HigherLowerConfig
         {
             EntryCost            = entry.EntryCost,
+            BoostedPot           = entry.BoostedPot,
             DiceSides            = entry.DiceSides,
             AutoWinCount         = entry.AutoWinCount,
             TargetRounds         = entry.TargetRounds,
@@ -446,18 +495,36 @@ public sealed class PresetService
         };
     }
 
+    private static VotingMadnessConfig BuildVotingMadnessFromPayload(VotingMadnessExportEntry? entry, PluginPreset? def)
+    {
+        if (entry == null)
+            return def != null ? DeepClone(def.VotingMadness) : new VotingMadnessConfig();
+        return new VotingMadnessConfig
+        {
+            Options            = new List<string>(entry.Options),
+            VoteChannels       = DeepClone(entry.VoteChannels),
+            MultipleChoice     = entry.MultipleChoice,
+            AllowMultipleVotes = entry.AllowMultipleVotes,
+            CloseHour          = entry.CloseHour,
+            CloseMinute        = entry.CloseMinute,
+            Chat               = DeepClone(entry.Chat),
+        };
+    }
+
     private Bar777ExportEntry CaptureBar777Export()
     {
         var s = this.config.Bar777;
         return new Bar777ExportEntry
         {
-            CustomName    = s.CustomName,
-            CostPerRoll   = s.CostPerRoll,
-            MaxRolls      = s.MaxRolls,
-            WinNumber     = s.WinNumber,
-            UseQueue      = s.UseQueue,
-            AutoCatchRoll = s.AutoCatchRoll,
-            Chat          = DeepClone(s.Chat),
+            CustomName         = s.CustomName,
+            CostPerRoll        = s.CostPerRoll,
+            MaxRolls           = s.MaxRolls,
+            WinNumber          = s.WinNumber,
+            BoostedPot         = s.BoostedPot,
+            TradesToPotPercent = s.TradesToPotPercent,
+            UseQueue           = s.UseQueue,
+            AutoCatchRoll      = s.AutoCatchRoll,
+            Chat               = DeepClone(s.Chat),
         };
     }
 
@@ -467,6 +534,7 @@ public sealed class PresetService
         return new DeathrollExportEntry
         {
             EntryCost                 = s.EntryCost,
+            BoostedPot                = s.BoostedPot,
             PrizeType                 = s.PrizeType,
             PrizeItemId               = s.PrizeItemId,
             PrizeItemName             = s.PrizeItemName,
@@ -483,6 +551,8 @@ public sealed class PresetService
             AutoBetKeyword            = s.AutoBetKeyword,
             BetKeyword                = s.BetKeyword,
             BetChannels               = DeepClone(s.BetChannels),
+            WebVenueName              = s.WebVenueName,
+            WebVenueImageUrl          = s.WebVenueImageUrl,
             Chat                      = DeepClone(s.Chat),
         };
     }
@@ -511,12 +581,28 @@ public sealed class PresetService
         return new HigherLowerExportEntry
         {
             EntryCost            = s.EntryCost,
+            BoostedPot           = s.BoostedPot,
             DiceSides            = s.DiceSides,
             AutoWinCount         = s.AutoWinCount,
             TargetRounds         = s.TargetRounds,
             AllowMultipleWinners = s.AllowMultipleWinners,
             TradesToPotPercent   = s.TradesToPotPercent,
             Chat                 = DeepClone(s.Chat),
+        };
+    }
+
+    private VotingMadnessExportEntry CaptureVotingMadnessExport()
+    {
+        var s = this.config.VotingMadness;
+        return new VotingMadnessExportEntry
+        {
+            Options            = new List<string>(s.Options),
+            VoteChannels       = DeepClone(s.VoteChannels),
+            MultipleChoice     = s.MultipleChoice,
+            AllowMultipleVotes = s.AllowMultipleVotes,
+            CloseHour          = s.CloseHour,
+            CloseMinute        = s.CloseMinute,
+            Chat               = DeepClone(s.Chat),
         };
     }
 

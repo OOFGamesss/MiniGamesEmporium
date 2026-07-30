@@ -83,8 +83,8 @@ public class SupportTab
     private static void DrawFaqSection(string idSuffix, string heading, string body)
     {
         ImGui.PushStyleColor(ImGuiCol.Header,        new Vector4(0.22f, 0.07f, 0.36f, 0.80f));
-        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, EmporiumNeonTheme.MainTabPurpleHovered);
-        ImGui.PushStyleColor(ImGuiCol.HeaderActive,  EmporiumNeonTheme.MainTabPurpleActive);
+        ImGui.PushStyleColor(ImGuiCol.HeaderHovered, EmporiumNeonTheme.EmporiumPurpleHovered);
+        ImGui.PushStyleColor(ImGuiCol.HeaderActive,  EmporiumNeonTheme.EmporiumPurpleActive);
         ImGui.PushStyleColor(ImGuiCol.Text,          EmporiumNeonTheme.NeonCyan);
 
         if (ImGui.CollapsingHeader($"{heading}{idSuffix}", ImGuiTreeNodeFlags.DefaultOpen))

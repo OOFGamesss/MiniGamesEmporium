@@ -115,6 +115,21 @@ public sealed class DeathrollTournamentRules : IDisposable
             payload.Rules.Add(new GambaWhereRuleEntry { Label = "Bet Cost", Value = _bettingService.GetBetUnit() });
             payload.Rules.Add(new GambaWhereRuleEntry { Label = "Bets Placed", Value = cfg.Bets.Count });
         }
+
+        var spectatorUrl = GetSpectatorUrl();
+        if (spectatorUrl != null)
+            payload.Rules.Add(new GambaWhereRuleEntry { Label = "Spectator URL", Value = spectatorUrl });
+
         return payload;
+    }
+
+    private string? GetSpectatorUrl()
+    {
+        var drt = _config.DeathrollTournament;
+        return drt.WebMirrorEnabled
+               && !string.IsNullOrWhiteSpace(drt.WebSessionId)
+               && !string.IsNullOrWhiteSpace(drt.WebSpectatorUrl)
+            ? drt.WebSpectatorUrl
+            : null;
     }
 }

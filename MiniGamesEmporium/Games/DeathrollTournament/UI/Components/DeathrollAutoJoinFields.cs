@@ -10,7 +10,7 @@ public static class DeathrollAutoJoinFields
     public static void Draw(PluginConfiguration config, string imguiSuffix, float fieldWidth)
     {
         var cfg = config.DeathrollTournament;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Auto Join");
+        ImGui.TextDisabled("Auto Join");
         ImGui.Spacing();
         var autoJoin = cfg.AutoJoinKeyword;
         if (ImGui.Checkbox($"Auto Join Keyword##DRAutoJoin_{imguiSuffix}", ref autoJoin))

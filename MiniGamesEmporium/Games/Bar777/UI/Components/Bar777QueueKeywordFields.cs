@@ -10,6 +10,8 @@ public static class Bar777QueueKeywordFields
 {
     public static void Draw(PluginConfiguration config, string imguiSuffix)
     {
+        ImGui.TextDisabled("Queue");
+        ImGui.Spacing();
         ImGui.TextDisabled("Queue join keyword");
         ImGui.Spacing();
         var keyword = config.QueueKeyword;

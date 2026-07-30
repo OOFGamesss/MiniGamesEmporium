@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 using Dalamud.Bindings.ImGui;
@@ -53,22 +54,21 @@ public sealed class HigherLowerPanel : IDisposable
         this.chatAutomation     = new HigherLowerChatAutomation(config, higherLowerService, chatQueue);
     }
 
-    public void Draw()
+    public static IReadOnlyList<GameSection> Sections { get; } =
+        [GameSection.Game, GameSection.Chat, GameSection.Settings];
+    public void DrawSection(GameSection section)
     {
         ImGui.Spacing();
-        using var chrome = new EmporiumNeonTheme.HigherLowerNestedTabChromeScope();
-        using var tabBar = ImRaii.TabBar("##HL_TabBar_v1");
-        if (!tabBar.Success) return;
-        DrawGameTab();
-        DrawChatSettingsTab();
-        DrawSettingsTab();
+        switch (section)
+        {
+            case GameSection.Game:     DrawGameSection(); break;
+            case GameSection.Chat:     DrawChatSection(); break;
+            case GameSection.Settings: DrawSettingsSection(); break;
+        }
     }
 
-    private void DrawGameTab()
+    private void DrawGameSection()
     {
-        using var tab = ImRaii.TabItem("Game");
-        if (!tab.Success) return;
-
         var session = this.higherLowerService.GetActiveSession();
         if (session == null)
         {
@@ -80,18 +80,14 @@ public sealed class HigherLowerPanel : IDisposable
         this.gameTab.Draw(skipLeadingSpacing: true, reserveBottom: statsH, drawBottomPanel: this.leaderboardTab.DrawInline);
     }
 
-    private void DrawChatSettingsTab()
+    private void DrawChatSection()
     {
-        using var tab = ImRaii.TabItem("Chat");
-        if (!tab.Success) return;
         using var scroll = ImRaii.Child("##HLChatScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.chatSettingsTab.Draw();
     }
 
-    private void DrawSettingsTab()
+    private void DrawSettingsSection()
     {
-        using var tab = ImRaii.TabItem("Settings");
-        if (!tab.Success) return;
         this.settingsTab.Draw();
     }
 
@@ -139,7 +135,7 @@ public sealed class HigherLowerPanel : IDisposable
 
     private void DrawStartDoorBody()
     {
-        ImGui.TextColored(EmporiumNeonTheme.HigherLowerOrange, "Start a Session");
+        UIHelper.DrawStartSessionHeading(EmporiumNeonTheme.HigherLowerOrange);
         ImGui.Spacing();
         HigherLowerPreSessionSettingsFields.Draw(this.config);
         ImGui.Spacing();

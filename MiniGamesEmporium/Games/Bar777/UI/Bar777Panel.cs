@@ -13,6 +13,7 @@ using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.Utility;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 /// <summary>Top-level UI panel for BAR 777.</summary>
@@ -57,21 +58,20 @@ public sealed class Bar777Panel : IDisposable
     {
         this.chatAutomation.Dispose();
     }
-    public void Draw()
+    public static IReadOnlyList<GameSection> Sections { get; } =
+        [GameSection.Game, GameSection.Chat, GameSection.Settings];
+    public void DrawSection(GameSection section)
     {
         ImGui.Spacing();
-        using var bar777TabsChrome = new EmporiumNeonTheme.Bar777NestedTabChromeScope();
-        using var tabBar = ImRaii.TabBar("##Bar777_TabBar_v8");
-        if (!tabBar.Success) return;
-        DrawGameWithQueueTab();
-        DrawBar777ChatSettingsTab();
-        DrawBar777SettingsTab();
+        switch (section)
+        {
+            case GameSection.Game:     DrawGameSection(); break;
+            case GameSection.Chat:     DrawChatSection(); break;
+            case GameSection.Settings: DrawSettingsSection(); break;
+        }
     }
-    private void DrawGameWithQueueTab()
+    private void DrawGameSection()
     {
-        using var tab = ImRaii.TabItem("Game");
-        if (!tab.Success)
-            return;
         var session = this.bar777SessionService.GetActiveSession();
         if (session == null || !Bar777GameIds.Matches(session.GameName))
         {
@@ -80,8 +80,7 @@ public sealed class Bar777Panel : IDisposable
         }
         if (!this.config.Bar777.UseQueue)
         {
-            var walkInHeightPx = MathF.Max(140f, ImGui.GetContentRegionAvail().Y);
-            using var gamePane = ImRaii.Child("##Bar777_GamePane", new Vector2(-1, walkInHeightPx), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+            using var gamePane = ImRaii.Child("##Bar777_GamePane", Vector2.Zero, false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
             if (gamePane.Success)
             {
                 this.gameTab.Draw(skipLeadingSpacing: true);
@@ -106,7 +105,8 @@ public sealed class Bar777Panel : IDisposable
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         {
-            using var gamePane = ImRaii.Child("##Bar777_GamePane", new Vector2(-1, splitHeightPx), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+            var cellH = ImGui.GetContentRegionAvail().Y;
+            using var gamePane = ImRaii.Child("##Bar777_GamePane", new Vector2(-1, cellH), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
             if (gamePane.Success)
             {
                 this.gameTab.Draw(skipLeadingSpacing: true);
@@ -146,10 +146,8 @@ public sealed class Bar777Panel : IDisposable
                 else this.bar777SessionService.PauseQueue();
             });
     }
-    private void DrawBar777ChatSettingsTab()
+    private void DrawChatSection()
     {
-        using var tab = ImRaii.TabItem("Chat");
-        if (!tab.Success) return;
         using var scroll = ImRaii.Child("##Bar777ChatScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.bar777ChatSettingsTab.Draw();
     }
@@ -218,7 +216,7 @@ public sealed class Bar777Panel : IDisposable
     }
     private void DrawBar777DoorStartBody()
     {
-        ImGui.TextColored(EmporiumNeonTheme.Bar777Red, "Start a Session");
+        UIHelper.DrawStartSessionHeading(EmporiumNeonTheme.Bar777Red);
         ImGui.Spacing();
         Bar777PreSessionSettingsFields.Draw(this.config);
         if (this.config.Bar777.UseQueue)
@@ -251,10 +249,8 @@ public sealed class Bar777Panel : IDisposable
         if (clicked)
             this.bar777SessionService.StartSession(Bar777GameIds.DisplayName, playerForSession);
     }
-    private void DrawBar777SettingsTab()
+    private void DrawSettingsSection()
     {
-        using var tab = ImRaii.TabItem("Settings");
-        if (!tab.Success) return;
         this.bar777SettingsTab.Draw();
     }
 }

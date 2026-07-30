@@ -10,7 +10,7 @@ public static class RaffleAutoJoinFields
     public static void Draw(PluginConfiguration config, string imguiSuffix, float fieldWidth)
     {
         var cfg = config.Raffle;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Auto Join");
+        ImGui.TextDisabled("Auto Join");
         ImGui.Spacing();
         var autoJoin = cfg.AutoJoinKeyword;
         if (ImGui.Checkbox($"Auto Join Keyword##RaffleAutoJoin_{imguiSuffix}", ref autoJoin))

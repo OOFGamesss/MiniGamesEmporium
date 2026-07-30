@@ -93,18 +93,20 @@ public sealed class RaffleGameTab
         ImGui.TableSetupColumn("##RaffleSideCol",   ImGuiTableColumnFlags.WidthFixed, RightPaneW);
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
-        using (var left = ImRaii.Child("##RafflePlayerPane", new Vector2(-1f, splitH), false, ImGuiWindowFlags.NoScrollbar))
-            if (left.Success) DrawLeftColumn(state, splitH);
+        var leftH = ImGui.GetContentRegionAvail().Y;
+        using (var left = ImRaii.Child("##RafflePlayerPane", new Vector2(-1f, leftH), false, ImGuiWindowFlags.NoScrollbar))
+            if (left.Success) DrawLeftColumn(state);
         ImGui.TableSetColumnIndex(1);
-        using (var right = ImRaii.Child("##RaffleSidePane", new Vector2(-1f, splitH), false))
+        var rightH = ImGui.GetContentRegionAvail().Y;
+        using (var right = ImRaii.Child("##RaffleSidePane", new Vector2(-1f, rightH), false, ImGuiWindowFlags.NoScrollbar))
             if (right.Success) DrawSidePane(state);
     }
 
-    private void DrawLeftColumn(RaffleState state, float splitH)
+    private void DrawLeftColumn(RaffleState state)
     {
         var showKept = state.TradesToPotPercentAtStart < 100;
         var bottomH  = GetStatsHeight(showKept);
-        var listH    = MathF.Max(80f, splitH - bottomH - ImGui.GetStyle().ItemSpacing.Y);
+        var listH    = MathF.Max(80f, ImGui.GetContentRegionAvail().Y - bottomH - ImGui.GetStyle().ItemSpacing.Y);
         using (var listChild = ImRaii.Child("##RaffleListRegion", new Vector2(-1f, listH), false, ImGuiWindowFlags.NoScrollbar))
             if (listChild.Success) DrawPlayerList(state);
         DrawBottomStats(state, showKept);

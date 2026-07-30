@@ -12,7 +12,7 @@ public static class DeathrollBettingFields
     public static void Draw(PluginConfiguration config, string imguiSuffix, float fieldWidth)
     {
         var cfg = config.DeathrollTournament;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Betting");
+        ImGui.TextDisabled("Betting");
         ImGui.Spacing();
         var enabled = cfg.BettingEnabled;
         if (ImGui.Checkbox($"Enable Betting##DRBetEnabled_{imguiSuffix}", ref enabled))
@@ -24,8 +24,12 @@ public static class DeathrollBettingFields
         ImGui.Spacing();
         ImGui.Indent();
         var betUnit = (int)cfg.BetUnit;
-        ImGui.TextDisabled("Bet Unit (Gil)");
-        ImGui.SetNextItemWidth(fieldWidth);
+        var betAvail = ImGui.GetContentRegionAvail().X;
+        var betWidth = fieldWidth <= 0f || betAvail <= 48f
+            ? fieldWidth
+            : MathF.Max(80f, MathF.Min(fieldWidth, betAvail - ImGui.GetFrameHeight() * 2f - 2f));
+        ImGui.TextDisabled("Bet Amount");
+        ImGui.SetNextItemWidth(betWidth);
         if (ImGuiEx.InputFancyNumeric($"##DRBetUnit_{imguiSuffix}", ref betUnit, 100_000))
         {
             cfg.BetUnit = Math.Max(0, betUnit);
@@ -43,7 +47,7 @@ public static class DeathrollBettingFields
             ImGui.Spacing();
             ImGui.Indent();
             var keyword = cfg.BetKeyword;
-            ImGui.TextDisabled("Bet keyword (followed by the target's name)");
+            ImGui.TextDisabled("Bet keyword");
             ImGui.SetNextItemWidth(fieldWidth);
             if (ImGui.InputText($"##DRBetKeyword_{imguiSuffix}", ref keyword, 32))
             {

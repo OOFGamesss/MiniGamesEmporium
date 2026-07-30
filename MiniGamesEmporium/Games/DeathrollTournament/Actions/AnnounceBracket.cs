@@ -21,7 +21,7 @@ public static class AnnounceBracket
         {
             if (string.IsNullOrEmpty(match.Player1) || string.IsNullOrEmpty(match.Player2)) continue;
             if (DeathrollGameIds.IsBye(match.Player1) || DeathrollGameIds.IsBye(match.Player2)) continue;
-            chatQueue.Enqueue($"{channel}  {PlayerInfoService.StripWorld(match.Player1)} vs {PlayerInfoService.StripWorld(match.Player2)}");
+            chatQueue.Enqueue($"{channel}  {PlayerInfoService.StripWorld(match.Player1)} vs {PlayerInfoService.StripWorld(match.Player2)}");
         }
     }
 

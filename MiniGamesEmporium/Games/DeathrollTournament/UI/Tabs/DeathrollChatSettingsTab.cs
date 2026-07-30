@@ -56,6 +56,7 @@ public sealed class DeathrollChatSettingsTab
         DrawPlaceholderRow("{bettarget}",     "The entrant a bet was placed on - bet gil request message only");
         DrawPlaceholderRow("{bettingpot}",    "Total betting pot in Gil");
         DrawPlaceholderRow("{betwinners}",    "Bettors who correctly bet on the tournament winner, joined by \", \"");
+        DrawPlaceholderRow("{url}",           "Live web spectator link - only filled in while a web session is running (Webview tab)");
     }
 
     private static void DrawPlaceholderRow(string token, string desc)
@@ -109,21 +110,21 @@ public sealed class DeathrollChatSettingsTab
         ImGui.Spacing();
         DrawMessageField(
             "Announce Bracket",
-            "Button: 'Announce Bracket' in the game panel.\nThe message will be sent along with the bracket matches:\n  {player1} vs {player2}",
+            "Button: 'Announce <round> Bracket' under Shouts in the game panel - only shown once the bracket exists.\nThe message will be sent along with the bracket matches:\n  {player1} vs {player2}",
             "##DRAnnounceBracketMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceBracketMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceBracketMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Matchup",
-            "Button: 'Announce Matchup' in the match tracker.  Also used for auto-announce below.",
+            "Button: 'Announce Matchup' under Match Shouts in the game panel.  Also used for auto-announce below.",
             "##DRAnnounceMatchupMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceMatchupMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceMatchupMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Prize",
-            "Button: 'Announce Prize' in the stats panel - works for a Gil pot, item, or custom prize via {prize}.  Also used for auto-announce below.",
+            "Button: 'Announce Prize' under Shouts in the game panel - works for a Gil pot, item, or custom prize via {prize}.  Also used for auto-announce below.",
             "##DRAnnouncePrizeMsg",
             () => this.config.DeathrollTournament.Chat.AnnouncePrizeMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnouncePrizeMessage = v; this.config.Save(); });
@@ -137,42 +138,42 @@ public sealed class DeathrollChatSettingsTab
         ImGui.Spacing();
         DrawMessageField(
             "Re-roll Random 10",
-            "Button: 'Re-roll Random 10' in the match tracker when both players tie their /random 10.  Also used for auto-announce below.",
+            "Button: 'Re-roll Random 10' under Match Shouts when both players tie their /random 10.  Also used for auto-announce below.",
             "##DRRerollRandom10Msg",
             () => this.config.DeathrollTournament.Chat.RerollRandom10Message,
             v  => { this.config.DeathrollTournament.Chat.RerollRandom10Message = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "First Player",
-            "Button: 'First Player' in the match tracker after order rolls resolve.  Also used for auto-announce below.",
+            "Button: 'First Player' under Match Shouts after order rolls resolve.  Also used for auto-announce below.",
             "##DRFirstPlayerMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceFirstPlayerMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceFirstPlayerMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Round Win",
-            "Button: 'Announce Round Win' in the match tracker after a game ends but the series continues.  Also used for auto-announce below.",
+            "Button: 'Announce Round Win' under Match Shouts after a game ends but the series continues.  Also used for auto-announce below.",
             "##DRRoundWinMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceRoundWinMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceRoundWinMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Match Win",
-            "Button: 'Announce Match Win' in the match tracker when the series is decided.  Also used for auto-announce below.",
+            "Button: 'Announce Match Win' under Match Shouts when the series is decided.  Also used for auto-announce below.",
             "##DRMatchWinMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceMatchWinMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceMatchWinMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Betting Open",
-            "Button: 'Announce Betting Open' in the Betting tab.  Also used for auto-announce below.",
+            "Button: 'Announce Betting Open' under Shouts in the Betting tab.  Also used for auto-announce below.",
             "##DRAnnounceBettingOpenMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceBettingOpenMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceBettingOpenMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Announce Betting Pot",
-            "Button: 'Announce Pot' in the Betting tab.",
+            "Button: 'Announce Betting Pot' under Shouts in the Betting tab.",
             "##DRAnnounceBettingPotMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceBettingPotMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceBettingPotMessage = v; this.config.Save(); });
@@ -197,6 +198,13 @@ public sealed class DeathrollChatSettingsTab
             "##DRAnnounceBetWinnersMsg",
             () => this.config.DeathrollTournament.Chat.AnnounceBetWinnersMessage,
             v  => { this.config.DeathrollTournament.Chat.AnnounceBetWinnersMessage = v; this.config.Save(); });
+        ImGui.Spacing();
+        DrawMessageField(
+            "Announce Web Link",
+            "Button: 'Announce Web Link' under Shouts in the game panel - only shown while a web session is live.  Use {url} for the spectator link.",
+            "##DRAnnounceWebviewMsg",
+            () => this.config.DeathrollTournament.Chat.AnnounceWebviewMessage,
+            v  => { this.config.DeathrollTournament.Chat.AnnounceWebviewMessage = v; this.config.Save(); });
     }
 
     private void DrawAutoSection()

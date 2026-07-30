@@ -24,15 +24,14 @@ The plugin lives inside FFXIV via the [Dalamud](https://github.com/goatcorp/Dala
 | **Deathroll Tournament** | ✅ Live |
 | **Higher/Lower** | ✅ Live |
 | **Raffle** | ✅ Live |
+| **Voting Madness** | ✅ Live |
 | Minefield Gambit | 🔜 Coming Soon |
-| Gambler Derby | 🔜 Coming Soon |
 | Beer Pong | 🔜 Coming Soon |
 | Darts | 🔜 Coming Soon |
 | 8 Ball Pool | 🔜 Coming Soon |
 | Russian Roulette | 🔜 Coming Soon |
 | Raid Boss | 🔜 Coming Soon |
 | Deal or No Deal | 🔜 Coming Soon |
-| Voting Madness | 🔜 Coming Soon |
 
 Each game gets its own tab inside the plugin's **Mini Games** section, styled in its own neon accent colour. The main window also holds a **Transaction History** ledger and a top-level **Settings** tab.
 
@@ -426,6 +425,92 @@ Once a winner is drawn, the winner screen shows the pot, the amount traded to th
 > **Session Complete: Winner**
 >
 > ![Session Complete: Winner](MiniGamesEmporium/Images/Screenshots/raffle-win.png)
+
+---
+
+## Voting Madness
+
+Voting Madness is a keyword poll. The host sets two or more voting options, players cast votes by saying an option keyword in chat, and the plugin tallies results on a live colour-coded bar chart. When the host stops the vote, the winning option (or a tie) can be announced with a custom shout.
+
+### How It Works
+
+1. The host opens the Voting Madness door, adds at least two voting options, chooses which chats to listen on, sets the vote rules and an optional closing time, then clicks **Start Session**.
+2. Players cast a vote by saying an option keyword as a whole word in an enabled chat channel (Say, Shout, Yell, or Tell). The host's own messages are ignored.
+3. The Game tab shows a live bar chart of the tallies and a voter table of every player who has voted.
+4. When ready, the host clicks **Stop Vote**. Voting closes and the Vote Ended shout is sent automatically.
+5. The host clicks **Announce Winning Vote** to shout the winner, or the tie message if two or more options share the lead.
+6. **Stop Session** clears the session and writes the result to session history.
+
+### Vote Options & Rules
+
+Set on the door before the session starts (also editable on the Settings tab when no session is active). Options and rules are locked while a session is running.
+
+| Option | Description |
+|---|---|
+| **Voting Options** | At least two unique keywords (defaults to Yes / No). Players vote by saying these words in chat |
+| **Listen on chats** | Which channels accept votes: Say, Shout, Yell, and/or Tell. At least one must be enabled to start |
+| **Multiple choice** | Players may vote for more than one option (one vote per option), across messages |
+| **Allow multiple votes per person** | Players may vote for the same option more than once |
+| **Closing Time (Server Time)** | Optional countdown target shown on the Game tab and used by the Closing Time shout |
+
+With both multiple-choice and multiple-votes off, each player may cast only a single vote for the session.
+
+### Closing Time
+
+The host can optionally set a closing time in Server Time on the door. This drives the **Time Left** countdown on the Game tab and the Closing Time chat announcement - it does not lock voting or stop the poll automatically. Voting stays open until the host clicks **Stop Vote**.
+
+### Statistics Panel
+
+The Statistics panel at the bottom of the Game tab shows the live tallies:
+
+| Row | Description |
+|---|---|
+| **Total Votes** | Number of votes cast this session |
+| **Unique Voters** | Number of distinct players who have voted |
+| **Leading Option** | The option currently ahead, or a tie list when more than one shares the top count |
+| **Time Left** | Countdown to the configured closing time (shown only when a closing time is set); displays "Closed" once that time has passed |
+
+### Automated Chat
+
+Voting Madness includes a full set of customisable message templates, each editable in the Chat tab. All are manual triggers from the Game tab (Vote Ended also fires automatically when **Stop Vote** is pressed):
+
+| Template | Trigger |
+|---|---|
+| Announce Options | Manually via **Announce Options** on the Game tab |
+| Vote Started | Manually via **Vote Started** on the Game tab |
+| Closing Time | Manually via **Closing Time** when a close time is set |
+| Standings | Manually via **Standings** on the Game tab |
+| Vote Ended | When **Stop Vote** is pressed, and available as a button afterwards |
+| Announce Winning Vote | Manually via **Announce Winning Vote** after the vote is stopped |
+| Announce Tie | Used instead of Announce Winning Vote when options are tied |
+
+Placeholders available in the templates include `{options}`, `{standings}`, `{winner}`, `{votes}`, `{percent}`, `{totalvotes}`, `{voters}`, `{closetime}`, and `{timeleft}`.
+
+All outbound messages are queued with a one-second gap between each to stay within FFXIV's chat rate limits.
+
+### Screenshots
+
+> **Session Tab (Pre-Session)**
+>
+> ![Session Tab (Pre-Session)](MiniGamesEmporium/Images/Screenshots/vm-session.png)
+
+---
+
+> **Game Tab: Voting Open**
+>
+> ![Game Tab: Voting Open](MiniGamesEmporium/Images/Screenshots/vm-game.png)
+
+---
+
+> **Game Tab: Vote Closed**
+>
+> ![Game Tab: Vote Closed](MiniGamesEmporium/Images/Screenshots/vm-closed.png)
+
+---
+
+> **Chat Settings Tab**
+>
+> ![Chat Settings Tab](MiniGamesEmporium/Images/Screenshots/vm-chat.png)
 
 ---
 

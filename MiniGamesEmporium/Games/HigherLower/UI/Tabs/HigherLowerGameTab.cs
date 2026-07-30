@@ -69,17 +69,18 @@ public sealed class HigherLowerGameTab
         ImGui.TableSetupColumn("##HLLeaderboardCol", ImGuiTableColumnFlags.WidthFixed, RightPaneW);
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
+        var cellH = ImGui.GetContentRegionAvail().Y;
         var colTopY = ImGui.GetCursorPosY();
-        DrawGamePane(session, MathF.Max(100f, fullH - reserveBottom));
+        DrawGamePane(session, MathF.Max(100f, cellH - reserveBottom));
         if (drawBottomPanel != null)
         {
-            var targetY = colTopY + fullH - reserveBottom;
+            var targetY = colTopY + cellH - reserveBottom;
             if (targetY > ImGui.GetCursorPosY())
                 ImGui.SetCursorPosY(targetY);
             drawBottomPanel();
         }
         ImGui.TableSetColumnIndex(1);
-        DrawLeaderboardPane(fullH);
+        DrawLeaderboardPane(ImGui.GetContentRegionAvail().Y);
     }
 
     private void DrawGamePane(ActiveSession session, float height)

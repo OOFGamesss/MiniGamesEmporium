@@ -73,6 +73,14 @@ internal static class UIHelper
         return clicked;
     }
 
+    internal static void SectionHeader(string label, Vector4 colour)
+    {
+        ImGui.TextColored(colour, label);
+        ImGuiHelpers.ScaledDummy(2f);
+        ImGui.Separator();
+        ImGuiHelpers.ScaledDummy(6f);
+    }
+
     internal static Vector2 CalcButtonSize(FontAwesomeIcon icon, string label)
     {
         var iconFont = UiBuilder.IconFont;
@@ -92,6 +100,19 @@ internal static class UIHelper
         return new Vector2(
             style.FramePadding.X * 2 + contentW,
             style.FramePadding.Y * 2 + height);
+    }
+
+    internal static void DrawStartSessionHeading(Vector4 colour)
+    {
+        const string label = "Start a Session";
+        const float scale = 1.35f;
+        ImGui.SetWindowFontScale(scale);
+        var textSize = ImGui.CalcTextSize(label);
+        var availX = ImGui.GetContentRegionAvail().X;
+        var cursorX = ImGui.GetCursorPosX();
+        ImGui.SetCursorPosX(cursorX + MathF.Max(0f, (availX - textSize.X) * 0.5f));
+        ImGui.TextColored(colour, label);
+        ImGui.SetWindowFontScale(1f);
     }
 
     internal static ImRaii.ColorDisposable PushGreenButtonColours() =>

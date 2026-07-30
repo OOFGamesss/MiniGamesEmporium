@@ -1,72 +1,67 @@
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Components;
-using Dalamud.Interface.Utility.Raii;
-using Dalamud.Utility;
+using Dalamud.Interface.Utility;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.UI.Components;
 
-/// <summary>Draws the global plugin Settings tab.</summary>
+/// <summary>Draws the global plugin settings sections.</summary>
 
 namespace MiniGamesEmporium.UI.Tabs;
 public sealed class SettingsTab
 {
-    private const string OofGamesDiscordUrl = "https://discord.gg/vM6ff4h5Ym";
+    private const float FieldWidth = 320f;
+    private const int GameKeyBufferLength = 128;
 
     private readonly PluginConfiguration config;
     public SettingsTab(PluginConfiguration config)
     {
         this.config = config;
     }
-    public void Draw()
+
+    public void DrawWebviewSetupSection()
     {
         ImGui.Spacing();
-        using var tabBar = ImRaii.TabBar("##MGE_Settings_TabBar");
-        if (!tabBar.Success) return;
-        DrawWebviewSetupTab();
-        DrawOtherSettingsTab();
+        UIHelper.SectionHeader("Web Spectator", EmporiumNeonTheme.NeonCyan);
+        ImGui.TextWrapped("Mirror games to the OOF Games website so anyone can watch live in a browser.");
+        ImGuiHelpers.ScaledDummy(8f);
+
+        DrawGameKeySection();
     }
 
-    private void DrawWebviewSetupTab()
+    private void DrawGameKeySection()
     {
-        using var tab = ImRaii.TabItem("Webview Setup");
-        if (!tab.Success) return;
-        ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Webview Setup");
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.TextDisabled("Mirror games to the OOF Games website so anyone can watch live in a browser.");
-        ImGui.Spacing();
+        UIHelper.SectionHeader("Game Key", EmporiumNeonTheme.NeonCyan);
 
         var key = this.config.Webview.ApiHostKey;
-        ImGui.TextUnformatted("Host API Key:");
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(320);
-        if (ImGui.InputText("##mge_api_host_key", ref key, 128, ImGuiInputTextFlags.Password))
+
+        ImGui.SetNextItemWidth(FieldWidth * ImGuiHelpers.GlobalScale);
+        if (ImGui.InputText("##mge_game_key", ref key, GameKeyBufferLength, ImGuiInputTextFlags.Password))
         {
             this.config.Webview.ApiHostKey = key.Trim();
             this.config.Save();
         }
+
         ImGui.SameLine();
-        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Get an API key FREE from the OOF Games Discord.");
-        ImGui.SameLine();
-        if (ImGuiComponents.IconButton("##mge_open_discord_api_key", FontAwesomeIcon.Globe))
-            Util.OpenLink(OofGamesDiscordUrl);
+        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Clear", "##mge_clear_game_key"))
+        {
+            this.config.Webview.ApiHostKey = string.Empty;
+            this.config.Save();
+        }
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip($"Open in browser:\n{OofGamesDiscordUrl}");
-        ImGui.Spacing();
-        ImGui.TextDisabled("Then open a game's Webview tab (e.g. Deathroll Tournament) to go live.");
+            ImGui.SetTooltip("Clear the saved game key from this plugin.");
+
+        ImGui.SameLine();
+        ImGui.TextDisabled("No key yet? See Support > Game Key.");
+
+        ImGuiHelpers.ScaledDummy(8f);
+        ImGui.TextDisabled("Then open a game's Webview section (e.g. Deathroll Tournament) to go live.");
     }
 
-    private void DrawOtherSettingsTab()
+    public void DrawOtherSettingsSection()
     {
-        using var tab = ImRaii.TabItem("Other Settings");
-        if (!tab.Success) return;
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Other Settings");
-        ImGui.Separator();
-        ImGui.Spacing();
+        UIHelper.SectionHeader("Other Settings", EmporiumNeonTheme.NeonCyan);
         ImGui.TextColored(EmporiumNeonTheme.Bar777Red, "BAR 777");
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Display Name");

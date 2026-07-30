@@ -3,6 +3,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using Dalamud.Plugin.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Actions;
 using MiniGamesEmporium.Games.DeathrollTournament.Automation;
 using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
@@ -13,6 +14,7 @@ using MiniGamesEmporium.Services;
 
 using MiniGamesEmporium.UI.Components;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 /// <summary>Top-level UI panel for Deathroll Tournament.</summary>
@@ -30,6 +32,8 @@ public sealed class DeathrollTournamentPanel : IDisposable
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
     private readonly SessionService sessionService;
+    private readonly DrtWebviewService webviewService;
+    private readonly ChatQueueService chatQueue;
     private readonly DeathrollBracketTab bracketTab;
     private readonly DeathrollChatSettingsTab chatSettingsTab;
     private readonly DeathrollSettingsTab settingsTab;
@@ -55,6 +59,8 @@ public sealed class DeathrollTournamentPanel : IDisposable
         this.config              = config;
         this.deathrollService    = deathrollService;
         this.sessionService      = sessionService;
+        this.webviewService      = webviewService;
+        this.chatQueue           = chatQueue;
         this.bracketTab          = new DeathrollBracketTab(config, deathrollService, bettingService, chatQueue, autoPayoutService, webviewService);
         this.chatSettingsTab     = new DeathrollChatSettingsTab(config);
         this.settingsTab         = new DeathrollSettingsTab(config);
@@ -72,79 +78,111 @@ public sealed class DeathrollTournamentPanel : IDisposable
         this.nextMatchAutomation.Dispose();
     }
 
-    public void Draw()
+    public static IReadOnlyList<GameSection> Sections { get; } =
+    [
+        GameSection.Game, GameSection.Betting, GameSection.Chat,
+        GameSection.Settings, GameSection.Webview, GameSection.Discord,
+    ];
+    public void DrawSection(GameSection section)
     {
         ImGui.Spacing();
-        using var chrome = new EmporiumNeonTheme.DeathrollTournamentNestedTabChromeScope();
-        using var tabBar = ImRaii.TabBar("##DR_TabBar_v2");
-        if (!tabBar.Success) return;
-        DrawBracketTab();
-        DrawBetsTab();
-        DrawChatTab();
-        DrawSettingsTab();
-        DrawDiscordTab();
-        DrawWebviewTab();
+        switch (section)
+        {
+            case GameSection.Game:     DrawGameSection(); break;
+            case GameSection.Chat:     DrawChatSection(); break;
+            case GameSection.Betting:  DrawBettingSection(); break;
+            case GameSection.Settings: DrawSettingsSection(); break;
+            case GameSection.Discord:  DrawDiscordSection(); break;
+            case GameSection.Webview:  DrawWebviewSection(); break;
+        }
     }
 
-    private void DrawBracketTab()
+    private void DrawGameSection()
     {
-        using var tab = ImRaii.TabItem("Game");
-        if (!tab.Success) return;
         if (!this.deathrollService.IsSessionActive())
         {
             DrawStartDoor();
             return;
         }
         ImGui.Spacing();
-        var statsH          = DeathrollStatsTab.GetInlineHeight(this.deathrollService.IsGilPrize());
-        var isPreTournament = !this.deathrollService.HasActiveTournament();
+        DrawShouts();
+        var statsH = DeathrollStatsTab.GetInlineHeight(this.deathrollService.IsGilPrize());
         this.bracketTab.Draw(
             skipLeadingSpacing: true,
             reserveBottom: statsH,
-            drawStatsInline: isPreTournament ? this.statsTab.DrawInline : null);
-        if (!isPreTournament)
+            drawStatsInline: this.statsTab.DrawInline);
+    }
+
+    private void DrawShouts()
+    {
+        using (var sections = ImRaii.Table("##DRShoutSections", 2, ImGuiTableFlags.BordersInnerV))
         {
-            var targetY = ImGui.GetContentRegionMax().Y - statsH;
-            if (targetY > ImGui.GetCursorPosY())
-                ImGui.SetCursorPosY(targetY);
-            this.statsTab.DrawInline();
+            if (sections.Success)
+            {
+                ImGui.TableSetupColumn("##DRGameShoutCol",  ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("##DRMatchShoutCol", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
+                DrawGameShouts();
+                ImGui.TableSetColumnIndex(1);
+                this.bracketTab.DrawMatchShouts();
+            }
+        }
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+    }
+
+    private void DrawGameShouts()
+    {
+        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, "Game Shouts");
+        ImGui.Spacing();
+        var row = new ShoutButtonRow();
+
+        var state = this.config.DeathrollTournamentSession;
+        if (state != null && state.Rounds.Count > 0)
+        {
+            using (UIHelper.PushYellowButtonColours())
+                if (row.Button(FontAwesomeIcon.Sitemap, $"Announce {state.CurrentRoundLabel()} Bracket", "##DRShoutBracket"))
+                    AnnounceBracket.Execute(this.config, this.chatQueue, state);
+        }
+
+        using (UIHelper.PushBlueButtonColours())
+            if (row.Button(FontAwesomeIcon.Trophy, "Announce Prize", "##DRShoutPrize"))
+                AnnouncePrize.Execute(this.config, this.chatQueue);
+
+        if (this.webviewService.SessionId != null)
+        {
+            using (UIHelper.PushGreenButtonColours())
+                if (row.Button(FontAwesomeIcon.Globe, "Announce Web Link", "##DRShoutWebLink"))
+                    AnnounceWebviewLink.Execute(this.config, this.chatQueue);
         }
     }
 
-    private void DrawChatTab()
+    private void DrawChatSection()
     {
-        using var tab = ImRaii.TabItem("Chat");
-        if (!tab.Success) return;
         using var scroll = ImRaii.Child("##DRChatScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.chatSettingsTab.Draw();
     }
 
-    private void DrawBetsTab()
+    private void DrawBettingSection()
     {
-        using var tab = ImRaii.TabItem("Betting");
-        if (!tab.Success) return;
         this.betsTab.Draw();
     }
 
-    private void DrawSettingsTab()
+    private void DrawSettingsSection()
     {
-        using var tab = ImRaii.TabItem("Settings");
-        if (!tab.Success) return;
         this.settingsTab.Draw();
     }
 
-    private void DrawDiscordTab()
+    private void DrawDiscordSection()
     {
-        using var tab = ImRaii.TabItem("Discord");
-        if (!tab.Success) return;
         using var scroll = ImRaii.Child("##DRDiscordScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.discordTab.Draw();
     }
 
-    private void DrawWebviewTab()
+    private void DrawWebviewSection()
     {
-        using var tab = ImRaii.TabItem("Webview");
-        if (!tab.Success) return;
         using var scroll = ImRaii.Child("##DRWebviewScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.webviewTab.Draw();
     }
@@ -215,7 +253,7 @@ public sealed class DeathrollTournamentPanel : IDisposable
 
     private void DrawStartDoorBody()
     {
-        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, "Start a Session");
+        UIHelper.DrawStartSessionHeading(EmporiumNeonTheme.DeathrollTournamentPink);
         ImGui.Spacing();
         DeathrollPreSessionSettingsFields.Draw(this.config);
         ImGui.Spacing();

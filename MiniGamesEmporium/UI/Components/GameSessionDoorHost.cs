@@ -98,6 +98,26 @@ public static class GameSessionDoorStyles
         SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
         ShellInsetBottom = 8f,
     };
+    public static GameSessionDoorStyle VotingMadnessStartDoor => new()
+    {
+        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
+        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
+        MinOuterContainerHeight = 260f,
+        MinTrackedContentSpan = 240f,
+        ContentBottomBleedPx = 12f,
+        SeedTrackedContentSpanPx = 280f,
+        ShellInsetBottom = 8f,
+    };
+    public static GameSessionDoorStyle VotingMadnessBlockingDoor => new()
+    {
+        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
+        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
+        MinOuterContainerHeight = 120f,
+        MinTrackedContentSpan = 96f,
+        ContentBottomBleedPx = 8f,
+        SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
+        ShellInsetBottom = 8f,
+    };
 }
 public static class KnownGameDoorModules
 {
@@ -105,6 +125,7 @@ public static class KnownGameDoorModules
     public const string DeathrollTournament = "DeathrollTournament";
     public const string HigherLower         = "HigherLower";
     public const string Raffle              = "Raffle";
+    public const string VotingMadness       = "VotingMadness";
 }
 public static class GameSessionDoorHost
 {
@@ -118,10 +139,9 @@ public static class GameSessionDoorHost
         ArgumentNullException.ThrowIfNull(gameModuleId);
         ArgumentNullException.ThrowIfNull(doorSurfaceId);
         ArgumentNullException.ThrowIfNull(drawDoorBody);
-        var vpSize = ImGui.GetContentRegionAvail();
         using var shell = ImRaii.Child(
             $"##GameDoorShell_{gameModuleId}_{doorSurfaceId}",
-            vpSize,
+            Vector2.Zero,
             false,
             ImGuiWindowFlags.NoScrollbar);
         if (!shell.Success)

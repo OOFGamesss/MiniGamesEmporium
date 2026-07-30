@@ -9,6 +9,8 @@ using MiniGamesEmporium.Games.HigherLower.Config;
 using MiniGamesEmporium.Games.HigherLower.Models;
 using MiniGamesEmporium.Games.Raffle.Config;
 using MiniGamesEmporium.Games.Raffle.State;
+using MiniGamesEmporium.Games.VotingMadness.Config;
+using MiniGamesEmporium.Games.VotingMadness.State;
 using MiniGamesEmporium.Models;
 
 /// <summary>Root plugin configuration serialised by Dalamud.</summary>
@@ -24,6 +26,7 @@ public class PluginConfiguration : IPluginConfiguration
     public DeathrollTournamentConfig DeathrollTournament { get; set; } = new();
     public HigherLowerConfig HigherLower { get; set; } = new();
     public RaffleConfig Raffle { get; set; } = new();
+    public VotingMadnessConfig VotingMadness { get; set; } = new();
     public string QueueKeyword { get; set; } = "!join";
     public QueueConfig QueueJoinChannels { get; set; } = new();
     public List<PluginPreset> Presets { get; set; } = new();
@@ -33,6 +36,7 @@ public class PluginConfiguration : IPluginConfiguration
     public DeathrollSessionInfo? DeathrollSession { get; set; } = null;
     public DeathrollTournamentState? DeathrollTournamentSession { get; set; } = null;
     public RaffleState? RaffleSession { get; set; } = null;
+    public VotingMadnessState? VotingMadnessSession { get; set; } = null;
     public ActiveSession? ActiveSession { get; set; } = null;
     public List<string> QueuedPlayers { get; set; } = new();
 

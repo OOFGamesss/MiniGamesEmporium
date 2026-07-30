@@ -16,7 +16,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 
-/// <summary>Draws the Betting tab for Deathroll Tournament: declaring, correcting and reviewing bets, and payout tracking.</summary>
+/// <summary>Draws the Betting tab for Deathroll Tournament.</summary>
 
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollBetsTab
@@ -79,8 +79,11 @@ public sealed class DeathrollBetsTab
             ImGui.TextDisabled("Betting is disabled for this session.");
             return;
         }
-        var panelH  = GetPotPanelHeight();
-        var scrollH = MathF.Max(60f, ImGui.GetContentRegionAvail().Y - panelH - ImGui.GetStyle().ItemSpacing.Y);
+        DrawShouts();
+        var panelH        = GetPotPanelHeight();
+        var outerPad      = ImGui.GetStyle().ItemSpacing.Y;
+        var bottomReserve = panelH + outerPad * 2f;
+        var scrollH       = MathF.Max(60f, ImGui.GetContentRegionAvail().Y - bottomReserve);
         using (var scroll = ImRaii.Child("##DeathrollBetsScroll", new Vector2(-1f, scrollH), false))
         {
             if (scroll.Success)
@@ -106,50 +109,44 @@ public sealed class DeathrollBetsTab
         DrawPotSummary();
     }
 
+    private void DrawShouts()
+    {
+        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Shouts");
+        ImGui.Spacing();
+        using (UIHelper.PushBlueButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Play, "Announce Betting Open", "##DRShoutBettingOpen"))
+                AnnounceBettingOpen.Execute(this.config, this.chatQueue);
+        ImGui.SameLine();
+        using (UIHelper.PushBlueButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Announce Betting Pot", "##DRShoutBettingPot"))
+                AnnounceBettingPot.Execute(this.config, this.chatQueue, this.bettingService.ComputeBettingPot());
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+    }
+
     private void DrawPotSummary()
     {
         var pot      = this.bettingService.ComputeBettingPot();
         var betUnit  = this.bettingService.GetBetUnit();
         var betCount = this.bettingService.ComputeConfirmedBetCount();
-        using var panel = ImRaii.Child("##DRBettingPotPanel", new Vector2(-1f, GetPotPanelHeight()), true, ImGuiWindowFlags.NoScrollbar);
+        using var panel = ImRaii.Child("##DRBettingPotPanel", new Vector2(-1f, GetPotPanelHeight()), true);
         if (!panel.Success) return;
         using var table = ImRaii.Table("##DRBettingPotTable", 3, ImGuiTableFlags.None, new Vector2(-1f, 0f));
         if (!table.Success) return;
         ImGui.TableSetupColumn("##DRBPLabel",  ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("##DRBPAction", ImGuiTableColumnFlags.WidthFixed, 170f);
         ImGui.TableSetupColumn("##DRBPValue",  ImGuiTableColumnFlags.WidthFixed, 160f);
-        DrawStatRow("Betting Pot", $"{pot:N0} Gil", EmporiumNeonTheme.WinGold,
-            FontAwesomeIcon.Bullhorn, "Announce Pot", "##DRAnnounceBettingPot",
-            () => AnnounceBettingPot.Execute(this.config, this.chatQueue, pot));
-        DrawStatRow("Bet Cost", $"{betUnit:N0} Gil", EmporiumNeonTheme.NeonCyan,
-            FontAwesomeIcon.Bullhorn, "Announce Open", "##DRAnnounceBettingOpen",
-            () => AnnounceBettingOpen.Execute(this.config, this.chatQueue));
+        DrawPlainStatRow("Betting Pot", $"{pot:N0} Gil", EmporiumNeonTheme.WinGold);
+        DrawPlainStatRow("Bet Cost", $"{betUnit:N0} Gil", EmporiumNeonTheme.NeonCyan);
         DrawPlainStatRow("Bet Count", betCount.ToString(), EmporiumNeonTheme.NeonMagenta);
     }
 
     private static float GetPotPanelHeight()
     {
-        var rowH = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
-        return 3 * rowH + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
-    }
-
-    private static void DrawStatRow(string label, string value, Vector4 valueColour, FontAwesomeIcon icon, string buttonLabel, string buttonId, Action onClick)
-    {
-        ImGui.TableNextRow();
-        ImGui.TableSetColumnIndex(0);
-        ImGui.TextDisabled(label);
-        ImGui.TableSetColumnIndex(1);
-        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(4f, 0f));
-        ImGui.PushStyleColor(ImGuiCol.Button,        YellButtonColour);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, YellButtonColourHovered);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  YellButtonColourActive);
-        var clicked = UIHelper.IconTextButton(icon, buttonLabel, buttonId);
-        ImGui.PopStyleColor(3);
-        ImGui.PopStyleVar();
-        if (clicked) onClick();
-        ImGui.TableSetColumnIndex(2);
-        ImGui.TextColored(valueColour, value);
+        var style = ImGui.GetStyle();
+        var rowH  = ImGui.GetTextLineHeight() + style.CellPadding.Y * 2f;
+        return 3 * rowH + 4f + style.WindowPadding.Y * 2f + 4f;
     }
 
     private static void DrawPlainStatRow(string label, string value, Vector4 valueColour)
@@ -273,9 +270,9 @@ public sealed class DeathrollBetsTab
             ImGui.TableSetColumnIndex(3);
             if (bet.IsPaid)
             {
-                ImGui.PushStyleColor(ImGuiCol.Button,        EmporiumNeonTheme.MainTabPurpleActive);
+                ImGui.PushStyleColor(ImGuiCol.Button,        EmporiumNeonTheme.EmporiumPurpleActive);
                 ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.58f, 0.16f, 0.80f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonActive,  EmporiumNeonTheme.MainTabPurple);
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive,  EmporiumNeonTheme.EmporiumPurple);
                 if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Mark as Unpaid", $"##DRBetPaid{bet.Id}", toggleBtnW))
                     toggleId = bet.Id;
                 ImGui.PopStyleColor(3);

@@ -18,9 +18,6 @@ public sealed class DeathrollStatsTab
     private readonly ChatQueueService chatQueue;
     private readonly HistoryService historyService;
     private int _donationInput = 0;
-    private static readonly Vector4 YellButtonColour        = new(0.72f, 0.55f, 0.00f, 1f);
-    private static readonly Vector4 YellButtonColourHovered = new(0.88f, 0.68f, 0.00f, 1f);
-    private static readonly Vector4 YellButtonColourActive  = new(0.58f, 0.44f, 0.00f, 1f);
 
     public DeathrollStatsTab(PluginConfiguration config, DeathrollTournamentService deathrollService, ChatQueueService chatQueue, HistoryService historyService)
     {
@@ -30,7 +27,7 @@ public sealed class DeathrollStatsTab
         this.historyService   = historyService;
     }
 
-    public static float GetInlineHeight(bool isGilPrize)
+    private static float ChildHeight(bool isGilPrize)
     {
         var rowH     = ImGui.GetTextLineHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
         var inputH   = ImGui.GetFrameHeight()    + ImGui.GetStyle().CellPadding.Y * 2f;
@@ -39,6 +36,9 @@ public sealed class DeathrollStatsTab
         if (isGilPrize) height += inputH;
         return height;
     }
+
+    public static float GetInlineHeight(bool isGilPrize) =>
+        ChildHeight(isGilPrize) + ImGui.GetStyle().ItemSpacing.Y * 2f;
 
     public void DrawInline()
     {
@@ -49,7 +49,8 @@ public sealed class DeathrollStatsTab
         var entryCost  = tournament?.EntryCostAtStart  ?? activeSession?.EntryCost  ?? cfg.EntryCost;
         var boostedPot = tournament?.BoostedPotAtStart ?? activeSession?.BoostedPot ?? cfg.BoostedPot;
         var isGilPrize = this.deathrollService.IsGilPrize();
-        using var child = ImRaii.Child("##DeathrollStatsPanel", new Vector2(-1, GetInlineHeight(isGilPrize)), true);
+        ImGui.Spacing();
+        using var child = ImRaii.Child("##DeathrollStatsPanel", new Vector2(-1, ChildHeight(isGilPrize)), true);
         if (!child.Success) return;
         using var table = ImRaii.Table("##DeathrollStatsTable", 3, ImGuiTableFlags.None, new Vector2(-1, 0));
         if (!table.Success) return;
@@ -75,16 +76,6 @@ public sealed class DeathrollStatsTab
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         ImGui.TextDisabled(isGilPrize ? "Total Pot" : "Prize");
-        ImGui.TableSetColumnIndex(1);
-        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + 2f);
-        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(4f, 0f));
-        ImGui.PushStyleColor(ImGuiCol.Button,        YellButtonColour);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, YellButtonColourHovered);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  YellButtonColourActive);
-        var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Prize", "##DRYellPrize");
-        ImGui.PopStyleColor(3);
-        ImGui.PopStyleVar();
-        if (clicked) AnnouncePrize.Execute(this.config, this.chatQueue);
         ImGui.TableSetColumnIndex(2);
         if (isGilPrize)
         {

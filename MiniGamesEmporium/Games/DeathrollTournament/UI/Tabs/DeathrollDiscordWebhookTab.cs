@@ -70,24 +70,24 @@ public sealed class DeathrollDiscordWebhookTab
         EnsureAppearanceInitialised();
 
         ImGuiHelpers.ScaledDummy(8f);
-        DrawSectionHeader("Webhook setup");
+        UIHelper.SectionHeader("Webhook setup", EmporiumNeonTheme.DeathrollTournamentPink);
         DrawSetupGuide();
         ImGui.Separator();
         ImGuiHelpers.ScaledDummy(6f);
 
-        DrawSectionHeader("Webhook URLs");
+        UIHelper.SectionHeader("Webhook URLs", EmporiumNeonTheme.DeathrollTournamentPink);
         DrawWebhookList();
 
         ImGuiHelpers.ScaledDummy(6f);
-        DrawSectionHeader("Webhook appearance (Delete original webhook to reset)");
+        UIHelper.SectionHeader("Webhook appearance (Delete original webhook to reset)", EmporiumNeonTheme.DeathrollTournamentPink);
         DrawAppearanceRows();
 
         ImGuiHelpers.ScaledDummy(10f);
-        DrawSectionHeader("What this posts");
+        UIHelper.SectionHeader("What this posts", EmporiumNeonTheme.DeathrollTournamentPink);
         DrawPostDescription();
 
         ImGuiHelpers.ScaledDummy(10f);
-        DrawSectionHeader("Discord Preview");
+        UIHelper.SectionHeader("Discord Preview", EmporiumNeonTheme.DeathrollTournamentPink);
         DrawPreviewPair();
     }
 
@@ -258,16 +258,6 @@ public sealed class DeathrollDiscordWebhookTab
         ImGui.SameLine();
         ImGui.TextWrapped(text);
         ImGuiHelpers.ScaledDummy(2f);
-    }
-
-    private void DrawSectionHeader(string label)
-    {
-        using (ImRaii.PushColor(ImGuiCol.Text, EmporiumNeonTheme.DeathrollTournamentPink))
-            ImGui.TextUnformatted(label);
-        ImGuiHelpers.ScaledDummy(2f);
-        using (ImRaii.PushColor(ImGuiCol.Separator, EmporiumNeonTheme.DeathrollTournamentPink with { W = 0.5f }))
-            ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(6f);
     }
 
     private void DrawAppearanceRows()

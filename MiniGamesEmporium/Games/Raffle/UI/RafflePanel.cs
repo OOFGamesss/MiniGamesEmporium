@@ -10,6 +10,7 @@ using MiniGamesEmporium.Games.Raffle.Utility;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 /// <summary>Top-level UI panel for the Raffle game.</summary>
@@ -34,6 +35,7 @@ public sealed class RafflePanel : IDisposable
     private readonly RaffleChatSettingsTab chatTab;
     private readonly RaffleSettingsTab settingsTab;
     private readonly RaffleChatAutomation chatAutomation;
+    private readonly VenueCreditFooter venueCredit;
 
     public RafflePanel(
         PluginConfiguration config,
@@ -50,6 +52,7 @@ public sealed class RafflePanel : IDisposable
         this.chatTab        = new RaffleChatSettingsTab(config);
         this.settingsTab    = new RaffleSettingsTab(config);
         this.chatAutomation = new RaffleChatAutomation(config, service, chatQueue);
+        this.venueCredit    = new VenueCreditFooter("habitat.png", "Habitat");
     }
 
     public void Dispose()
@@ -57,21 +60,21 @@ public sealed class RafflePanel : IDisposable
         this.chatAutomation.Dispose();
     }
 
-    public void Draw()
+    public static IReadOnlyList<GameSection> Sections { get; } =
+        [GameSection.Game, GameSection.Chat, GameSection.Settings];
+    public void DrawSection(GameSection section)
     {
         ImGui.Spacing();
-        using var chrome = new EmporiumNeonTheme.RaffleNestedTabChromeScope();
-        using var tabBar = ImRaii.TabBar("##Raffle_TabBar_v1");
-        if (!tabBar.Success) return;
-        DrawGameTab();
-        DrawChatTab();
-        DrawSettingsTab();
+        switch (section)
+        {
+            case GameSection.Game:     DrawGameSection(); break;
+            case GameSection.Chat:     DrawChatSection(); break;
+            case GameSection.Settings: DrawSettingsSection(); break;
+        }
     }
 
-    private void DrawGameTab()
+    private void DrawGameSection()
     {
-        using var tab = ImRaii.TabItem("Game");
-        if (!tab.Success) return;
         if (!this.service.IsSessionActive())
         {
             DrawStartDoor();
@@ -80,18 +83,14 @@ public sealed class RafflePanel : IDisposable
         this.gameTab.Draw();
     }
 
-    private void DrawChatTab()
+    private void DrawChatSection()
     {
-        using var tab = ImRaii.TabItem("Chat");
-        if (!tab.Success) return;
         using var scroll = ImRaii.Child("##RaffleChatScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.chatTab.Draw();
     }
 
-    private void DrawSettingsTab()
+    private void DrawSettingsSection()
     {
-        using var tab = ImRaii.TabItem("Settings");
-        if (!tab.Success) return;
         this.settingsTab.Draw();
     }
 
@@ -110,12 +109,22 @@ public sealed class RafflePanel : IDisposable
         }
         DrawGameInfoCard();
         ImGui.Spacing();
-        GameSessionDoorHost.Draw(
-            KnownGameDoorModules.Raffle,
-            DoorSurfaceStart,
-            ref this.trackedStartDoorSpanPx,
-            GameSessionDoorStyles.RaffleStartDoor,
-            DrawStartDoorBody);
+        var doorAreaH = MathF.Max(120f, ImGui.GetContentRegionAvail().Y - VenueCreditFooter.RowHeight());
+        using (var doorArea = ImRaii.Child(
+                   "##RaffleDoorArea",
+                   new Vector2(-1f, doorAreaH),
+                   false,
+                   ImGuiWindowFlags.NoScrollbar))
+        {
+            if (doorArea.Success)
+                GameSessionDoorHost.Draw(
+                    KnownGameDoorModules.Raffle,
+                    DoorSurfaceStart,
+                    ref this.trackedStartDoorSpanPx,
+                    GameSessionDoorStyles.RaffleStartDoor,
+                    DrawStartDoorBody);
+        }
+        this.venueCredit.Draw();
     }
 
     private void DrawBlockingDoorBody(string blockingGameName)
@@ -153,7 +162,7 @@ public sealed class RafflePanel : IDisposable
 
     private void DrawStartDoorBody()
     {
-        ImGui.TextColored(EmporiumNeonTheme.RaffleTeal, "Start a Session");
+        UIHelper.DrawStartSessionHeading(EmporiumNeonTheme.RaffleTeal);
         ImGui.Spacing();
         RafflePreSessionSettingsFields.Draw(this.config);
         ImGui.Spacing();

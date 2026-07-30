@@ -11,7 +11,7 @@ public static class DeathrollPrizeFields
     public static void Draw(PluginConfiguration config, string imguiSuffix, float fieldWidth)
     {
         var cfg = config.DeathrollTournament;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Prize");
+        ImGui.TextDisabled("Prize");
         ImGui.Spacing();
 
         var prizeType = cfg.PrizeType;

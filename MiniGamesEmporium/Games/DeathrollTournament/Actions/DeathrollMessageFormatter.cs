@@ -63,6 +63,7 @@ public static class DeathrollMessageFormatter
             .Replace("{betkeyword}",    cfg.BetKeyword)
             .Replace("{bettarget}",     PlayerInfoService.StripWorld(betTarget))
             .Replace("{bettingpot}",    bettingPotOverride.ToString("N0"))
-            .Replace("{betwinners}",    betWinnersList);
+            .Replace("{betwinners}",    betWinnersList)
+            .Replace("{url}",           cfg.WebSpectatorUrl ?? string.Empty);
     }
 }

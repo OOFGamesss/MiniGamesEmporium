@@ -50,4 +50,6 @@ public class DeathrollTournamentChatConfig
     public string AnnounceBetWinnersMessage { get; set; } =
         "/shout {betwinners} correctly bet on {winner} and share the {bettingpot} Gil betting pot!";
     public bool AutoAnnounceBetWinners { get; set; } = false;
+    public string AnnounceWebviewMessage { get; set; } =
+        "/shout Want to join in the Deathroll Tournament? Sign up or watch the bracket in action here: {url}";
 }

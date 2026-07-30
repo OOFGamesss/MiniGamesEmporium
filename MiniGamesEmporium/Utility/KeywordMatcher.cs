@@ -8,7 +8,7 @@ using Dalamud.Game.Text.SeStringHandling;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
-/// <summary>Shared chat keyword detection: matches an enabled channel and keyword, resolves the sender to a queue name and excludes the host, and for bets extracts the target name that follows the keyword.</summary>
+/// <summary>Shared chat keyword detection used by the game keyword handlers.</summary>
 
 namespace MiniGamesEmporium.Utility;
 public static class KeywordMatcher
@@ -38,12 +38,36 @@ public static class KeywordMatcher
         };
     }
 
+    public static string? TryResolveVoter(QueueConfig channels, XivChatType kind, SeString? sender, PlayerInfoService playerInfo)
+    {
+        if (!channels.Matches(kind)) return null;
+        if (sender == null) return null;
+
+        var queueName = PlayerInfoService.BuildQueueName(sender);
+        if (string.IsNullOrWhiteSpace(queueName)) return null;
+        if (playerInfo.IsHost(queueName)) return null;
+        return queueName;
+    }
+
+    public static IReadOnlyList<(string Keyword, int Index)> FindWholeWordKeywords(string message, IEnumerable<string> keywords)
+    {
+        var found = new List<(string Keyword, int Index)>();
+        foreach (var keyword in keywords)
+        {
+            if (string.IsNullOrWhiteSpace(keyword)) continue;
+            var index = IndexOfWholeWord(message, keyword);
+            if (index >= 0)
+                found.Add((keyword, index));
+        }
+        return found.OrderBy(m => m.Index).ToList();
+    }
+
     private static string? TryResolveSender(QueueConfig channels, string keyword, XivChatType kind, SeString? sender, string message, PlayerInfoService playerInfo, out int keywordIndex)
     {
         keywordIndex = -1;
         if (!channels.Matches(kind)) return null;
         if (string.IsNullOrWhiteSpace(keyword)) return null;
-        keywordIndex = message.IndexOf(keyword, StringComparison.OrdinalIgnoreCase);
+        keywordIndex = IndexOfWholeWord(message, keyword);
         if (keywordIndex < 0) return null;
         if (sender == null) return null;
 
@@ -53,6 +77,32 @@ public static class KeywordMatcher
 
         return queueName;
     }
+
+    private static int IndexOfWholeWord(string message, string keyword)
+    {
+        var start = 0;
+        while (start <= message.Length - keyword.Length)
+        {
+            var index = message.IndexOf(keyword, start, StringComparison.OrdinalIgnoreCase);
+            if (index < 0) return -1;
+            if (IsWholeWordAt(message, keyword, index))
+                return index;
+            start = index + 1;
+        }
+        return -1;
+    }
+
+    private static bool IsWholeWordAt(string message, string keyword, int index)
+    {
+        if (index > 0 && IsWordChar(message[index - 1]))
+            return false;
+        var after = index + keyword.Length;
+        if (after < message.Length && IsWordChar(message[after]))
+            return false;
+        return true;
+    }
+
+    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
 
     private static string? TryFuzzyResolve(string typedText, IEnumerable<string> candidates)
     {
