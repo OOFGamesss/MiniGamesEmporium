@@ -14,8 +14,8 @@ using MiniGamesEmporium.Services;
 namespace MiniGamesEmporium.Games.Raffle.IPC;
 public sealed class RaffleRules : IDisposable
 {
-    private const string PluginName = "Mini Games Emporium";
-    private const string Category = "Mini Games";
+    private static readonly string PluginName = GambaWhereIds.PluginNameFor(RaffleGameIds.DisplayName);
+    private const string Category = GambaWhereIds.Category;
     private const string Gate = "GambaWhere.SubmitRules";
 
     private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(5);

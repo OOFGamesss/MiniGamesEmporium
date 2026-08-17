@@ -9,14 +9,19 @@ using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 using MiniGamesEmporium.Games.DeathrollTournament.Webview;
 using MiniGamesEmporium.Games.HigherLower.Services;
+using MiniGamesEmporium.Games.HigherLower.Utility;
 using MiniGamesEmporium.Games.Raffle.Services;
+using MiniGamesEmporium.Games.Raffle.Utility;
 using MiniGamesEmporium.Games.VotingMadness.Services;
+using MiniGamesEmporium.Games.VotingMadness.Utility;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.UI.Tabs;
 using System;
+using System.Linq;
 using System.Numerics;
 
 /// <summary>The main plugin window hosting the navigation sidebar and the selected section's content.</summary>
@@ -54,6 +59,9 @@ public sealed class MainWindow : Window, IDisposable
     private const string ActivePillLabel = "ACTIVE";
     private const string PausedPillLabel = "PAUSED";
     private const string LivePillLabel = "LIVE";
+    private const string PausedDoorSurface = "PausedDoor";
+    private const string ContinueSessionLabel = "Continue Session";
+    private const string StopSessionLabel = "Stop Session";
 
     private static readonly string[] SubItemLabels =
         ["Webview Setup", "Other Settings", "Help", "Game Key"];
@@ -102,6 +110,7 @@ public sealed class MainWindow : Window, IDisposable
     private bool pendingHLStopConfirm;
     private bool pendingRaffleStopConfirm;
     private bool pendingVotingMadnessStopConfirm;
+    private float trackedPausedDoorSpanPx = GameSessionDoorStyles.PausedSessionDoor.SeedTrackedContentSpanPx;
 
     public MainWindow(
         PluginConfiguration config,
@@ -130,7 +139,7 @@ public sealed class MainWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         this.transactionHistoryTab = new TransactionHistoryTab(historyService);
         this.sessionHistoryTab     = new SessionHistoryTab(historyService);
-        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, sessionService, chatQueue, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService, votingMadnessService);
+        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, chatQueue, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService, votingMadnessService);
         this.presetManagerTab      = new PresetManagerTab(config, presetService);
         this.settingsTab           = new SettingsTab(config);
         this.supportTab            = new SupportTab();
@@ -338,9 +347,9 @@ public sealed class MainWindow : Window, IDisposable
         if (!IsSessionActive(game))
             return (null, null);
 
-        return this.sessionService.IsPaused
-            ? (PausedPillLabel, PausedPillColour)
-            : (ActivePillLabel, Pulse(LivePillColour));
+        return this.sessionService.IsFocused(DisplayNameOf(game))
+            ? (ActivePillLabel, Pulse(LivePillColour))
+            : (PausedPillLabel, PausedPillColour);
     }
 
     private static Vector4 Pulse(Vector4 colour)
@@ -362,6 +371,16 @@ public sealed class MainWindow : Window, IDisposable
         MiniGame.Raffle              => this.raffleService.IsSessionActive(),
         MiniGame.VotingMadness       => this.votingMadnessService.IsSessionActive(),
         _ => false,
+    };
+
+    private static string DisplayNameOf(MiniGame game) => game switch
+    {
+        MiniGame.Bar777              => Bar777GameIds.DisplayName,
+        MiniGame.DeathrollTournament => DeathrollGameIds.DisplayName,
+        MiniGame.HigherLower         => HigherLowerGameIds.DisplayName,
+        MiniGame.Raffle              => RaffleGameIds.DisplayName,
+        MiniGame.VotingMadness       => VotingMadnessGameIds.DisplayName,
+        _ => string.Empty,
     };
 
     private void DrawSettingsNav()
@@ -428,12 +447,86 @@ public sealed class MainWindow : Window, IDisposable
     {
         switch (this.selected)
         {
-            case Tab.MiniGames:          this.miniGamesTab.Draw(this.selectedGame, this.selectedSection); break;
+            case Tab.MiniGames:          DrawMiniGamesContent(); break;
             case Tab.SessionHistory:     this.sessionHistoryTab.Draw(); break;
             case Tab.TransactionHistory: this.transactionHistoryTab.Draw(); break;
             case Tab.PresetManager:      this.presetManagerTab.Draw(); break;
             case Tab.Settings:           DrawSettingsContent(); break;
             case Tab.Support:            DrawSupportContent(); break;
+        }
+    }
+
+    private void DrawMiniGamesContent()
+    {
+        if (this.selectedSection == GameSection.Game && IsSessionPaused(this.selectedGame))
+        {
+            DrawPausedSessionDoor(this.selectedGame);
+            return;
+        }
+        this.miniGamesTab.Draw(this.selectedGame, this.selectedSection);
+    }
+
+    private bool IsSessionPaused(MiniGame game) =>
+        IsSessionActive(game) && !this.sessionService.IsFocused(DisplayNameOf(game));
+
+    private void DrawPausedSessionDoor(MiniGame game)
+    {
+        GameSessionDoorHost.Draw(
+            game.ToString(),
+            PausedDoorSurface,
+            ref this.trackedPausedDoorSpanPx,
+            GameSessionDoorStyles.PausedSessionDoor,
+            () => DrawPausedSessionDoorBody(game));
+    }
+
+    private void DrawPausedSessionDoorBody(MiniGame game)
+    {
+        var entry  = this.miniGamesTab.NavEntries.FirstOrDefault(e => e.Game == game);
+        var label  = entry?.Label() ?? DisplayNameOf(game);
+        var colour = entry?.Colour ?? EmporiumNeonTheme.WarningPanel;
+
+        ImGui.TextColored(colour, "Session Paused");
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        var focused = this.sessionService.FocusedGameName;
+        var message = focused != null
+            ? $"{label} still has a live session, but {focused} currently has control. Continue Session to move chat and trades to {label}."
+            : $"{label} still has a live session. Continue Session to resume chat listening and trades.";
+
+        var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
+        ImGui.PushTextWrapPos(wrapEnd);
+        ImGui.TextUnformatted(message);
+        ImGui.PopTextWrapPos();
+        ImGui.Spacing();
+
+        var style       = ImGui.GetStyle();
+        var continueW   = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, ContinueSessionLabel).X;
+        var stopW       = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, StopSessionLabel).X;
+        var totalWidth  = continueW + style.ItemSpacing.X + stopW;
+        var avail       = ImGui.GetContentRegionAvail().X;
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (avail - totalWidth) * 0.5f));
+
+        if (DrawColouredButton(FontAwesomeIcon.Play, ContinueSessionLabel, "##MGE_PausedDoorContinue",
+                ResumeButton, ResumeHovered, ResumeActive, EmporiumNeonTheme.MinefieldGreenDim))
+            this.sessionService.Focus(DisplayNameOf(game));
+
+        ImGui.SameLine();
+
+        if (DrawColouredButton(FontAwesomeIcon.Stop, StopSessionLabel, "##MGE_PausedDoorStop",
+                EmporiumNeonTheme.Bar777Red, StopHovered, StopActive, EmporiumNeonTheme.Bar777RedDim))
+            RequestStopConfirm(game);
+    }
+
+    private void RequestStopConfirm(MiniGame game)
+    {
+        switch (game)
+        {
+            case MiniGame.Bar777:              this.pendingStopConfirm = true; break;
+            case MiniGame.DeathrollTournament: this.pendingDeathrollStopConfirm = true; break;
+            case MiniGame.HigherLower:         this.pendingHLStopConfirm = true; break;
+            case MiniGame.Raffle:              this.pendingRaffleStopConfirm = true; break;
+            case MiniGame.VotingMadness:       this.pendingVotingMadnessStopConfirm = true; break;
         }
     }
 
@@ -460,24 +553,17 @@ public sealed class MainWindow : Window, IDisposable
         if (this.selected != Tab.MiniGames || !IsSessionActive(this.selectedGame))
             return;
 
-        switch (this.selectedGame)
+        var idSuffix = this.selectedGame switch
         {
-            case MiniGame.Bar777:
-                DrawSessionControlStrip("Stop Session", "Session", "Bar777", () => this.pendingStopConfirm = true);
-                break;
-            case MiniGame.DeathrollTournament:
-                DrawSessionControlStrip("Stop Tournament", "Tournament", "Deathroll", () => this.pendingDeathrollStopConfirm = true);
-                break;
-            case MiniGame.HigherLower:
-                DrawSessionControlStrip("Stop Session", "Session", "HL", () => this.pendingHLStopConfirm = true);
-                break;
-            case MiniGame.Raffle:
-                DrawSessionControlStrip("Stop Session", "Session", "Raffle", () => this.pendingRaffleStopConfirm = true);
-                break;
-            case MiniGame.VotingMadness:
-                DrawSessionControlStrip("Stop Session", "Session", "VM", () => this.pendingVotingMadnessStopConfirm = true);
-                break;
-        }
+            MiniGame.Bar777              => "Bar777",
+            MiniGame.DeathrollTournament => "Deathroll",
+            MiniGame.HigherLower         => "HL",
+            MiniGame.Raffle              => "Raffle",
+            MiniGame.VotingMadness       => "VM",
+            _ => null,
+        };
+        if (idSuffix == null) return;
+        DrawSessionControlStrip(DisplayNameOf(this.selectedGame), idSuffix, () => RequestStopConfirm(this.selectedGame));
     }
 
     private bool IsBar777SessionActive()
@@ -486,16 +572,16 @@ public sealed class MainWindow : Window, IDisposable
         return session != null && Bar777GameIds.Matches(session.GameName);
     }
 
-    private void DrawSessionControlStrip(string stopLabel, string pauseNoun, string idSuffix, Action onStop)
+    private void DrawSessionControlStrip(string gameName, string idSuffix, Action onStop)
     {
-        var isPaused   = this.sessionService.IsPaused;
-        var pauseLabel = isPaused ? $"Continue {pauseNoun}" : $"Pause {pauseNoun}";
+        var isPaused   = !this.sessionService.IsFocused(gameName);
+        var pauseLabel = isPaused ? ContinueSessionLabel : "Pause Session";
         var pauseIcon  = isPaused ? FontAwesomeIcon.Play : FontAwesomeIcon.Pause;
 
         var style = ImGui.GetStyle();
         var totalWidth = UIHelper.CalcButtonSize(pauseIcon, pauseLabel).X
             + style.ItemSpacing.X
-            + UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, stopLabel).X;
+            + UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, StopSessionLabel).X;
 
         var rightEdge = ImGui.GetWindowContentRegionMin().X + ImGui.GetContentRegionAvail().X;
         ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), rightEdge - totalWidth));
@@ -506,13 +592,13 @@ public sealed class MainWindow : Window, IDisposable
 
         if (pauseClicked)
         {
-            if (isPaused) this.sessionService.ResumeActiveGame();
-            else this.sessionService.PauseActiveGame();
+            if (isPaused) this.sessionService.Focus(gameName);
+            else this.sessionService.ClearFocus();
         }
 
         ImGui.SameLine();
 
-        if (DrawColouredButton(FontAwesomeIcon.Stop, stopLabel, "##MGE_Stop" + idSuffix,
+        if (DrawColouredButton(FontAwesomeIcon.Stop, StopSessionLabel, "##MGE_Stop" + idSuffix,
                 EmporiumNeonTheme.Bar777Red, StopHovered, StopActive, EmporiumNeonTheme.Bar777RedDim))
             onStop();
 
@@ -546,7 +632,7 @@ public sealed class MainWindow : Window, IDisposable
             "Stop BAR 777 session?", bar777Message, "Stop Session", this.bar777SessionService.CancelSession);
 
         DrawStopConfirmPopup(ref this.pendingDeathrollStopConfirm, "##DeathrollStopConfirm", EmporiumNeonTheme.DeathrollTournamentPink,
-            "Stop Deathroll Tournament?", "The tournament bracket and all session data will be cleared.", "Stop Tournament", this.deathrollService.StopSession);
+            "Stop Deathroll Tournament?", "The tournament bracket and all session data will be cleared.", StopSessionLabel, this.deathrollService.StopSession);
 
         DrawStopConfirmPopup(ref this.pendingHLStopConfirm, "##HLStopConfirm", EmporiumNeonTheme.HigherLowerOrange,
             "Stop Higher/Lower session?", "All session stats will be reset.", "Stop Session", this.higherLowerService.CancelSession);
@@ -578,7 +664,6 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.Spacing();
         if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, stopLabel, $"##Confirm{id}"))
         {
-            this.sessionService.ResumeActiveGame();
             onConfirm();
             ImGui.CloseCurrentPopup();
         }

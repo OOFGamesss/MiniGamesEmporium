@@ -1,4 +1,5 @@
 using MiniGamesEmporium.Games.Raffle.Services;
+using MiniGamesEmporium.Games.Raffle.Utility;
 using MiniGamesEmporium.Services;
 
 /// <summary>Captures the host's armed /random result as the raffle draw when a session is running.</summary>
@@ -14,6 +15,8 @@ public sealed class RaffleRollHandler : IChatRollHandler
         this.raffleService = raffleService;
         this.playerInfo    = playerInfo;
     }
+
+    public string GameName => RaffleGameIds.DisplayName;
 
     public void TryHandleRoll(string playerName, int rollValue, int rollMax)
     {

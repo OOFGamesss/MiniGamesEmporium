@@ -8,10 +8,10 @@ namespace MiniGamesEmporium.Services;
 public sealed class ChatQueueService : IDisposable
 {
     private readonly TaskManager taskManager = new();
-    public void Enqueue(string message)
+    public void Enqueue(string message, int delayMs = 1000)
     {
         taskManager.Enqueue(() => Chat.SendMessage(message));
-        taskManager.EnqueueDelay(1000);
+        taskManager.EnqueueDelay(delayMs);
     }
     public void EnqueueAction(Action action) => taskManager.Enqueue(action);
     public void Dispose() => taskManager.Dispose();

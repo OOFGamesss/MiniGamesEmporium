@@ -13,6 +13,8 @@ using MiniGamesEmporium.Services;
 namespace MiniGamesEmporium.Games.Raffle.Services;
 public sealed class RaffleService
 {
+    private static readonly Random Rng = new();
+
     private readonly PluginConfiguration config;
     private readonly HistoryService historyService;
 
@@ -39,6 +41,7 @@ public sealed class RaffleService
             BoostedPotAtStart          = Math.Max(0, cfg.BoostedPot),
             MaxTicketsPerPlayerAtStart = Math.Clamp(cfg.MaxTicketsPerPlayer, 1, RaffleGameIds.MaxTicketPoolSize),
             TradesToPotPercentAtStart  = Math.Clamp(cfg.TradesToPotPercent, 0, 100),
+            ShuffleModeAtStart         = cfg.ShuffleTicketNumbers,
             StartedAt                  = DateTime.UtcNow,
             CloseHour                  = cfg.CloseHour,
             CloseMinute                = cfg.CloseMinute,
@@ -264,6 +267,47 @@ public sealed class RaffleService
         }
     }
 
+    public bool AreNumbersHidden()
+    {
+        var state = this.config.RaffleSession;
+        return state != null && state.ShuffleModeAtStart && !state.HasShuffled;
+    }
+
+    public void ShuffleTicketNumbers()
+    {
+        var state = this.config.RaffleSession;
+        if (state == null || state.Blocks.Count == 0) return;
+
+        var owners = new List<(string Owner, int Count)>();
+        foreach (var b in state.Blocks.OrderBy(b => b.StartNumber))
+        {
+            var i = owners.FindIndex(o => NamesMatch(o.Owner, b.Owner));
+            if (i >= 0) owners[i] = (owners[i].Owner, owners[i].Count + b.Count);
+            else        owners.Add((b.Owner, b.Count));
+        }
+
+        var pool = Enumerable.Range(1, owners.Sum(o => o.Count)).ToList();
+        for (var i = pool.Count - 1; i > 0; i--)
+        {
+            var j = Rng.Next(i + 1);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
+        }
+
+        state.Blocks.Clear();
+        var cursor = 0;
+        foreach (var (owner, count) in owners)
+        {
+            var numbers = pool.GetRange(cursor, count);
+            cursor += count;
+            foreach (var (start, runLength) in Coalesce(numbers))
+                state.Blocks.Add(new TicketBlock { Owner = owner, StartNumber = start, Count = runLength });
+        }
+
+        state.HasShuffled = true;
+        Save();
+        SessionUpdated?.Invoke();
+    }
+
     public int ComputeFreeTicketCount()
     {
         var state = this.config.RaffleSession;
@@ -289,6 +333,7 @@ public sealed class RaffleService
 
     public string GetPlayerRangeLabel(string playerEntry)
     {
+        if (AreNumbersHidden()) return "pending shuffle";
         var blocks = GetPlayerBlocks(playerEntry);
         return blocks.Count == 0 ? "-" : string.Join(", ", blocks.Select(b => b.RangeLabel));
     }
@@ -342,6 +387,7 @@ public sealed class RaffleService
     {
         var state = this.config.RaffleSession;
         if (state == null || !CanDraw()) return;
+        if (state.ShuffleModeAtStart && !state.HasShuffled) ShuffleTicketNumbers();
         state.IsDrawArmed  = true;
         state.HasDrawn     = false;
         state.WinningNumber = null;

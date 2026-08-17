@@ -31,6 +31,7 @@ public sealed class RaffleChatAutomation : IDisposable
     private void OnTicketsAutoGranted(string playerEntry)
     {
         if (!this.config.Raffle.Chat.AutoSendTicketNumbers) return;
+        if (this.raffleService.AreNumbersHidden()) return;
         var numbers = this.raffleService.GetPlayerRangeLabel(playerEntry);
         TellTicketNumbers.Execute(playerEntry, numbers, this.config, this.chatQueue);
     }

@@ -4,7 +4,6 @@ using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
 using System;
 using System.Collections.Generic;
-using MiniGamesEmporium.Config;
 
 /// <summary>Dispatches chat roll and keyword events to the registered per-game handlers.</summary>
 
@@ -12,7 +11,6 @@ namespace MiniGamesEmporium.Services;
 public sealed class ChatListenerService : IDisposable
 {
     private readonly IChatGui chatGui;
-    private readonly PluginConfiguration config;
     private readonly SessionService sessionService;
     private readonly IReadOnlyList<IChatRollHandler> rollHandlers;
     private readonly IReadOnlyList<IChatKeywordHandler> keywordHandlers;
@@ -21,7 +19,6 @@ public sealed class ChatListenerService : IDisposable
 
     public ChatListenerService(
         IChatGui chatGui,
-        PluginConfiguration config,
         SessionService sessionService,
         IReadOnlyList<IChatRollHandler> rollHandlers,
         IReadOnlyList<IChatKeywordHandler> keywordHandlers,
@@ -29,7 +26,6 @@ public sealed class ChatListenerService : IDisposable
         IPluginLog log)
     {
         this.chatGui         = chatGui;
-        this.config          = config;
         this.sessionService  = sessionService;
         this.rollHandlers    = rollHandlers;
         this.keywordHandlers = keywordHandlers;
@@ -45,7 +41,8 @@ public sealed class ChatListenerService : IDisposable
 
     private void OnChatMessage(IHandleableChatMessage message)
     {
-        if (this.sessionService.IsPaused) return;
+        var focused = this.sessionService.FocusedGameName;
+        if (focused == null) return;
         var messageText = message.Message?.TextValue ?? string.Empty;
         var kind = message.LogKind;
         if (string.IsNullOrEmpty(messageText)) return;
@@ -58,7 +55,10 @@ public sealed class ChatListenerService : IDisposable
             {
                 this.log.Information($"Roll: {roll.PlayerName} rolled {roll.RollValue} (max: {roll.RollMax})");
                 foreach (var handler in this.rollHandlers)
+                {
+                    if (!IsFocusedHandler(handler.GameName, focused)) continue;
                     handler.TryHandleRoll(roll.PlayerName, roll.RollValue, roll.RollMax);
+                }
             }
             return;
         }
@@ -67,8 +67,14 @@ public sealed class ChatListenerService : IDisposable
 
         if (!IsKeywordChatKind(kind)) return;
         foreach (var handler in this.keywordHandlers)
+        {
+            if (!IsFocusedHandler(handler.GameName, focused)) continue;
             handler.TryHandleKeyword(message.Sender, messageText, kind);
+        }
     }
+
+    private static bool IsFocusedHandler(string handlerGame, string focusedGame) =>
+        handlerGame.Equals(focusedGame, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsKeywordChatKind(XivChatType kind) =>
         kind is XivChatType.Say or XivChatType.Shout or XivChatType.Yell or XivChatType.TellIncoming;
@@ -76,10 +82,12 @@ public sealed class ChatListenerService : IDisposable
 
 public interface IChatRollHandler
 {
+    string GameName { get; }
     void TryHandleRoll(string playerName, int rollValue, int rollMax);
 }
 
 public interface IChatKeywordHandler
 {
+    string GameName { get; }
     void TryHandleKeyword(SeString? sender, string message, XivChatType kind);
 }

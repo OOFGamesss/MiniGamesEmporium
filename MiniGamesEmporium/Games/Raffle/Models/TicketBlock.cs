@@ -14,5 +14,10 @@ public class TicketBlock
 
     public bool Contains(int number) => number >= StartNumber && number <= EndNumber;
 
-    public string RangeLabel => Count <= 1 ? $"{StartNumber}" : $"{StartNumber}-{EndNumber}";
+    public string RangeLabel => Count switch
+    {
+        <= 1 => $"{StartNumber}",
+        2    => $"{StartNumber}, {EndNumber}",
+        _    => $"{StartNumber}-{EndNumber}",
+    };
 }

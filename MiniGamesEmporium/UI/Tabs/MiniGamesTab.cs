@@ -57,7 +57,6 @@ public sealed class MiniGamesTab : IDisposable
     public MiniGamesTab(
         PluginConfiguration config,
         Bar777SessionService bar777SessionService,
-        SessionService sessionService,
         ChatQueueService chatQueue,
         DeathrollTournamentService deathrollService,
         DeathrollBettingService bettingService,
@@ -72,18 +71,18 @@ public sealed class MiniGamesTab : IDisposable
         VotingMadnessService votingMadnessService)
     {
         this.bar777SessionService     = bar777SessionService;
-        this.bar777Panel              = new Bar777Panel(config, bar777SessionService, sessionService, chatQueue, historyService, autoPayoutService);
-        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, chatQueue, sessionService, log, historyService, autoPayoutService);
-        this.rafflePanel              = new RafflePanel(config, raffleService, chatQueue, sessionService, historyService, autoPayoutService);
+        this.bar777Panel              = new Bar777Panel(config, bar777SessionService, chatQueue, historyService, autoPayoutService);
+        this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, chatQueue, log, historyService, autoPayoutService);
+        this.rafflePanel              = new RafflePanel(config, raffleService, chatQueue, historyService, autoPayoutService, playerInfoService);
         this.minefieldGambitPanel     = new MinefieldGambitPanel();
-        this.higherLowerPanel         = new HigherLowerPanel(config, higherLowerService, chatQueue, autoPayoutService, sessionService, playerInfoService, historyService);
+        this.higherLowerPanel         = new HigherLowerPanel(config, higherLowerService, chatQueue, autoPayoutService, playerInfoService, historyService);
         this.beerPongPanel            = new BeerPongPanel();
         this.dartsPanel               = new DartsPanel();
         this.eightBallPoolPanel       = new EightBallPoolPanel();
         this.russianRoulettePanel     = new RussianRoulettePanel();
         this.raidBossPanel            = new RaidBossPanel();
         this.dealOrNoDealPanel        = new DealOrNoDealPanel();
-        this.votingMadnessPanel       = new VotingMadnessPanel(config, votingMadnessService, chatQueue, sessionService);
+        this.votingMadnessPanel       = new VotingMadnessPanel(config, votingMadnessService, chatQueue);
         this.NavEntries =
         [
             new(MiniGame.Bar777, () => config.Bar777.CustomName, FontAwesomeIcon.Dice, EmporiumNeonTheme.Bar777Red, Bar777Panel.Sections),

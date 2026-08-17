@@ -26,12 +26,9 @@ public sealed class DeathrollTournamentPanel : IDisposable
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
     private const string DoorSurfaceStart    = "StartDoor";
-    private const string DoorSurfaceBlocking = "BlockingDoor";
     private float trackedStartDoorSpanPx    = GameSessionDoorStyles.DeathrollTournamentStartDoor.SeedTrackedContentSpanPx;
-    private float trackedBlockingDoorSpanPx = GameSessionDoorStyles.DeathrollTournamentBlockingDoor.SeedTrackedContentSpanPx;
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
-    private readonly SessionService sessionService;
     private readonly DrtWebviewService webviewService;
     private readonly ChatQueueService chatQueue;
     private readonly DeathrollBracketTab bracketTab;
@@ -51,14 +48,12 @@ public sealed class DeathrollTournamentPanel : IDisposable
         DeathrollWebhookService discordService,
         DrtWebviewService webviewService,
         ChatQueueService chatQueue,
-        SessionService sessionService,
         IPluginLog log,
         HistoryService historyService,
         AutoPayoutService autoPayoutService)
     {
         this.config              = config;
         this.deathrollService    = deathrollService;
-        this.sessionService      = sessionService;
         this.webviewService      = webviewService;
         this.chatQueue           = chatQueue;
         this.bracketTab          = new DeathrollBracketTab(config, deathrollService, bettingService, chatQueue, autoPayoutService, webviewService);
@@ -189,12 +184,6 @@ public sealed class DeathrollTournamentPanel : IDisposable
 
     private void DrawStartDoor()
     {
-        var blocking = this.sessionService.GetBlockingGameName("Deathroll Tournament");
-        if (blocking != null)
-        {
-            DrawActiveBlockingDoor(blocking);
-            return;
-        }
         DrawGameInfoCard();
         ImGui.Spacing();
         GameSessionDoorHost.Draw(
@@ -203,28 +192,6 @@ public sealed class DeathrollTournamentPanel : IDisposable
             ref this.trackedStartDoorSpanPx,
             GameSessionDoorStyles.DeathrollTournamentStartDoor,
             DrawStartDoorBody);
-    }
-
-    private void DrawActiveBlockingDoor(string blockingGameName)
-    {
-        GameSessionDoorHost.Draw(
-            KnownGameDoorModules.DeathrollTournament,
-            DoorSurfaceBlocking,
-            ref this.trackedBlockingDoorSpanPx,
-            GameSessionDoorStyles.DeathrollTournamentBlockingDoor,
-            () => DrawActiveBlockingDoorBody(blockingGameName));
-    }
-
-    private void DrawActiveBlockingDoorBody(string blockingGameName)
-    {
-        var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
-        ImGui.PushTextWrapPos(wrapEnd);
-        ImGui.TextColored(EmporiumNeonTheme.WarningPanel,
-            $"{blockingGameName} is currently running. Please end or discard the game to play Deathroll Tournament.");
-        ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Session", "##DRDiscardSession"))
-            this.sessionService.CancelActiveGame();
     }
 
     private float trackedGameInfoCardSpanPx = 80f;

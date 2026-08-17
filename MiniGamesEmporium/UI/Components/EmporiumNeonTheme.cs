@@ -43,7 +43,7 @@ public static class EmporiumNeonTheme
     public static readonly Vector4 EmporiumPurpleActive = new(0.44f, 0.12f, 0.66f, 1f);
     public const float StartDoorPanelWidth = 420f;
     public const float StartDoorEstimatedBodyHeight = 400f;
-    public const float BlockingDoorEstimatedBodyHeight = 180f;
+    public const float PausedDoorEstimatedBodyHeight = 180f;
     public const float StartDoorInnerPadX = 18f;
     public const float DoorContainerMinHeight = 240f;
     public readonly struct Scope : IDisposable

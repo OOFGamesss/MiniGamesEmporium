@@ -2,9 +2,13 @@ using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using ECommons.GameHelpers;
 using MiniGamesEmporium.Games.Bar777.Services;
+using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 using MiniGamesEmporium.Games.HigherLower.Services;
+using MiniGamesEmporium.Games.HigherLower.Utility;
 using MiniGamesEmporium.Games.Raffle.Services;
+using MiniGamesEmporium.Games.Raffle.Utility;
 using System;
 
 /// <summary>Forwards completed gil trades to the game services for payment verification.</summary>
@@ -40,23 +44,30 @@ public sealed class TradeListenerService : IDisposable
     private void OnTradeEnd(IPlayerCharacter? counterparty, TradeDetectionManager.TradeDescriptor? result)
     {
         if (result == null || counterparty == null) return;
-        var hasBar777Session = this.bar777SessionService.IsSessionActive();
-        var hasDRSession     = this.deathrollService.IsSessionActive();
-        var hasHLSession     = this.higherLowerService.IsSessionActive();
-        var hasRaffleSession = this.raffleService.IsSessionActive();
-        if (!hasBar777Session && !hasDRSession && !hasHLSession && !hasRaffleSession) return;
-
         var name  = counterparty.Name.TextValue;
         var world = counterparty.HomeWorld.Value.Name.ToString();
         if (result.ReceivedGil > 0)
         {
-            if (this.sessionService.IsPaused) return;
-            this.log.Information($"Trade complete: {name}@{world} gave {result.ReceivedGil:N0} gil.");
-            this.bar777SessionService.VerifyPayment(name, result.ReceivedGil, world);
-            this.deathrollService.TryAutoMarkPaid(name, result.ReceivedGil);
-            this.deathrollBettingService.TryAutoApplyBetTrade(name, result.ReceivedGil);
-            this.higherLowerService.TryVerifyPayment(name, result.ReceivedGil, world);
-            this.raffleService.TryAutoAddTickets(name, result.ReceivedGil, world);
+            var focused = this.sessionService.FocusedGameName;
+            if (focused == null) return;
+            this.log.Information($"Trade complete: {name}@{world} gave {result.ReceivedGil:N0} gil to {focused}.");
+            if (Bar777GameIds.Matches(focused))
+            {
+                this.bar777SessionService.VerifyPayment(name, result.ReceivedGil, world);
+            }
+            else if (DeathrollGameIds.Matches(focused))
+            {
+                this.deathrollService.TryAutoMarkPaid(name, result.ReceivedGil);
+                this.deathrollBettingService.TryAutoApplyBetTrade(name, result.ReceivedGil);
+            }
+            else if (HigherLowerGameIds.Matches(focused))
+            {
+                this.higherLowerService.TryVerifyPayment(name, result.ReceivedGil, world);
+            }
+            else if (RaffleGameIds.Matches(focused))
+            {
+                this.raffleService.TryAutoAddTickets(name, result.ReceivedGil, world);
+            }
         }
         else if (result.ReceivedGil < 0)
         {

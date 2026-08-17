@@ -2,48 +2,68 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-/// <summary>Tracks which game session is running so the host can only run one game at a time.</summary>
+/// <summary>Tracks which game sessions are running and which one holds chat focus. Any number of games may be live, but only the focused game receives chat and incoming trades.</summary>
 
 namespace MiniGamesEmporium.Services;
 public sealed class SessionService
 {
     private readonly List<GameRegistration> games = new();
-    private string? pausedGameName;
+    private readonly HashSet<string> knownActive = new(StringComparer.OrdinalIgnoreCase);
+    private string? focusedGameName;
 
-    public void RegisterGame(string displayName, Func<bool> isActive, Action cancel) =>
-        this.games.Add(new GameRegistration(displayName, isActive, cancel));
+    public void RegisterGame(string displayName, Func<bool> isActive) =>
+        this.games.Add(new GameRegistration(displayName, isActive));
 
-    public string? GetActiveGameName() =>
-        this.games.FirstOrDefault(g => g.IsActive())?.DisplayName;
-
-    public bool IsPaused
+    public string? FocusedGameName
     {
         get
         {
-            var active = GetActiveGameName();
-            if (active != null && string.Equals(active, this.pausedGameName, StringComparison.OrdinalIgnoreCase))
-                return true;
-            this.pausedGameName = null;
-            return false;
+            Reconcile();
+            return this.focusedGameName;
         }
     }
 
-    public void PauseActiveGame() => this.pausedGameName = GetActiveGameName();
-
-    public void ResumeActiveGame() => this.pausedGameName = null;
-
-    public string? GetBlockingGameName(string ownGameName)
+    public bool IsFocused(string gameName)
     {
-        var active = GetActiveGameName();
-        return active != null && !active.Equals(ownGameName, StringComparison.OrdinalIgnoreCase)
-            ? active : null;
+        Reconcile();
+        return this.focusedGameName != null
+            && this.focusedGameName.Equals(gameName, StringComparison.OrdinalIgnoreCase);
     }
 
-    public void CancelActiveGame()
+    public void Focus(string gameName)
     {
-        this.games.FirstOrDefault(g => g.IsActive())?.Cancel();
-        this.pausedGameName = null;
+        Reconcile();
+        var game = this.games.FirstOrDefault(g => g.DisplayName.Equals(gameName, StringComparison.OrdinalIgnoreCase));
+        if (game == null || !game.IsActive()) return;
+        this.focusedGameName = game.DisplayName;
     }
 
-    private sealed record GameRegistration(string DisplayName, Func<bool> IsActive, Action Cancel);
+    public void ClearFocus()
+    {
+        Reconcile();
+        this.focusedGameName = null;
+    }
+
+    private void Reconcile()
+    {
+        foreach (var game in this.games)
+        {
+            var isActive  = game.IsActive();
+            var wasActive = this.knownActive.Contains(game.DisplayName);
+            if (isActive == wasActive) continue;
+            if (isActive)
+            {
+                this.knownActive.Add(game.DisplayName);
+                this.focusedGameName = game.DisplayName;
+            }
+            else
+            {
+                this.knownActive.Remove(game.DisplayName);
+                if (game.DisplayName.Equals(this.focusedGameName, StringComparison.OrdinalIgnoreCase))
+                    this.focusedGameName = null;
+            }
+        }
+    }
+
+    private sealed record GameRegistration(string DisplayName, Func<bool> IsActive);
 }

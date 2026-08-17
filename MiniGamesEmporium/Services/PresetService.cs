@@ -171,16 +171,17 @@ public sealed class PresetService
         var s = this.config.Raffle;
         return new RaffleConfig
         {
-            TicketCost          = s.TicketCost,
-            MaxTicketsPerPlayer = s.MaxTicketsPerPlayer,
-            BoostedPot          = s.BoostedPot,
-            TradesToPotPercent  = s.TradesToPotPercent,
-            CloseHour           = s.CloseHour,
-            CloseMinute         = s.CloseMinute,
-            AutoJoinKeyword     = s.AutoJoinKeyword,
-            JoinKeyword         = s.JoinKeyword,
-            JoinChannels        = DeepClone(s.JoinChannels),
-            Chat                = DeepClone(s.Chat),
+            TicketCost           = s.TicketCost,
+            MaxTicketsPerPlayer  = s.MaxTicketsPerPlayer,
+            BoostedPot           = s.BoostedPot,
+            TradesToPotPercent   = s.TradesToPotPercent,
+            ShuffleTicketNumbers = s.ShuffleTicketNumbers,
+            CloseHour            = s.CloseHour,
+            CloseMinute          = s.CloseMinute,
+            AutoJoinKeyword      = s.AutoJoinKeyword,
+            JoinKeyword          = s.JoinKeyword,
+            JoinChannels         = DeepClone(s.JoinChannels),
+            Chat                 = DeepClone(s.Chat),
         };
     }
 
@@ -263,16 +264,17 @@ public sealed class PresetService
 
     private void ApplyRaffleSettings(RaffleConfig r)
     {
-        this.config.Raffle.TicketCost          = r.TicketCost;
-        this.config.Raffle.MaxTicketsPerPlayer = r.MaxTicketsPerPlayer;
-        this.config.Raffle.BoostedPot          = r.BoostedPot;
-        this.config.Raffle.TradesToPotPercent  = r.TradesToPotPercent;
-        this.config.Raffle.CloseHour           = r.CloseHour;
-        this.config.Raffle.CloseMinute         = r.CloseMinute;
-        this.config.Raffle.AutoJoinKeyword     = r.AutoJoinKeyword;
-        this.config.Raffle.JoinKeyword         = r.JoinKeyword;
-        this.config.Raffle.JoinChannels        = DeepClone(r.JoinChannels);
-        this.config.Raffle.Chat                = DeepClone(r.Chat);
+        this.config.Raffle.TicketCost           = r.TicketCost;
+        this.config.Raffle.MaxTicketsPerPlayer  = r.MaxTicketsPerPlayer;
+        this.config.Raffle.BoostedPot           = r.BoostedPot;
+        this.config.Raffle.TradesToPotPercent   = r.TradesToPotPercent;
+        this.config.Raffle.ShuffleTicketNumbers = r.ShuffleTicketNumbers;
+        this.config.Raffle.CloseHour            = r.CloseHour;
+        this.config.Raffle.CloseMinute          = r.CloseMinute;
+        this.config.Raffle.AutoJoinKeyword      = r.AutoJoinKeyword;
+        this.config.Raffle.JoinKeyword          = r.JoinKeyword;
+        this.config.Raffle.JoinChannels         = DeepClone(r.JoinChannels);
+        this.config.Raffle.Chat                 = DeepClone(r.Chat);
     }
 
     private void ApplyHigherLowerSettings(HigherLowerConfig h)
@@ -465,16 +467,17 @@ public sealed class PresetService
             return def != null ? DeepClone(def.Raffle) : new RaffleConfig();
         return new RaffleConfig
         {
-            TicketCost          = entry.TicketCost,
-            MaxTicketsPerPlayer = entry.MaxTicketsPerPlayer,
-            BoostedPot          = entry.BoostedPot,
-            TradesToPotPercent  = entry.TradesToPotPercent,
-            CloseHour           = entry.CloseHour,
-            CloseMinute         = entry.CloseMinute,
-            AutoJoinKeyword     = entry.AutoJoinKeyword,
-            JoinKeyword         = entry.JoinKeyword,
-            JoinChannels        = DeepClone(entry.JoinChannels),
-            Chat                = DeepClone(entry.Chat),
+            TicketCost           = entry.TicketCost,
+            MaxTicketsPerPlayer  = entry.MaxTicketsPerPlayer,
+            BoostedPot           = entry.BoostedPot,
+            TradesToPotPercent   = entry.TradesToPotPercent,
+            ShuffleTicketNumbers = entry.ShuffleTicketNumbers,
+            CloseHour            = entry.CloseHour,
+            CloseMinute          = entry.CloseMinute,
+            AutoJoinKeyword      = entry.AutoJoinKeyword,
+            JoinKeyword          = entry.JoinKeyword,
+            JoinChannels         = DeepClone(entry.JoinChannels),
+            Chat                 = DeepClone(entry.Chat),
         };
     }
 
@@ -562,16 +565,17 @@ public sealed class PresetService
         var s = this.config.Raffle;
         return new RaffleExportEntry
         {
-            TicketCost          = s.TicketCost,
-            MaxTicketsPerPlayer = s.MaxTicketsPerPlayer,
-            BoostedPot          = s.BoostedPot,
-            TradesToPotPercent  = s.TradesToPotPercent,
-            CloseHour           = s.CloseHour,
-            CloseMinute         = s.CloseMinute,
-            AutoJoinKeyword     = s.AutoJoinKeyword,
-            JoinKeyword         = s.JoinKeyword,
-            JoinChannels        = DeepClone(s.JoinChannels),
-            Chat                = DeepClone(s.Chat),
+            TicketCost           = s.TicketCost,
+            MaxTicketsPerPlayer  = s.MaxTicketsPerPlayer,
+            BoostedPot           = s.BoostedPot,
+            TradesToPotPercent   = s.TradesToPotPercent,
+            ShuffleTicketNumbers = s.ShuffleTicketNumbers,
+            CloseHour            = s.CloseHour,
+            CloseMinute          = s.CloseMinute,
+            AutoJoinKeyword      = s.AutoJoinKeyword,
+            JoinKeyword          = s.JoinKeyword,
+            JoinChannels         = DeepClone(s.JoinChannels),
+            Chat                 = DeepClone(s.Chat),
         };
     }
 

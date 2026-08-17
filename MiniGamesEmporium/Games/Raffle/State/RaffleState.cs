@@ -14,6 +14,8 @@ public class RaffleState
     public long BoostedPotAtStart { get; set; } = 0L;
     public int MaxTicketsPerPlayerAtStart { get; set; } = 999;
     public int TradesToPotPercentAtStart { get; set; } = 100;
+    public bool ShuffleModeAtStart { get; set; } = false;
+    public bool HasShuffled { get; set; } = false;
     public long PotAdjustment { get; set; } = 0L;
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
 

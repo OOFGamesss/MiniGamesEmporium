@@ -74,6 +74,7 @@ public sealed class RaffleExportEntry
     public int MaxTicketsPerPlayer { get; set; } = 999;
     public long BoostedPot { get; set; } = 0L;
     public int TradesToPotPercent { get; set; } = 100;
+    public bool ShuffleTicketNumbers { get; set; } = false;
     public int CloseHour { get; set; } = -1;
     public int CloseMinute { get; set; } = 0;
     public bool AutoJoinKeyword { get; set; } = false;

@@ -23,6 +23,8 @@ public sealed class Bar777KeywordHandler : IChatKeywordHandler
         this.playerInfo     = playerInfo;
     }
 
+    public string GameName => Bar777GameIds.DisplayName;
+
     public void TryHandleKeyword(SeString? sender, string message, XivChatType kind)
     {
         var session = this.config.ActiveSession;

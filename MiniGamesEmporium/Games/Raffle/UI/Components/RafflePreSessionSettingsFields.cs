@@ -17,6 +17,8 @@ public static class RafflePreSessionSettingsFields
         DrawMaxTickets(config);
         DrawTradesToPotPercent(config);
         ImGui.Spacing();
+        RaffleShuffleModeFields.Draw(config, "Door");
+        ImGui.Spacing();
         RaffleCloseTimeFields.DrawConfig(config, "Door", ResolvedWidth());
         ImGui.Spacing();
         RaffleAutoJoinFields.Draw(config, "Door", ResolvedWidth());

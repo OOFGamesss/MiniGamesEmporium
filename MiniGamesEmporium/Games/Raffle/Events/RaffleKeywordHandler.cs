@@ -2,6 +2,7 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Raffle.Services;
+using MiniGamesEmporium.Games.Raffle.Utility;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.Utility;
 
@@ -20,6 +21,8 @@ public sealed class RaffleKeywordHandler : IChatKeywordHandler
         this.raffleService = raffleService;
         this.playerInfo    = playerInfo;
     }
+
+    public string GameName => RaffleGameIds.DisplayName;
 
     public void TryHandleKeyword(SeString? sender, string message, XivChatType kind)
     {

@@ -112,6 +112,12 @@ public sealed class RaffleChatSettingsTab
         }
         ImGui.SameLine();
         ImGui.TextDisabled("- tells a registered player their numbers when a trade grants them tickets");
+        if (autoNumbers && this.config.Raffle.ShuffleTicketNumbers)
+        {
+            ImGui.Indent();
+            ImGui.TextDisabled("Shuffle mode: held back until you close the raffle, then use 'Send All Numbers'.");
+            ImGui.Unindent();
+        }
     }
 
     private static void DrawMessageField(string label, string hint, string id, Func<string> get, Action<string> set)

@@ -19,11 +19,12 @@ public sealed class HigherLowerRollHandler : IChatRollHandler
         this.playerInfo          = playerInfo;
     }
 
+    public string GameName => HigherLowerGameIds.DisplayName;
+
     public void TryHandleRoll(string playerName, int rollValue, int rollMax)
     {
-        var session = this.config.ActiveSession;
-        if (session == null || !HigherLowerGameIds.Matches(session.GameName)) return;
-        if (!session.PaymentVerified) return;
+        var session = this.higherLowerService.GetActiveSession();
+        if (session == null || !session.PaymentVerified) return;
         if (rollMax != this.config.HigherLower.DiceSides) return;
         if (!this.playerInfo.IsHost(playerName)) return;
         this.higherLowerService.RecordRoll(rollValue);

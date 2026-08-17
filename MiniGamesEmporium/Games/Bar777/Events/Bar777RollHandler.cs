@@ -19,6 +19,8 @@ public sealed class Bar777RollHandler : IChatRollHandler
         this.bar777SessionService = bar777SessionService;
     }
 
+    public string GameName => Bar777GameIds.DisplayName;
+
     public void TryHandleRoll(string playerName, int rollValue, int rollMax)
     {
         var session = this.config.ActiveSession;

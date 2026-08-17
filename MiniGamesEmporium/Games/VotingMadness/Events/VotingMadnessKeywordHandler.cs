@@ -2,6 +2,7 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.VotingMadness.Services;
+using MiniGamesEmporium.Games.VotingMadness.Utility;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.Utility;
 using System.Linq;
@@ -21,6 +22,8 @@ public sealed class VotingMadnessKeywordHandler : IChatKeywordHandler
         this.service    = service;
         this.playerInfo = playerInfo;
     }
+
+    public string GameName => VotingMadnessGameIds.DisplayName;
 
     public void TryHandleKeyword(SeString? sender, string message, XivChatType kind)
     {

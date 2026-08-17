@@ -10,8 +10,8 @@ namespace MiniGamesEmporium.IPC;
 
 public sealed class WindowOpenedIpc : IDisposable
 {
-    private const string PluginName = "Mini Games Emporium";
-    private const string Category = "Mini Games";
+    private const string PluginName = GambaWhereIds.PluginName;
+    private const string Category = GambaWhereIds.Category;
     private const string Gate = "GambaWhere.WindowOpened";
 
     private readonly ICallGateSubscriber<string, string, bool> _windowOpened;

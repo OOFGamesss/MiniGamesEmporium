@@ -7,6 +7,7 @@ using Dalamud.Plugin.Services;
 
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Services;
+using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.IPC;
 
 /// <summary>Pushes live BAR 777 session state to GambaWhere over IPC.</summary>
@@ -15,8 +16,8 @@ namespace MiniGamesEmporium.Games.Bar777.IPC;
 
 public sealed class Bar777Rules : IDisposable
 {
-    private const string PluginName = "Mini Games Emporium";
-    private const string Category = "Mini Games";
+    private static readonly string PluginName = GambaWhereIds.PluginNameFor(Bar777GameIds.DisplayName);
+    private const string Category = GambaWhereIds.Category;
     private const string Gate = "GambaWhere.SubmitRules";
 
     private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(5);
@@ -68,7 +69,7 @@ public sealed class Bar777Rules : IDisposable
 
     private GambaWhereRulesPayload? BuildPayload()
     {
-        if (_config.ActiveSession == null) return null;
+        if (!Bar777GameIds.Matches(_config.ActiveSession?.GameName)) return null;
 
         var bar      = _config.Bar777;
         var totalPot = Bar777SessionService.ComputeTotalPot(_config);

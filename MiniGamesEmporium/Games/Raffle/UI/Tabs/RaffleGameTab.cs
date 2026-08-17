@@ -47,6 +47,7 @@ public sealed class RaffleGameTab
     private readonly ChatQueueService chatQueue;
     private readonly HistoryService historyService;
     private readonly AutoPayoutService autoPayoutService;
+    private readonly PlayerInfoService playerInfo;
     private readonly ISharedImmediateTexture? trophyTexture;
 
     private string comboFilter = string.Empty;
@@ -59,13 +60,15 @@ public sealed class RaffleGameTab
         RaffleService service,
         ChatQueueService chatQueue,
         HistoryService historyService,
-        AutoPayoutService autoPayoutService)
+        AutoPayoutService autoPayoutService,
+        PlayerInfoService playerInfo)
     {
         this.config            = config;
         this.service           = service;
         this.chatQueue         = chatQueue;
         this.historyService    = historyService;
         this.autoPayoutService = autoPayoutService;
+        this.playerInfo        = playerInfo;
         var path = Path.Combine(
             MiniGamesEmporium.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty,
             "Images", "trophy.png");
@@ -163,6 +166,9 @@ public sealed class RaffleGameTab
         var isFree      = state.TicketCostAtStart == 0;
         var hasTickets  = tickets > 0;
         var atMax       = tickets >= state.MaxTicketsPerPlayerAtStart;
+        var canSendNums = hasTickets
+                          && !this.service.AreNumbersHidden()
+                          && !this.playerInfo.IsHost(entry.PlayerName);
 
         if (hasTickets)
             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(new Vector4(0.04f, 0.20f, 0.18f, 1f)));
@@ -182,7 +188,7 @@ public sealed class RaffleGameTab
 
         ImGui.TableSetColumnIndex(2);
 
-        if (hasTickets)
+        if (canSendNums)
         {
             using (UIHelper.PushBlueButtonColours())
                 if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Send Numbers", $"##RaffleNumbers{idx}"))
@@ -521,6 +527,26 @@ public sealed class RaffleGameTab
             using (Btn(MagentaBtn, MagentaBtnHover, MagentaBtnActive))
                 if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Join Reminder", "##RaffleAnnJoin"))
                     AnnounceJoinReminder.Execute(this.config, this.chatQueue);
+        if (!this.service.AreNumbersHidden() && this.service.ComputeTicketsSold() > 0)
+        {
+            using (Btn(TealBtn, TealBtnHovered, TealBtnActive))
+                if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Send All Numbers", "##RaffleSendAllNumbers"))
+                    SendAllTicketNumbers();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Tells every player with tickets their numbers");
+        }
+    }
+
+    private void SendAllTicketNumbers()
+    {
+        var state = this.service.GetState();
+        if (state == null) return;
+        foreach (var entry in state.Entries)
+        {
+            if (this.playerInfo.IsHost(entry.PlayerName)) continue;
+            if (this.service.GetPlayerTickets(entry.PlayerName) <= 0) continue;
+            TellTicketNumbers.Execute(
+                entry.PlayerName, this.service.GetPlayerRangeLabel(entry.PlayerName), this.config, this.chatQueue);
+        }
     }
 
     private void DrawDrawSection(RaffleState state)
@@ -548,7 +574,10 @@ public sealed class RaffleGameTab
                 AnnounceRaffleClosed.Execute(this.config, this.chatQueue);
                 this.service.ArmDraw();
             }
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Announces closed in chat and arms the draw.");
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(state.ShuffleModeAtStart
+                ? "Shuffles all ticket numbers, announces closed in chat and arms the draw."
+                : "Announces closed in chat and arms the draw.");
     }
 
     private void DrawArmed(RaffleState state)
@@ -556,6 +585,14 @@ public sealed class RaffleGameTab
         using (UIHelper.PushBlueButtonColours())
             if (UIHelper.IconTextButton(FontAwesomeIcon.Dice, $"Roll {state.HighestNumber}", "##RaffleRoll"))
                 this.chatQueue.Enqueue($"/random {state.HighestNumber}");
+        if (state.ShuffleModeAtStart)
+        {
+            ImGui.SameLine();
+            using (UIHelper.PushAmberButtonColours())
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Random, "Re-shuffle", "##RaffleReshuffle"))
+                    this.service.ShuffleTicketNumbers();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Redraws everyone's numbers - they must be re-sent.");
+        }
         ImGui.Spacing();
         using (UIHelper.PushRedButtonColours())
             if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Cancel Draw", "##RaffleCancelArm"))

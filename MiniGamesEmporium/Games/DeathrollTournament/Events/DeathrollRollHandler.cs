@@ -1,4 +1,5 @@
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 using MiniGamesEmporium.Services;
 
 /// <summary>Handles RandomNumber roll events for Deathroll Tournament, routing them to order rolls or game roll recording.</summary>
@@ -14,6 +15,8 @@ public sealed class DeathrollRollHandler : IChatRollHandler
         this.deathrollService = deathrollService;
         this.playerInfo = playerInfo;
     }
+
+    public string GameName => DeathrollGameIds.DisplayName;
 
     public void TryHandleRoll(string playerName, int rollValue, int rollMax)
     {

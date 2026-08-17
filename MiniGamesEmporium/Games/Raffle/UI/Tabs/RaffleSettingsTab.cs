@@ -33,6 +33,10 @@ public sealed class RaffleSettingsTab
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
+        RaffleShuffleModeFields.Draw(this.config, "Settings");
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
         RaffleCloseTimeFields.DrawConfig(this.config, "Settings", -1f);
         ImGui.Spacing();
         ImGui.Separator();

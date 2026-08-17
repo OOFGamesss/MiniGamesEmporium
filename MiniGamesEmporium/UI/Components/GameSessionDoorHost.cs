@@ -1,4 +1,4 @@
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using System;
 using System.Numerics;
@@ -28,16 +28,6 @@ public static class GameSessionDoorStyles
         SeedTrackedContentSpanPx = EmporiumNeonTheme.StartDoorEstimatedBodyHeight,
         ShellInsetBottom = 8f,
     };
-    public static GameSessionDoorStyle Bar777BlockingDoor => new()
-    {
-        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
-        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
-        MinOuterContainerHeight = 120f,
-        MinTrackedContentSpan = 96f,
-        ContentBottomBleedPx = 8f,
-        SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
-        ShellInsetBottom = 8f,
-    };
     public static GameSessionDoorStyle DeathrollTournamentStartDoor => new()
     {
         PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
@@ -46,16 +36,6 @@ public static class GameSessionDoorStyles
         MinTrackedContentSpan = 160f,
         ContentBottomBleedPx = 12f,
         SeedTrackedContentSpanPx = 160f,
-        ShellInsetBottom = 8f,
-    };
-    public static GameSessionDoorStyle DeathrollTournamentBlockingDoor => new()
-    {
-        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
-        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
-        MinOuterContainerHeight = 120f,
-        MinTrackedContentSpan = 96f,
-        ContentBottomBleedPx = 8f,
-        SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
         ShellInsetBottom = 8f,
     };
     public static GameSessionDoorStyle HigherLowerStartDoor => new()
@@ -68,16 +48,6 @@ public static class GameSessionDoorStyles
         SeedTrackedContentSpanPx = EmporiumNeonTheme.StartDoorEstimatedBodyHeight,
         ShellInsetBottom = 8f,
     };
-    public static GameSessionDoorStyle HigherLowerBlockingDoor => new()
-    {
-        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
-        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
-        MinOuterContainerHeight = 120f,
-        MinTrackedContentSpan = 96f,
-        ContentBottomBleedPx = 8f,
-        SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
-        ShellInsetBottom = 8f,
-    };
     public static GameSessionDoorStyle RaffleStartDoor => new()
     {
         PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
@@ -86,16 +56,6 @@ public static class GameSessionDoorStyles
         MinTrackedContentSpan = 200f,
         ContentBottomBleedPx = 12f,
         SeedTrackedContentSpanPx = 220f,
-        ShellInsetBottom = 8f,
-    };
-    public static GameSessionDoorStyle RaffleBlockingDoor => new()
-    {
-        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
-        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
-        MinOuterContainerHeight = 120f,
-        MinTrackedContentSpan = 96f,
-        ContentBottomBleedPx = 8f,
-        SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
         ShellInsetBottom = 8f,
     };
     public static GameSessionDoorStyle VotingMadnessStartDoor => new()
@@ -108,14 +68,14 @@ public static class GameSessionDoorStyles
         SeedTrackedContentSpanPx = 280f,
         ShellInsetBottom = 8f,
     };
-    public static GameSessionDoorStyle VotingMadnessBlockingDoor => new()
+    public static GameSessionDoorStyle PausedSessionDoor => new()
     {
         PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
         InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
         MinOuterContainerHeight = 120f,
         MinTrackedContentSpan = 96f,
         ContentBottomBleedPx = 8f,
-        SeedTrackedContentSpanPx = EmporiumNeonTheme.BlockingDoorEstimatedBodyHeight,
+        SeedTrackedContentSpanPx = EmporiumNeonTheme.PausedDoorEstimatedBodyHeight,
         ShellInsetBottom = 8f,
     };
 }

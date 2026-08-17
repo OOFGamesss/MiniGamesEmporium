@@ -21,6 +21,7 @@ public sealed class HigherLowerService : IDisposable
     private readonly PluginConfiguration config;
     private readonly HistoryService historyService;
     private readonly IChatGui chatGui;
+    private readonly SessionService sessionService;
     private readonly List<string> _gameLog = [];
 
     public event Action? SessionUpdated;
@@ -30,22 +31,18 @@ public sealed class HigherLowerService : IDisposable
     public event Action<string, int>? RoundCorrect;
     public event Action<int>? RollAwaitingGuess;
 
-    public HigherLowerService(PluginConfiguration config, HistoryService historyService, IChatGui chatGui)
+    public HigherLowerService(PluginConfiguration config, HistoryService historyService, IChatGui chatGui, SessionService sessionService)
     {
         this.config         = config;
         this.historyService = historyService;
         this.chatGui        = chatGui;
+        this.sessionService = sessionService;
         this.chatGui.ChatMessage += OnChatMessage;
     }
 
-    public bool IsSessionActive() =>
-        this.config.ActiveSession != null && HigherLowerGameIds.Matches(this.config.ActiveSession.GameName);
+    public bool IsSessionActive() => this.config.HigherLowerActiveSession != null;
 
-    public ActiveSession? GetActiveSession()
-    {
-        var s = this.config.ActiveSession;
-        return s != null && HigherLowerGameIds.Matches(s.GameName) ? s : null;
-    }
+    public ActiveSession? GetActiveSession() => this.config.HigherLowerActiveSession;
 
     public HigherLowerTurnState? GetActiveTurn() => this.config.HigherLowerSession;
 
@@ -53,8 +50,8 @@ public sealed class HigherLowerService : IDisposable
 
     public void StartSession()
     {
-        if (this.config.ActiveSession != null) return;
-        this.config.ActiveSession = new ActiveSession
+        if (this.config.HigherLowerActiveSession != null) return;
+        this.config.HigherLowerActiveSession = new ActiveSession
         {
             GameName        = HigherLowerGameIds.DisplayName,
             PlayerName      = HigherLowerGameIds.NoPlayerSelectedPlaceholder,
@@ -81,8 +78,8 @@ public sealed class HigherLowerService : IDisposable
         this.config.HigherLower.PlayersPlayed      = 0;
         this.config.HigherLower.SessionFinished    = false;
         this.config.HigherLower.WinnerPayouts.Clear();
-        this.config.ActiveSession      = null;
-        this.config.HigherLowerSession = null;
+        this.config.HigherLowerActiveSession = null;
+        this.config.HigherLowerSession       = null;
         this._gameLog.Clear();
         this.config.Save();
         SessionUpdated?.Invoke();
@@ -420,6 +417,7 @@ public sealed class HigherLowerService : IDisposable
 
     private void OnChatMessage(IHandleableChatMessage message)
     {
+        if (!this.sessionService.IsFocused(HigherLowerGameIds.DisplayName)) return;
         var session = GetActiveSession();
         var turn    = this.config.HigherLowerSession;
         if (session == null || !session.PaymentVerified || turn == null) return;

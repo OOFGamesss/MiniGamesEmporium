@@ -8,7 +8,6 @@ using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.VotingMadness.Services;
 using MiniGamesEmporium.Games.VotingMadness.UI.Components;
 using MiniGamesEmporium.Games.VotingMadness.UI.Tabs;
-using MiniGamesEmporium.Games.VotingMadness.Utility;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 
@@ -22,15 +21,12 @@ public sealed class VotingMadnessPanel
     private static readonly Vector4 GreenButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
 
     private const string DoorSurfaceStart    = "StartDoor";
-    private const string DoorSurfaceBlocking = "BlockingDoor";
 
     private float trackedStartDoorSpanPx    = GameSessionDoorStyles.VotingMadnessStartDoor.SeedTrackedContentSpanPx;
-    private float trackedBlockingDoorSpanPx = GameSessionDoorStyles.VotingMadnessBlockingDoor.SeedTrackedContentSpanPx;
     private float trackedGameInfoCardSpanPx = 120f;
 
     private readonly PluginConfiguration config;
     private readonly VotingMadnessService service;
-    private readonly SessionService sessionService;
     private readonly VotingMadnessGameTab gameTab;
     private readonly VotingMadnessChatSettingsTab chatTab;
     private readonly VotingMadnessSettingsTab settingsTab;
@@ -39,12 +35,10 @@ public sealed class VotingMadnessPanel
     public VotingMadnessPanel(
         PluginConfiguration config,
         VotingMadnessService service,
-        ChatQueueService chatQueue,
-        SessionService sessionService)
+        ChatQueueService chatQueue)
     {
         this.config         = config;
         this.service        = service;
-        this.sessionService = sessionService;
         this.gameTab        = new VotingMadnessGameTab(config, service, chatQueue);
         this.chatTab        = new VotingMadnessChatSettingsTab(config);
         this.settingsTab    = new VotingMadnessSettingsTab(config);
@@ -85,17 +79,6 @@ public sealed class VotingMadnessPanel
 
     private void DrawStartDoor()
     {
-        var blocking = this.sessionService.GetBlockingGameName(VotingMadnessGameIds.DisplayName);
-        if (blocking != null)
-        {
-            GameSessionDoorHost.Draw(
-                KnownGameDoorModules.VotingMadness,
-                DoorSurfaceBlocking,
-                ref this.trackedBlockingDoorSpanPx,
-                GameSessionDoorStyles.VotingMadnessBlockingDoor,
-                () => DrawBlockingDoorBody(blocking));
-            return;
-        }
         DrawGameInfoCard();
         ImGui.Spacing();
         var doorAreaH = MathF.Max(120f, ImGui.GetContentRegionAvail().Y - VenueCreditFooter.RowHeight());
@@ -114,18 +97,6 @@ public sealed class VotingMadnessPanel
                     DrawStartDoorBody);
         }
         this.venueCredit.Draw();
-    }
-
-    private void DrawBlockingDoorBody(string blockingGameName)
-    {
-        var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
-        ImGui.PushTextWrapPos(wrapEnd);
-        ImGui.TextColored(EmporiumNeonTheme.WarningPanel,
-            $"{blockingGameName} is currently running. Please end or discard that game to run Voting Madness.");
-        ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Session", "##VMDiscardSession"))
-            this.sessionService.CancelActiveGame();
     }
 
     private void DrawGameInfoCard()

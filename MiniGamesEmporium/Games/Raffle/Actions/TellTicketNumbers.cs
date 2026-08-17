@@ -6,10 +6,12 @@ using MiniGamesEmporium.Services;
 namespace MiniGamesEmporium.Games.Raffle.Actions;
 public static class TellTicketNumbers
 {
+    private const int TellDelayMs = 2500;
+
     public static void Execute(string playerEntry, string numbers, PluginConfiguration config, ChatQueueService chatQueue)
     {
         var msg = RaffleMessageFormatter.Format(
             config.Raffle.Chat.TicketNumbersMessage, config, player: playerEntry.Trim(), numbers: numbers);
-        chatQueue.Enqueue(msg);
+        chatQueue.Enqueue(msg, TellDelayMs);
     }
 }

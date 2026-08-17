@@ -6,7 +6,6 @@ using MiniGamesEmporium.Games.Raffle.Automation;
 using MiniGamesEmporium.Games.Raffle.Services;
 using MiniGamesEmporium.Games.Raffle.UI.Components;
 using MiniGamesEmporium.Games.Raffle.UI.Tabs;
-using MiniGamesEmporium.Games.Raffle.Utility;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 using System;
@@ -22,15 +21,12 @@ public sealed class RafflePanel : IDisposable
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
     private const string DoorSurfaceStart    = "StartDoor";
-    private const string DoorSurfaceBlocking = "BlockingDoor";
 
     private float trackedStartDoorSpanPx    = GameSessionDoorStyles.RaffleStartDoor.SeedTrackedContentSpanPx;
-    private float trackedBlockingDoorSpanPx = GameSessionDoorStyles.RaffleBlockingDoor.SeedTrackedContentSpanPx;
     private float trackedGameInfoCardSpanPx = 96f;
 
     private readonly PluginConfiguration config;
     private readonly RaffleService service;
-    private readonly SessionService sessionService;
     private readonly RaffleGameTab gameTab;
     private readonly RaffleChatSettingsTab chatTab;
     private readonly RaffleSettingsTab settingsTab;
@@ -41,14 +37,13 @@ public sealed class RafflePanel : IDisposable
         PluginConfiguration config,
         RaffleService service,
         ChatQueueService chatQueue,
-        SessionService sessionService,
         HistoryService historyService,
-        AutoPayoutService autoPayoutService)
+        AutoPayoutService autoPayoutService,
+        PlayerInfoService playerInfo)
     {
         this.config         = config;
         this.service        = service;
-        this.sessionService = sessionService;
-        this.gameTab        = new RaffleGameTab(config, service, chatQueue, historyService, autoPayoutService);
+        this.gameTab        = new RaffleGameTab(config, service, chatQueue, historyService, autoPayoutService, playerInfo);
         this.chatTab        = new RaffleChatSettingsTab(config);
         this.settingsTab    = new RaffleSettingsTab(config);
         this.chatAutomation = new RaffleChatAutomation(config, service, chatQueue);
@@ -96,17 +91,6 @@ public sealed class RafflePanel : IDisposable
 
     private void DrawStartDoor()
     {
-        var blocking = this.sessionService.GetBlockingGameName(RaffleGameIds.DisplayName);
-        if (blocking != null)
-        {
-            GameSessionDoorHost.Draw(
-                KnownGameDoorModules.Raffle,
-                DoorSurfaceBlocking,
-                ref this.trackedBlockingDoorSpanPx,
-                GameSessionDoorStyles.RaffleBlockingDoor,
-                () => DrawBlockingDoorBody(blocking));
-            return;
-        }
         DrawGameInfoCard();
         ImGui.Spacing();
         var doorAreaH = MathF.Max(120f, ImGui.GetContentRegionAvail().Y - VenueCreditFooter.RowHeight());
@@ -125,18 +109,6 @@ public sealed class RafflePanel : IDisposable
                     DrawStartDoorBody);
         }
         this.venueCredit.Draw();
-    }
-
-    private void DrawBlockingDoorBody(string blockingGameName)
-    {
-        var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
-        ImGui.PushTextWrapPos(wrapEnd);
-        ImGui.TextColored(EmporiumNeonTheme.WarningPanel,
-            $"{blockingGameName} is currently running. Please end or discard that game to run a Raffle.");
-        ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Session", "##RaffleDiscardSession"))
-            this.sessionService.CancelActiveGame();
     }
 
     private void DrawGameInfoCard()

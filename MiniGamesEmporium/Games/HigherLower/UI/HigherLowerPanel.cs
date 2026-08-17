@@ -11,7 +11,6 @@ using MiniGamesEmporium.Games.HigherLower.Automation;
 using MiniGamesEmporium.Games.HigherLower.Services;
 using MiniGamesEmporium.Games.HigherLower.UI.Components;
 using MiniGamesEmporium.Games.HigherLower.UI.Tabs;
-using MiniGamesEmporium.Games.HigherLower.Utility;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.UI.Components;
 
@@ -21,32 +20,28 @@ namespace MiniGamesEmporium.Games.HigherLower.UI;
 public sealed class HigherLowerPanel : IDisposable
 {
     private const string DoorSurfaceStart    = "StartDoor";
-    private const string DoorSurfaceBlocking = "BlockingDoor";
 
     private static readonly Vector4 GreenButton        = new(0.04f, 0.42f, 0.16f, 1f);
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
 
     private float trackedStartDoorSpanPx    = GameSessionDoorStyles.HigherLowerStartDoor.SeedTrackedContentSpanPx;
-    private float trackedBlockingDoorSpanPx = GameSessionDoorStyles.HigherLowerBlockingDoor.SeedTrackedContentSpanPx;
     private float trackedGameInfoCardSpanPx = 140f;
 
     private readonly PluginConfiguration config;
     private readonly HigherLowerService higherLowerService;
     private readonly ChatQueueService chatQueue;
-    private readonly SessionService sessionService;
     private readonly HigherLowerGameTab gameTab;
     private readonly HigherLowerSettingsTab settingsTab;
     private readonly HigherLowerChatSettingsTab chatSettingsTab;
     private readonly HigherLowerLeaderboardTab leaderboardTab;
     private readonly HigherLowerChatAutomation chatAutomation;
 
-    public HigherLowerPanel(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, SessionService sessionService, PlayerInfoService playerInfoService, HistoryService historyService)
+    public HigherLowerPanel(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PlayerInfoService playerInfoService, HistoryService historyService)
     {
         this.config             = config;
         this.higherLowerService = higherLowerService;
         this.chatQueue          = chatQueue;
-        this.sessionService     = sessionService;
         this.gameTab            = new HigherLowerGameTab(config, higherLowerService, chatQueue, autoPayoutService, playerInfoService);
         this.settingsTab        = new HigherLowerSettingsTab(config);
         this.chatSettingsTab    = new HigherLowerChatSettingsTab(config);
@@ -93,12 +88,6 @@ public sealed class HigherLowerPanel : IDisposable
 
     private void DrawStartSessionDoor()
     {
-        var blocking = this.sessionService.GetBlockingGameName(HigherLowerGameIds.DisplayName);
-        if (blocking != null)
-        {
-            DrawActiveBlockingDoor(blocking);
-            return;
-        }
         DrawGameInfoCard();
         ImGui.Spacing();
         GameSessionDoorHost.Draw(
@@ -142,28 +131,6 @@ public sealed class HigherLowerPanel : IDisposable
         ImGui.Separator();
         ImGui.Spacing();
         DrawCentredStartButton();
-    }
-
-    private void DrawActiveBlockingDoor(string blockingGameName)
-    {
-        GameSessionDoorHost.Draw(
-            KnownGameDoorModules.HigherLower,
-            DoorSurfaceBlocking,
-            ref this.trackedBlockingDoorSpanPx,
-            GameSessionDoorStyles.HigherLowerBlockingDoor,
-            () => DrawActiveBlockingDoorBody(blockingGameName));
-    }
-
-    private void DrawActiveBlockingDoorBody(string blockingGameName)
-    {
-        var wrapEnd = ImGui.GetCursorPos().X + MathF.Max(8f, ImGui.GetContentRegionAvail().X);
-        ImGui.PushTextWrapPos(wrapEnd);
-        ImGui.TextColored(EmporiumNeonTheme.WarningPanel,
-            $"{blockingGameName} is currently running. Please end or discard the game to play {HigherLowerGameIds.DisplayName}.");
-        ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Trash, "Discard Session", "##HLDiscardSession"))
-            this.sessionService.CancelActiveGame();
     }
 
     private void DrawCentredStartButton()

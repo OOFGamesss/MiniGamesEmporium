@@ -38,6 +38,7 @@ public class PluginConfiguration : IPluginConfiguration
     public RaffleState? RaffleSession { get; set; } = null;
     public VotingMadnessState? VotingMadnessSession { get; set; } = null;
     public ActiveSession? ActiveSession { get; set; } = null;
+    public ActiveSession? HigherLowerActiveSession { get; set; } = null;
     public List<string> QueuedPlayers { get; set; } = new();
 
     public bool HasMigratedHistoryToLiteDb { get; set; } = false;

@@ -15,8 +15,8 @@ using MiniGamesEmporium.Utility;
 namespace MiniGamesEmporium.Games.VotingMadness.IPC;
 public sealed class VotingMadnessRules : IDisposable
 {
-    private const string PluginName = "Mini Games Emporium";
-    private const string Category   = "Mini Games";
+    private static readonly string PluginName = GambaWhereIds.PluginNameFor(VotingMadnessGameIds.DisplayName);
+    private const string Category   = GambaWhereIds.Category;
     private const string Gate       = "GambaWhere.SubmitRules";
     private const int    MaxStrLen  = 50;
 

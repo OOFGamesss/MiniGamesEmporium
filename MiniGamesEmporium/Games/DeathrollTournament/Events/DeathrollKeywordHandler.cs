@@ -3,6 +3,7 @@ using Dalamud.Game.Text.SeStringHandling;
 
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
+using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 using MiniGamesEmporium.Services;
 using MiniGamesEmporium.Utility;
 
@@ -21,6 +22,8 @@ public sealed class DeathrollKeywordHandler : IChatKeywordHandler
         this.deathrollService = deathrollService;
         this.playerInfo       = playerInfo;
     }
+
+    public string GameName => DeathrollGameIds.DisplayName;
 
     public void TryHandleKeyword(SeString? sender, string message, XivChatType kind)
     {

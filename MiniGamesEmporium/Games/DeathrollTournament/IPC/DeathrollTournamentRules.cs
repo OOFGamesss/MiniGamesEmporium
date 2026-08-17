@@ -14,11 +14,12 @@ namespace MiniGamesEmporium.Games.DeathrollTournament.IPC;
 
 public sealed class DeathrollTournamentRules : IDisposable
 {
-    private const string PluginName = "Mini Games Emporium";
-    private const string Category = "Mini Games";
+    private static readonly string PluginName = GambaWhereIds.PluginNameFor(DeathrollGameIds.DisplayName);
+    private const string Category = GambaWhereIds.Category;
     private const string Gate = "GambaWhere.SubmitRules";
 
     private static readonly TimeSpan PushInterval = TimeSpan.FromSeconds(5);
+    private static readonly string[] TrimOrder = ["Join Keyword", "Bet Cost"];
 
     private readonly ICallGateSubscriber<string, string, object, bool> _submitRules;
     private readonly IFramework _framework;
@@ -120,7 +121,17 @@ public sealed class DeathrollTournamentRules : IDisposable
         if (spectatorUrl != null)
             payload.Rules.Add(new GambaWhereRuleEntry { Label = "Spectator URL", Value = spectatorUrl });
 
+        TrimToMaxRules(payload);
         return payload;
+    }
+
+    private static void TrimToMaxRules(GambaWhereRulesPayload payload)
+    {
+        foreach (var label in TrimOrder)
+        {
+            if (payload.Rules.Count <= GambaWhereIds.MaxRules) return;
+            payload.Rules.RemoveAll(r => string.Equals(r.Label, label, StringComparison.Ordinal));
+        }
     }
 
     private string? GetSpectatorUrl()

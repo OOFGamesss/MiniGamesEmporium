@@ -4,7 +4,7 @@
   "InternalName": "MiniGamesEmporium",
   "Punchline": "Five live games under one roof, with more on the way.",
   "Description": "The all-in-one hosting tool for FFXIV gambling venues, with five live games: BAR 777, Deathroll Tournament, Higher/Lower, Raffle, and Voting Madness. Handles player queues, trade verification, boosted pots, ticket draws, live vote tallying, automated chat, and a full transaction ledger.",
-  "Changelog": "- New game Voting Madness! - Use this for when you want to vote on something within a venue and it will catch all votes for you! See more details in announcements.\n- UI overhaul for the sidebar to match other plugins.\n- You can now add eliminated players back into the game for Deathroll Tournament.\n- Minor fixes for DRT messages.\n- Credits added for Habitat and 1-UP on game suggestions.",
+  "Changelog": "- New shuffle mode added to Raffle. Once ticket sales are closed it will assign raffle numbers randomly to each person who bought tickets.\n- You can now host multiple sessions at once! Start a game and then go to another to start a session! Upon starting another session your old session will be paused so trades and triggers go to the correct game.",
   "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
   "ApplicableVersion": "any",
   "Tags": [

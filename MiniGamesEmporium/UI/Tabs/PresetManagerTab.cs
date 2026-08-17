@@ -759,6 +759,7 @@ public sealed class PresetManagerTab
         DrawRow("Max Tickets/Player",   r.MaxTicketsPerPlayer.ToString());
         DrawRow("Boosted Pot",          r.BoostedPot.ToString("N0") + " gil");
         DrawRow("Trades to Pot",        r.TradesToPotPercent + "%");
+        DrawBoolRow("Shuffle Numbers",  r.ShuffleTicketNumbers);
         DrawRow("Close Time",           r.CloseHour < 0 ? "(none)" : $"{r.CloseHour:00}:{r.CloseMinute:00}");
         DrawBoolRow("Auto Join Keyword", r.AutoJoinKeyword);
         DrawRow("Join Keyword",         r.JoinKeyword);

@@ -42,7 +42,6 @@ public sealed class DeathrollTournamentService
     public void StartSession()
     {
         if (this.config.DeathrollSession != null) return;
-        if (this.config.ActiveSession != null) return;
         var cfg = this.config.DeathrollTournament;
         cfg.PaidPlayers.Clear();
         this.config.DeathrollSession = new DeathrollSessionInfo
