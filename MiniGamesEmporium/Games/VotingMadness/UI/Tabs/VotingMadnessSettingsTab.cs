@@ -1,3 +1,4 @@
+using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.VotingMadness.UI.Components;
@@ -8,6 +9,11 @@ using MiniGamesEmporium.UI.Components;
 namespace MiniGamesEmporium.Games.VotingMadness.UI.Tabs;
 public sealed class VotingMadnessSettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.VotingMadnessLime;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
 
     public VotingMadnessSettingsTab(PluginConfiguration config) => this.config = config;
@@ -15,18 +21,20 @@ public sealed class VotingMadnessSettingsTab
     public void Draw()
     {
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime, "Voting Madness");
+        ImGui.TextColored(CardAccent, "Voting Madness");
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Settings");
         ImGui.Separator();
         ImGui.Spacing();
         if (this.config.VotingMadnessSession != null)
         {
-            ImGui.TextColored(EmporiumNeonTheme.WarnAmber,
+            SessionLockNotice.Draw(
                 "A session is active. Options and rules are locked until you stop the session.");
-            ImGui.Spacing();
             return;
         }
-        VotingMadnessPreSessionSettingsFields.Draw(this.config, "Settings");
+        this.card.Draw("##VMSettingsCard", "Session Defaults", CardAccent, CardTitle, DrawSettingsBody);
     }
+
+    private void DrawSettingsBody() =>
+        VotingMadnessPreSessionSettingsFields.Draw(this.config, "Settings");
 }

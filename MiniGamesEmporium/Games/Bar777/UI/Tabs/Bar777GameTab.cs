@@ -22,7 +22,10 @@ namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
 public sealed class Bar777GameTab
 {
     private static readonly Vector4 GoldColour = new(1f, 0.84f, 0f, 1f);
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.Bar777Red;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
     private const float TrophySide = 140f;
+    private readonly ThemedCard card = new();
     private readonly PluginConfiguration config;
     private readonly Bar777SessionService bar777SessionService;
     private readonly ChatQueueService chatQueue;
@@ -52,68 +55,50 @@ public sealed class Bar777GameTab
         var session = this.bar777SessionService.GetActiveSession();
         if (session == null || !Bar777GameIds.Matches(session.GameName))
             return;
-        DrawSendRulesButton();
-        ImGui.Spacing();
         DrawActiveSessionView(session);
     }
 
-    private void DrawSendRulesButton()
+    public void DrawSessionActionButtons()
     {
-        using var blue = UIHelper.PushBlueButtonColours();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Scroll, "Send Rules", "##Bar777SendRules"))
-            AnnounceRules.Execute(this.config, this.chatQueue);
+        using (UIHelper.PushBlueButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Scroll, "Send Rules", "##Bar777SendRules"))
+                AnnounceRules.Execute(this.config, this.chatQueue);
+        ImGui.SameLine();
+        using (UIHelper.PushOrangeButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Advertise", "##Bar777Advertise"))
+                Advertise.Execute(this.config, this.chatQueue);
     }
 
     private void DrawActiveSessionView(ActiveSession session)
     {
         if (Bar777GameIds.IsWaitingPlaceholder(session.PlayerName))
         {
-            ImGui.TextDisabled($"Player: {Bar777GameIds.WaitingPlayerPlaceholder}");
-            ImGui.Spacing();
-            ImGui.TextWrapped("Nobody in the queue right now. Players can keyword-join, or add them manually in the queue column.");
+            this.card.Draw("##Bar777WaitingCard", "Waiting for Players", CardAccent, CardTitle, DrawWaitingBody);
             return;
         }
         if (session.WinTriggered)
         {
-            DrawWinnerScreen(session);
+            this.card.Draw("##Bar777WinnerCard", "Win Detected", CardAccent, GoldColour,
+                () => DrawWinnerBody(session));
             return;
         }
-        DrawPlayerHeader(session);
-        ImGui.Spacing();
+        this.card.Draw("##Bar777PlayerCard", "Player", CardAccent, CardTitle, () => DrawPlayerBody(session));
         DrawTakeBetPhase(session);
         DrawRollsPhase(session);
         DrawSessionControls(session);
     }
 
-    private void DrawWinnerScreen(ActiveSession session)
+    private static void DrawWaitingBody()
     {
-        var avail  = ImGui.GetContentRegionAvail().X;
-        var startX = ImGui.GetCursorPosX();
+        UIHelper.CentreTextDisabled($"Player: {Bar777GameIds.WaitingPlayerPlaceholder}");
+    }
 
-        var winnerDisplay = BuildLockedDisplayName(session);
-        ImGui.SetWindowFontScale(1.6f);
-        var nameW = ImGui.CalcTextSize(winnerDisplay).X;
-        ImGui.SetWindowFontScale(1.0f);
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - nameW) * 0.5f));
-        ImGui.SetWindowFontScale(1.6f);
-        ImGui.TextColored(GoldColour, winnerDisplay);
-        ImGui.SetWindowFontScale(1.0f);
-
-        const string subtitle = "WIN DETECTED!";
-        var subtitleW = ImGui.CalcTextSize(subtitle).X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - subtitleW) * 0.5f));
-        ImGui.TextColored(GoldColour, subtitle);
+    private void DrawWinnerBody(ActiveSession session)
+    {
+        UIHelper.CentreTextScaled(BuildLockedDisplayName(session), GoldColour, 1.6f);
 
         ImGui.Spacing();
-
-        var trophySide = TrophySide * ImGuiHelpers.GlobalScale;
-        var tex = _trophyTexture?.GetWrapOrDefault();
-        if (tex != null)
-        {
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - trophySide) * 0.5f));
-            ImGui.Image(tex.Handle, new Vector2(trophySide, trophySide));
-        }
-
+        DrawTrophy();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -122,189 +107,147 @@ public sealed class Bar777GameTab
         var paid      = session.WinnerPayoutGil;
         var remaining = Math.Max(0L, pot - paid);
 
-        var labelColW  = MathF.Max(ImGui.CalcTextSize("Pot:").X, MathF.Max(ImGui.CalcTextSize("Traded:").X, ImGui.CalcTextSize("Remaining:").X));
-        var valueColW  = MathF.Max(ImGui.CalcTextSize($"{pot:N0} Gil").X, MathF.Max(ImGui.CalcTextSize($"{paid:N0} Gil").X, ImGui.CalcTextSize($"{remaining:N0} Gil").X));
-        var spacing    = ImGui.GetStyle().ItemSpacing.X;
-        var blockW     = labelColW + spacing + valueColW;
-        var rowX       = startX + MathF.Max(0f, (avail - blockW) * 0.5f);
-        var valueX     = rowX + labelColW + spacing;
-
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(GoldColour, "Pot:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(GoldColour, $"{pot:N0} Gil");
-
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, "Traded:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, $"{paid:N0} Gil");
-
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Remaining:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, $"{remaining:N0} Gil");
-
+        DrawPayoutFigures(pot, paid, remaining);
         ImGui.Spacing();
 
-        var tradeBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Coins, "Trade Winner").X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - tradeBtnW) * 0.5f));
+        var payoutRunning = this.autoPayoutService.IsRunning;
+        var payoutIcon    = payoutRunning ? FontAwesomeIcon.Stop : FontAwesomeIcon.MoneyBillWave;
+        var payoutLabel   = payoutRunning ? "Stop Auto Payout" : "Auto Payout";
+        UIHelper.CentreNextButtonRow((FontAwesomeIcon.Coins, "Trade Winner"), (payoutIcon, payoutLabel));
+
         using (UIHelper.PushAmberButtonColours())
         {
             if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade Winner", "##WinnerTrade"))
                 SendTradeRequest.Execute(session.PlayerName, this.chatQueue);
         }
 
+        ImGui.SameLine();
+        DrawAutoPayoutButton(session.PlayerName, remaining);
+        ImGui.Spacing();
+        ImGui.Separator();
         ImGui.Spacing();
 
-        DrawAutoPayoutButton(session.PlayerName, remaining, avail, startX);
+        var progress = pot > 0 ? MathF.Min(1f, (float)paid / pot) : 1f;
+        ImGui.ProgressBar(progress, new Vector2(-1f, ImGui.GetFrameHeight()), $"{progress * 100f:F0}% paid out");
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
-        DrawPayoutProgressBar(pot, paid, avail, startX);
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        var endBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.FlagCheckered, "End Game").X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - endBtnW) * 0.5f));
         using var green = UIHelper.PushGreenButtonColours();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##WinnerEndGame"))
-        {
-            if (this.config.Bar777.UseQueue)
-                this.bar777SessionService.EndQueuePlayerAndProcessNext();
-            else
-                this.bar777SessionService.EndWalkInAndReset();
-        }
+        if (UIHelper.CentredIconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##WinnerEndGame"))
+            EndCurrentGame();
     }
 
-    private void DrawAutoPayoutButton(string playerName, long remaining, float avail, float startX)
+    private void DrawTrophy()
+    {
+        var tex = this._trophyTexture?.GetWrapOrDefault();
+        if (tex == null) return;
+        var side = TrophySide * ImGuiHelpers.GlobalScale;
+        UIHelper.CentreNext(side);
+        ImGui.Image(tex.Handle, new Vector2(side, side));
+    }
+
+    private static void DrawPayoutFigures(long pot, long paid, long remaining)
+    {
+        var labelColW = MathF.Max(ImGui.CalcTextSize("Pot:").X, MathF.Max(ImGui.CalcTextSize("Traded:").X, ImGui.CalcTextSize("Remaining:").X));
+        var valueColW = MathF.Max(ImGui.CalcTextSize($"{pot:N0} Gil").X, MathF.Max(ImGui.CalcTextSize($"{paid:N0} Gil").X, ImGui.CalcTextSize($"{remaining:N0} Gil").X));
+        var spacing   = ImGui.GetStyle().ItemSpacing.X;
+        var blockW    = labelColW + spacing + valueColW;
+        var rowX      = ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - blockW) * 0.5f);
+        var valueX    = rowX + labelColW + spacing;
+
+        DrawFigureRow(rowX, valueX, "Pot:",       $"{pot:N0} Gil",       GoldColour);
+        DrawFigureRow(rowX, valueX, "Traded:",    $"{paid:N0} Gil",      EmporiumNeonTheme.SuccessMint);
+        DrawFigureRow(rowX, valueX, "Remaining:", $"{remaining:N0} Gil", EmporiumNeonTheme.WarnAmber);
+    }
+
+    private static void DrawFigureRow(float rowX, float valueX, string label, string value, Vector4 colour)
+    {
+        ImGui.SetCursorPosX(rowX);
+        ImGui.TextColored(colour, label);
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(colour, value);
+    }
+
+    private void EndCurrentGame()
+    {
+        if (this.config.Bar777.UseQueue)
+            this.bar777SessionService.EndQueuePlayerAndProcessNext();
+        else
+            this.bar777SessionService.EndWalkInAndReset();
+    }
+
+    private void DrawAutoPayoutButton(string playerName, long remaining)
     {
         if (this.autoPayoutService.IsRunning)
         {
-            var stopBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, "Stop Auto Payout").X;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - stopBtnW) * 0.5f));
             using var red = UIHelper.PushRedButtonColours();
             if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Auto Payout", "##Bar777StopAutoPayout"))
                 this.autoPayoutService.Stop();
+            return;
         }
-        else
+
+        using var disabled = ImRaii.Disabled(remaining <= 0);
+        using var green    = UIHelper.PushGreenButtonColours();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.MoneyBillWave, "Auto Payout", "##Bar777AutoPayout"))
         {
-            using var disabled = ImRaii.Disabled(remaining <= 0);
-            var autoBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.MoneyBillWave, "Auto Payout").X;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - autoBtnW) * 0.5f));
-            using var green = UIHelper.PushGreenButtonColours();
-            if (UIHelper.IconTextButton(FontAwesomeIcon.MoneyBillWave, "Auto Payout", "##Bar777AutoPayout"))
-            {
-                this.autoPayoutService.Start(
-                    playerName,
-                    () =>
-                    {
-                        var p = Bar777SessionService.ComputeTotalPot(this.config);
-                        var w = this.bar777SessionService.GetActiveSession()?.WinnerPayoutGil ?? 0L;
-                        return Math.Max(0L, p - w);
-                    },
-                    () =>
-                    {
-                        var s = this.bar777SessionService.GetActiveSession();
-                        return s != null && Bar777GameIds.Matches(s.GameName);
-                    });
-            }
+            this.autoPayoutService.Start(
+                playerName,
+                () =>
+                {
+                    var p = Bar777SessionService.ComputeTotalPot(this.config);
+                    var w = this.bar777SessionService.GetActiveSession()?.WinnerPayoutGil ?? 0L;
+                    return Math.Max(0L, p - w);
+                },
+                () =>
+                {
+                    var s = this.bar777SessionService.GetActiveSession();
+                    return s != null && Bar777GameIds.Matches(s.GameName);
+                });
         }
     }
 
-    private static void DrawPayoutProgressBar(long pot, long paid, float avail, float startX)
+    private void DrawPlayerBody(ActiveSession session)
     {
-        var progress   = pot > 0 ? MathF.Min(1f, (float)paid / pot) : 1f;
-        var pctOverlay = $"{progress * 100f:F0}% paid out";
-        ImGui.SetCursorPosX(startX);
-        ImGui.ProgressBar(progress, new Vector2(avail, ImGui.GetFrameHeight()), pctOverlay);
-    }
-
-    private void DrawPlayerHeader(ActiveSession session)
-    {
-        var avail  = ImGui.GetContentRegionAvail().X;
-        var startX = ImGui.GetCursorPosX();
-
         if (!this.config.Bar777.UseQueue && session.PlayerSet)
         {
-            var fullName       = BuildLockedDisplayName(session);
-            var spacing        = ImGui.GetStyle().ItemSpacing.X;
-            var unsetBtnSize   = UIHelper.CalcButtonSize(FontAwesomeIcon.UserSlash, "Un-set Player");
-            ImGui.SetWindowFontScale(1.4f);
-            var nameSize = ImGui.CalcTextSize(fullName);
-            ImGui.SetWindowFontScale(1.0f);
-            var totalW = nameSize.X + spacing + unsetBtnSize.X;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - totalW) * 0.5f));
-            ImGui.SetWindowFontScale(1.4f);
-            ImGui.TextColored(EmporiumNeonTheme.SuccessMint, fullName);
-            ImGui.SetWindowFontScale(1.0f);
-            ImGui.SameLine();
-            using var red = UIHelper.PushRedButtonColours();
-            if (UIHelper.IconTextButton(FontAwesomeIcon.UserSlash, "Un-set Player", "##UnsetPlayer"))
-                this.bar777SessionService.UnlockWalkInPlayer();
+            UIHelper.CentreTextScaled(BuildLockedDisplayName(session), EmporiumNeonTheme.SuccessMint, 1.4f);
+            ImGui.Spacing();
+            using (UIHelper.PushRedButtonColours())
+            {
+                if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserSlash, "Un-set Player", "##UnsetPlayer"))
+                    this.bar777SessionService.UnlockWalkInPlayer();
+            }
         }
         else
         {
-            var (charName, worldName) = GetCurrentTarget();
-            string displayName;
-            if (!this.config.Bar777.UseQueue && !string.IsNullOrEmpty(charName))
-                displayName = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
-            else
-                displayName = Bar777GameIds.IsAnyPlaceholder(session.PlayerName) ? "Select a player to start" : BuildLockedDisplayName(session);
-
-            ImGui.SetWindowFontScale(1.4f);
-            var nameSize = ImGui.CalcTextSize(displayName);
-            ImGui.SetWindowFontScale(1.0f);
-
-            var showNextBtn = this.config.Bar777.UseQueue && !Bar777GameIds.IsAnyPlaceholder(session.PlayerName);
-            var showSetBtn  = !this.config.Bar777.UseQueue && !string.IsNullOrEmpty(charName);
-            float cursorX;
-            if (showNextBtn)
-            {
-                var btnSize = UIHelper.CalcButtonSize(FontAwesomeIcon.CommentDots, "Next Player Up");
-                cursorX = startX + MathF.Max(0f, (avail - nameSize.X - ImGui.GetStyle().ItemSpacing.X - btnSize.X) * 0.5f);
-            }
-            else if (showSetBtn)
-            {
-                var btnSize = UIHelper.CalcButtonSize(FontAwesomeIcon.UserCheck, "Set Player");
-                cursorX = startX + MathF.Max(0f, (avail - nameSize.X - ImGui.GetStyle().ItemSpacing.X - btnSize.X) * 0.5f);
-            }
-            else
-            {
-                cursorX = startX + MathF.Max(0f, (avail - nameSize.X) * 0.5f);
-            }
-
-            ImGui.SetCursorPosX(cursorX);
-            ImGui.SetWindowFontScale(1.4f);
-            ImGui.TextColored(EmporiumNeonTheme.Bar777Red, displayName);
-            ImGui.SetWindowFontScale(1.0f);
-
-            if (showNextBtn)
-            {
-                ImGui.SameLine();
-                using var yellow = UIHelper.PushYellowButtonColours();
-                if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Next Player Up", "##NextPlayerUpBtn"))
-                    AnnounceNextPlayerUp.Execute(displayName, this.config, this.chatQueue);
-            }
-            else if (showSetBtn)
-            {
-                ImGui.SameLine();
-                using var green = UIHelper.PushGreenButtonColours();
-                if (UIHelper.IconTextButton(FontAwesomeIcon.UserCheck, "Set Player", "##SetWalkInPlayer"))
-                    this.bar777SessionService.LockWalkInPlayer(charName, worldName);
-            }
+            DrawUnlockedPlayerRow(session);
         }
+    }
 
-        var statusText   = GetStatusText(session);
-        var statusColour = GetStatusColour(session);
-        ImGui.SetWindowFontScale(1.15f);
-        var statusSize = ImGui.CalcTextSize(statusText);
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - statusSize.X) * 0.5f));
-        ImGui.TextColored(statusColour, statusText);
-        ImGui.SetWindowFontScale(1.0f);
+    private static void DrawStatusLine(ActiveSession session) =>
+        UIHelper.CentreTextScaled(GetStatusText(session), GetStatusColour(session), 1.15f);
+
+    private void DrawUnlockedPlayerRow(ActiveSession session)
+    {
+        var (charName, worldName) = GetCurrentTarget();
+        string displayName;
+        if (!this.config.Bar777.UseQueue && !string.IsNullOrEmpty(charName))
+            displayName = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
+        else
+            displayName = Bar777GameIds.IsAnyPlaceholder(session.PlayerName) ? "Select a player to start" : BuildLockedDisplayName(session);
+
+        UIHelper.CentreTextScaled(displayName, EmporiumNeonTheme.Bar777Red, 1.4f);
+
+        var showSetBtn = !this.config.Bar777.UseQueue && !string.IsNullOrEmpty(charName);
+        if (!showSetBtn) return;
+
+        ImGui.Spacing();
+
+        using var green = UIHelper.PushGreenButtonColours();
+        if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserCheck, "Set Player", "##SetWalkInPlayer"))
+            this.bar777SessionService.LockWalkInPlayer(charName, worldName);
     }
 
     private static string GetStatusText(ActiveSession session)
@@ -329,37 +272,29 @@ public sealed class Bar777GameTab
     private void DrawTakeBetPhase(ActiveSession session)
     {
         if (session.PaymentVerified) return;
-        ImGui.Separator();
-        ImGui.Spacing();
+        var pairHeight = this.card.MatchedHeight("##Bar777TakeBetCard", "##Bar777BuyerCard");
+        using (var split = ImRaii.Table("##TakeBetSplit", 2, ImGuiTableFlags.None, new Vector2(-1f, 0f)))
         {
-            using var split = ImRaii.Table("##TakeBetSplit", 2, ImGuiTableFlags.BordersInnerV, new Vector2(-1f, 0f));
             if (split.Success)
             {
                 ImGui.TableSetupColumn("##TakeBetLeft",  ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableSetupColumn("##TakeBetRight", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
-                DrawPrimaryBetActions(session);
+                this.card.Draw("##Bar777TakeBetCard", "Take Bet", CardAccent, CardTitle, pairHeight, () => DrawPrimaryBetActions(session));
                 ImGui.TableSetColumnIndex(1);
-                DrawBuyerSection(session);
+                this.card.Draw("##Bar777BuyerCard", "Paying for Another Player", CardAccent, CardTitle, pairHeight, () => DrawBuyerSection(session));
             }
         }
-        ImGui.Spacing();
-        DrawStartGameSection(session);
+        this.card.Draw("##Bar777StartCard", "Start Game", CardAccent, CardTitle, () => DrawStartGameSection(session));
     }
 
     private void DrawPrimaryBetActions(ActiveSession session)
     {
-        var startX = ImGui.GetCursorPosX();
-        var avail  = ImGui.GetContentRegionAvail().X;
+        UIHelper.CentreNextButtonRow(
+            (FontAwesomeIcon.CommentDots, "Request Gil"),
+            (FontAwesomeIcon.Coins, "Trade"));
 
-        var headerText = "Take Bet";
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - ImGui.CalcTextSize(headerText).X) * 0.5f));
-        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, headerText);
-        ImGui.Spacing();
-
-        var reqGilW = UIHelper.CalcButtonSize(FontAwesomeIcon.CommentDots, "Request Gil").X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - reqGilW) * 0.5f));
         using (UIHelper.PushBlueButtonColours())
         {
             if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil", "##TellAmtBtn"))
@@ -382,10 +317,8 @@ public sealed class Bar777GameTab
             }
         }
 
-        ImGui.Spacing();
+        ImGui.SameLine();
 
-        var tradeW = UIHelper.CalcButtonSize(FontAwesomeIcon.ArrowRightArrowLeft, "Trade").X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - tradeW) * 0.5f));
         using (UIHelper.PushAmberButtonColours())
         {
             if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade", "##TradeBtn"))
@@ -420,96 +353,78 @@ public sealed class Bar777GameTab
 
     private void DrawBuyerSection(ActiveSession session)
     {
-        var startX = ImGui.GetCursorPosX();
-        var avail  = ImGui.GetContentRegionAvail().X;
-        var style  = ImGui.GetStyle();
-
-        var headerText = "Paying for another player";
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - ImGui.CalcTextSize(headerText).X) * 0.5f));
-        ImGui.TextColored(EmporiumNeonTheme.NeonMagenta, headerText);
-        ImGui.Spacing();
-
         var buyer = this.bar777SessionService.GetBuyer();
         if (!string.IsNullOrEmpty(buyer))
         {
-            var clearBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Times, "Clear").X;
-            var rowW      = ImGui.CalcTextSize("Buyer:").X + style.ItemSpacing.X
-                          + ImGui.CalcTextSize(buyer).X    + style.ItemSpacing.X
-                          + clearBtnW;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - rowW) * 0.5f));
-            ImGui.TextDisabled("Buyer:");
-            ImGui.SameLine();
-            ImGui.TextColored(EmporiumNeonTheme.SuccessMint, buyer);
-            ImGui.SameLine();
-            using (UIHelper.PushRedButtonColours())
-            {
-                if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Clear", "##ClearBuyer"))
-                    this.bar777SessionService.ClearBuyer();
-            }
-            ImGui.Spacing();
+            DrawAssignedBuyer(session, buyer);
+            return;
+        }
 
-            var reqGilBuyerW = UIHelper.CalcButtonSize(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)").X;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - reqGilBuyerW) * 0.5f));
-            using (UIHelper.PushBlueButtonColours())
-            {
-                if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", "##BuyerRequestGil"))
-                    SendTellBuyerRequest.Execute(buyer, session.PlayerName, this.config, this.chatQueue);
-            }
-            ImGui.Spacing();
+        var (charName, worldName) = GetCurrentTarget();
+        if (string.IsNullOrEmpty(charName))
+        {
+            UIHelper.CentreTextDisabled("Target a player in-game to set them as the buyer.");
+            return;
+        }
 
-            var tradeBuyerW = UIHelper.CalcButtonSize(FontAwesomeIcon.ArrowRightArrowLeft, "Trade (Buyer)").X;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - tradeBuyerW) * 0.5f));
-            using (UIHelper.PushAmberButtonColours())
+        var style        = ImGui.GetStyle();
+        var targetedRowW = ImGui.CalcTextSize("Targeted:").X + style.ItemSpacing.X + ImGui.CalcTextSize(charName).X;
+        UIHelper.CentreNext(targetedRowW);
+        ImGui.TextDisabled("Targeted:");
+        ImGui.SameLine();
+        ImGui.TextUnformatted(charName);
+        ImGui.Spacing();
+
+        using (UIHelper.PushGreenButtonColours())
+        {
+            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##SetBuyer"))
             {
-                if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade (Buyer)", "##BuyerTrade"))
-                    SendTradeRequest.Execute(buyer, this.chatQueue);
+                var fullName = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
+                this.bar777SessionService.SetBuyer(fullName);
             }
         }
-        else
-        {
-            var (charName, worldName) = GetCurrentTarget();
-            if (!string.IsNullOrEmpty(charName))
-            {
-                var targetedRowW = ImGui.CalcTextSize("Targeted:").X + style.ItemSpacing.X + ImGui.CalcTextSize(charName).X;
-                ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - targetedRowW) * 0.5f));
-                ImGui.TextDisabled("Targeted:");
-                ImGui.SameLine();
-                ImGui.TextUnformatted(charName);
-                ImGui.Spacing();
+    }
 
-                var setBuyerW = UIHelper.CalcButtonSize(FontAwesomeIcon.UserCheck, "Set as Buyer").X;
-                ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - setBuyerW) * 0.5f));
-                using (UIHelper.PushGreenButtonColours())
-                {
-                    if (UIHelper.IconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##SetBuyer"))
-                    {
-                        var fullName = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
-                        this.bar777SessionService.SetBuyer(fullName);
-                    }
-                }
-            }
-            else
-            {
-                const string hintText = "Target a player in-game to set them as the buyer.";
-                ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - ImGui.CalcTextSize(hintText).X) * 0.5f));
-                ImGui.TextDisabled(hintText);
-            }
+    private void DrawAssignedBuyer(ActiveSession session, string buyer)
+    {
+        var style     = ImGui.GetStyle();
+        var clearBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Times, "Clear").X;
+        var rowW      = ImGui.CalcTextSize("Buyer:").X + style.ItemSpacing.X
+                      + ImGui.CalcTextSize(buyer).X    + style.ItemSpacing.X
+                      + clearBtnW;
+        UIHelper.CentreNext(rowW);
+        ImGui.TextDisabled("Buyer:");
+        ImGui.SameLine();
+        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, buyer);
+        ImGui.SameLine();
+        using (UIHelper.PushRedButtonColours())
+        {
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Times, "Clear", "##ClearBuyer"))
+                this.bar777SessionService.ClearBuyer();
         }
         ImGui.Spacing();
+
+        UIHelper.CentreNextButtonRow(
+            (FontAwesomeIcon.CommentDots, "Request Gil (Buyer)"),
+            (FontAwesomeIcon.Coins, "Trade (Buyer)"));
+
+        using (UIHelper.PushBlueButtonColours())
+        {
+            if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", "##BuyerRequestGil"))
+                SendTellBuyerRequest.Execute(buyer, session.PlayerName, this.config, this.chatQueue);
+        }
+        ImGui.SameLine();
+
+        using (UIHelper.PushAmberButtonColours())
+        {
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade (Buyer)", "##BuyerTrade"))
+                SendTradeRequest.Execute(buyer, this.chatQueue);
+        }
     }
 
     private void DrawStartGameSection(ActiveSession session)
     {
         SyncPendingRolls(session);
-        ImGui.Separator();
-        ImGui.Spacing();
-        var startX = ImGui.GetCursorPosX();
-        var avail  = ImGui.GetContentRegionAvail().X;
-
-        var headerText = "Start Game";
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - ImGui.CalcTextSize(headerText).X) * 0.5f));
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, headerText);
-        ImGui.Spacing();
 
         string descText;
         if (session.AmountTraded > 0)
@@ -522,51 +437,49 @@ public sealed class Bar777GameTab
         {
             descText = "No trade recorded. Enter roll count manually.";
         }
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - ImGui.CalcTextSize(descText).X) * 0.5f));
-        ImGui.TextDisabled(descText);
+        DrawStatusLine(session);
+        ImGui.Spacing();
+        UIHelper.CentreTextDisabled(descText);
         ImGui.Spacing();
 
         const float InputW = 160f;
-        var rollsLabelW   = ImGui.CalcTextSize("Rolls").X;
-        var inputGroupW   = InputW + ImGui.GetStyle().ItemInnerSpacing.X + rollsLabelW;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - inputGroupW) * 0.5f));
+        UIHelper.CentreNext(InputW + ImGui.GetStyle().ItemInnerSpacing.X + ImGui.CalcTextSize("Rolls").X);
         ImGui.SetNextItemWidth(InputW);
         ImGui.InputInt("Rolls##PendingRolls", ref this._pendingRollCount, 1, 1);
         this._pendingRollCount = Math.Clamp(this._pendingRollCount, 0, this.config.Bar777.MaxRolls);
 
         var noPlayer = !this.config.Bar777.UseQueue && !session.PlayerSet;
         if (noPlayer)
-        {
-            const string hintText = "Target a player first to lock them in.";
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - ImGui.CalcTextSize(hintText).X) * 0.5f));
-            ImGui.TextDisabled(hintText);
-        }
+            UIHelper.CentreTextDisabled("Target a player first to lock them in.");
         ImGui.Spacing();
 
-        var startBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Game").X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - startBtnW) * 0.5f));
         using var disabled = ImRaii.Disabled(this._pendingRollCount < 1 || noPlayer);
         using var green    = UIHelper.PushGreenButtonColours();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Game", "##StartGame"))
+        if (UIHelper.CentredIconTextButton(FontAwesomeIcon.Play, "Start Game", "##StartGame"))
             this.bar777SessionService.StartGameWithRolls(this._pendingRollCount);
     }
 
     private void DrawRollsPhase(ActiveSession session)
     {
         if (!session.PaymentVerified) return;
-        ImGui.Separator();
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Rolls");
+        this.card.Draw("##Bar777RollsCard", "Rolls", CardAccent, CardTitle, () => DrawRollsBody(session));
+    }
+
+    private void DrawRollsBody(ActiveSession session)
+    {
+        DrawStatusLine(session);
         ImGui.Spacing();
+
         if (session.AmountTraded > 0)
         {
-            ImGui.TextColored(EmporiumNeonTheme.NeonCyan, $"Session Trade: {session.AmountTraded:N0} Gil");
+            UIHelper.CentreText($"Session Trade: {session.AmountTraded:N0} Gil", EmporiumNeonTheme.NeonCyan);
             ImGui.Spacing();
         }
         if (!this.config.Bar777.Chat.AutoStartRolls)
         {
             using (UIHelper.PushYellowButtonColours())
             {
-                if (UIHelper.IconTextButton(FontAwesomeIcon.Comments, "Send 'Start Rolls' Msg", "##StartRollsMsg"))
+                if (UIHelper.CentredIconTextButton(FontAwesomeIcon.Comments, "Send 'Start Rolls' Msg", "##StartRollsMsg"))
                     AnnouncePaymentReceived.Execute(session.PlayerName, this.config, this.chatQueue);
             }
             ImGui.Spacing();
@@ -574,28 +487,25 @@ public sealed class Bar777GameTab
         var progress = session.RollsAllowed > 0
             ? (float)session.RollsUsed / session.RollsAllowed
             : 0f;
-        ImGui.Text($"Rolls: {session.RollsUsed} / {session.RollsAllowed}");
-        ImGui.ProgressBar(progress, new Vector2(-1, 0), string.Empty);
+        ImGui.ProgressBar(progress, new Vector2(-1f, 0f), string.Empty);
         ImGui.Spacing();
         DrawRollLog(session);
-        ImGui.Spacing();
     }
 
     private void DrawRollLog(ActiveSession session)
     {
         var log = session.RollLog;
+        const int maxRows = 5;
+        var lineH   = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
+        var padding = ImGui.GetStyle().WindowPadding.Y * 2f;
+        var height  = maxRows * lineH + padding;
+        using var child = ImRaii.Child("##RollLogBox", new Vector2(-1, height), true);
+        if (!child.Success) return;
         if (log == null || log.Count == 0)
         {
             ImGui.TextDisabled("No rolls yet.");
             return;
         }
-        const int maxRows = 5;
-        var lineH   = ImGui.GetTextLineHeight() + ImGui.GetStyle().ItemSpacing.Y;
-        var padding = ImGui.GetStyle().WindowPadding.Y * 2f;
-        var visRows = Math.Min(log.Count, maxRows);
-        var height  = visRows * lineH + padding;
-        using var child = ImRaii.Child("##RollLogBox", new Vector2(-1, height), true);
-        if (!child.Success) return;
         var numCols = Math.Max(1, (log.Count + maxRows - 1) / maxRows);
         using var table = ImRaii.Table("##RollGrid", numCols);
         if (!table.Success) return;
@@ -638,17 +548,22 @@ public sealed class Bar777GameTab
 
     private void DrawSessionControls(ActiveSession session)
     {
-        ImGui.Separator();
-        ImGui.Spacing();
         var sessionDone = session.RollsUsed >= session.RollsAllowed || session.WinTriggered;
+        if (!(session.PaymentVerified && !sessionDone) && !sessionDone) return;
+        this.card.Draw("##Bar777SessionCard", "Session", CardAccent, CardTitle,
+            () => DrawSessionControlsBody(session, sessionDone));
+    }
+
+    private void DrawSessionControlsBody(ActiveSession session, bool sessionDone)
+    {
         if (session.PaymentVerified && !sessionDone)
         {
             using (UIHelper.PushRedButtonColours())
             {
-                if (UIHelper.IconTextButton(FontAwesomeIcon.ExclamationTriangle, "End Game Early", "##EndEarlyBtn"))
-                    ImGui.OpenPopup("EndEarlyConfirm##Modal");
+                if (UIHelper.CentredIconTextButton(FontAwesomeIcon.ExclamationTriangle, "End Game Early", "##EndEarlyBtn"))
+                    ImGui.OpenPopup("Confirm End Game Early##Modal");
             }
-            using var modal = ImRaii.PopupModal("EndEarlyConfirm##Modal");
+            using var modal = ImRaii.PopupModal("Confirm End Game Early##Modal", ImGuiWindowFlags.AlwaysAutoResize);
             if (modal.Success)
             {
                 ImGui.TextUnformatted("The player hasn't finished their rolls.");
@@ -658,10 +573,7 @@ public sealed class Bar777GameTab
                 {
                     if (UIHelper.IconTextButton(FontAwesomeIcon.Check, "Yes, end early", "##ConfirmEndEarly"))
                     {
-                        if (this.config.Bar777.UseQueue)
-                            this.bar777SessionService.EndQueuePlayerAndProcessNext();
-                        else
-                            this.bar777SessionService.EndWalkInAndReset();
+                        EndCurrentGame();
                         ImGui.CloseCurrentPopup();
                     }
                 }
@@ -674,22 +586,12 @@ public sealed class Bar777GameTab
             }
             ImGui.Spacing();
         }
-        if (!this.config.Bar777.UseQueue)
-        {
-            if (sessionDone)
-            {
-                using var green = UIHelper.PushGreenButtonColours();
-                if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##EndWalkIn"))
-                    this.bar777SessionService.EndWalkInAndReset();
-            }
-            return;
-        }
-        if (sessionDone)
-        {
-            using var green = UIHelper.PushGreenButtonColours();
-            if (UIHelper.IconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##EndAndNext"))
-                this.bar777SessionService.EndQueuePlayerAndProcessNext();
-        }
+
+        if (!sessionDone) return;
+
+        using var green = UIHelper.PushGreenButtonColours();
+        if (UIHelper.CentredIconTextButton(FontAwesomeIcon.FlagCheckered, "End Game", "##EndGameBtn"))
+            EndCurrentGame();
     }
 
     private static (string CharName, string WorldName) GetCurrentTarget()

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Actions;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;

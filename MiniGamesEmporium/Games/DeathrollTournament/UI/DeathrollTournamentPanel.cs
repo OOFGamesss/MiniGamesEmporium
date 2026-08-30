@@ -1,4 +1,4 @@
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
@@ -11,7 +11,6 @@ using MiniGamesEmporium.Games.DeathrollTournament.UI.Components;
 using MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 using MiniGamesEmporium.Games.DeathrollTournament.Webview;
 using MiniGamesEmporium.Services;
-
 using MiniGamesEmporium.UI.Components;
 using System;
 using System.Collections.Generic;
@@ -25,6 +24,11 @@ public sealed class DeathrollTournamentPanel : IDisposable
     private static readonly Vector4 GreenButton        = new(0.04f, 0.42f, 0.16f, 1f);
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
+
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.DeathrollTournamentPink;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard infoCard = new();
     private const string DoorSurfaceStart    = "StartDoor";
     private float trackedStartDoorSpanPx    = GameSessionDoorStyles.DeathrollTournamentStartDoor.SeedTrackedContentSpanPx;
     private readonly PluginConfiguration config;
@@ -92,6 +96,18 @@ public sealed class DeathrollTournamentPanel : IDisposable
         }
     }
 
+    public bool DrawSessionActionButtons()
+    {
+        using (UIHelper.PushBlueButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Scroll, "Send Rules", "##DRSendRules"))
+                AnnounceRules.Execute(this.config, this.chatQueue);
+        ImGui.SameLine();
+        using (UIHelper.PushOrangeButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Advertise", "##DRAdvertise"))
+                Advertise.Execute(this.config, this.chatQueue);
+        return true;
+    }
+
     private void DrawGameSection()
     {
         if (!this.deathrollService.IsSessionActive())
@@ -100,38 +116,29 @@ public sealed class DeathrollTournamentPanel : IDisposable
             return;
         }
         ImGui.Spacing();
-        DrawShouts();
         var statsH = DeathrollStatsTab.GetInlineHeight(this.deathrollService.IsGilPrize());
         this.bracketTab.Draw(
             skipLeadingSpacing: true,
             reserveBottom: statsH,
-            drawStatsInline: this.statsTab.DrawInline);
+            drawStatsInline: this.statsTab.DrawInline,
+            drawShoutsInline: DrawShouts);
     }
 
     private void DrawShouts()
     {
-        using (var sections = ImRaii.Table("##DRShoutSections", 2, ImGuiTableFlags.BordersInnerV))
-        {
-            if (sections.Success)
-            {
-                ImGui.TableSetupColumn("##DRGameShoutCol",  ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn("##DRMatchShoutCol", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableNextRow();
-                ImGui.TableSetColumnIndex(0);
-                DrawGameShouts();
-                ImGui.TableSetColumnIndex(1);
-                this.bracketTab.DrawMatchShouts();
-            }
-        }
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
+        using var sections = ImRaii.Table("##DRShoutSections", 2, ImGuiTableFlags.None);
+        if (!sections.Success) return;
+        ImGui.TableSetupColumn("##DRGameShoutCol",  ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn("##DRMatchShoutCol", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableNextRow();
+        ImGui.TableSetColumnIndex(0);
+        this.infoCard.Draw("##DRGameShoutsCard", "Game Shouts", CardAccent, CardTitle, DrawGameShouts);
+        ImGui.TableSetColumnIndex(1);
+        this.infoCard.Draw("##DRMatchShoutsCard", "Match Shouts", CardAccent, CardTitle, this.bracketTab.DrawMatchShouts);
     }
 
     private void DrawGameShouts()
     {
-        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, "Game Shouts");
-        ImGui.Spacing();
         var row = new ShoutButtonRow();
 
         var state = this.config.DeathrollTournamentSession;
@@ -194,19 +201,12 @@ public sealed class DeathrollTournamentPanel : IDisposable
             DrawStartDoorBody);
     }
 
-    private float trackedGameInfoCardSpanPx = 80f;
-    private void DrawGameInfoCard()
+    private void DrawGameInfoCard() =>
+        this.infoCard.Draw("##DRGameInfoCard", "Game Info", CardAccent, CardTitle, DrawGameInfoBody);
+
+    private static void DrawGameInfoBody()
     {
-        var containerH = MathF.Max(80f, this.trackedGameInfoCardSpanPx + 14f);
-        using var card = ImRaii.Child("##DRGameInfoCard", new Vector2(-1f, containerH), true, ImGuiWindowFlags.NoScrollbar);
-        if (!card.Success) return;
-        var topY = ImGui.GetCursorPosY();
-        ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, "Game Info");
-        ImGui.Separator();
-        ImGui.Spacing();
-        var wrapEnd = ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X;
-        ImGui.PushTextWrapPos(wrapEnd);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
         ImGui.TextDisabled("1.  Collect the entry cost from each player before the tournament begins.");
         ImGui.TextDisabled("2.  Add all entrants, optionally shuffle, then configure best-of settings per round.");
         ImGui.TextDisabled("3.  Both players in each match roll /random 10 - the highest roller goes first.");
@@ -214,8 +214,6 @@ public sealed class DeathrollTournamentPanel : IDisposable
         ImGui.TextDisabled("5.  Play alternates back and forth. The first to roll a 1 loses that game.");
         ImGui.TextDisabled("6.  Winner advances through the bracket. Final winner takes the entire pot.");
         ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        this.trackedGameInfoCardSpanPx = MathF.Max(80f, ImGui.GetCursorPosY() - topY);
     }
 
     private void DrawStartDoorBody()
@@ -231,13 +229,8 @@ public sealed class DeathrollTournamentPanel : IDisposable
 
     private void DrawStartButton()
     {
-        var btnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Session").X;
-        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - btnW) * 0.5f);
-        ImGui.PushStyleColor(ImGuiCol.Button,        GreenButton);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, GreenButtonHovered);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  GreenButtonActive);
-        var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Session", "##DRStartSession");
-        ImGui.PopStyleColor(3);
+        using var startColours = UIHelper.PushButtonColours(GreenButton, GreenButtonHovered, GreenButtonActive);
+        var clicked = UIHelper.CentredIconTextButton(FontAwesomeIcon.Play, "Start Session", "##DRStartSession");
         if (clicked) this.deathrollService.StartSession();
     }
 }

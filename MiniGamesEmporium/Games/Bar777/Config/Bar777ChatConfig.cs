@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 /// <summary>Serialisable chat configuration for BAR 777 messages and toggles.</summary>
 
@@ -45,6 +45,8 @@ public class Bar777ChatConfig
         "/yell Shout {keyword} to join the BAR 777 Queue!";
     public string NextPlayerUpMessage { get; set; } =
         "/say Next player up is {player}";
+    public string AdvertiseMessage { get; set; } =
+        "/shout BAR 777 is OPEN! {cost} gil per roll, up to {rolls} rolls each. Match the winning number and take the whole {totalpot} gil pot! Shout {keyword} to join the queue!";
     public string RulesMessage { get; set; } =
         "/s ==========  HOW TO PLAY  ==========\n" +
         "/s  {cost} gil per roll, buy up to {rolls} rolls (max {maxcost} gil).\n" +
@@ -71,6 +73,7 @@ public class Bar777ChatConfig
         this.ReminderToPlayMessage = ConvertLeadingChannel(this.ReminderToPlayMessage, target);
         this.AnnounceKeywordMessage = ConvertLeadingChannel(this.AnnounceKeywordMessage, target);
         this.NextPlayerUpMessage = ConvertLeadingChannel(this.NextPlayerUpMessage, target);
+        this.AdvertiseMessage = ConvertLeadingChannel(this.AdvertiseMessage, target);
         this.RulesMessage = ConvertLeadingChannelPerLine(this.RulesMessage, target);
     }
 

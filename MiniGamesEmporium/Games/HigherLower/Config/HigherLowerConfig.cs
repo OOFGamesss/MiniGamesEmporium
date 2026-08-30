@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-
 using MiniGamesEmporium.Games.HigherLower.Models;
 
 /// <summary>Serialisable configuration for the Higher/Lower game.</summary>

@@ -21,17 +21,18 @@ The plugin lives inside FFXIV via the [Dalamud](https://github.com/goatcorp/Dala
 | Game | Status |
 |---|---|
 | **BAR 777** | ✅ Live |
+| **Coin Collector** | ✅ Live |
 | **Deathroll Tournament** | ✅ Live |
 | **Higher/Lower** | ✅ Live |
 | **Raffle** | ✅ Live |
 | **Voting Madness** | ✅ Live |
-| Minefield Gambit | 🔜 Coming Soon |
+| 8 Ball Pool | 🔜 Coming Soon |
 | Beer Pong | 🔜 Coming Soon |
 | Darts | 🔜 Coming Soon |
-| 8 Ball Pool | 🔜 Coming Soon |
-| Russian Roulette | 🔜 Coming Soon |
-| Raid Boss | 🔜 Coming Soon |
 | Deal or No Deal | 🔜 Coming Soon |
+| Minefield Gambit | 🔜 Coming Soon |
+| Raid Boss | 🔜 Coming Soon |
+| Russian Roulette | 🔜 Coming Soon |
 
 Each game gets its own tab inside the plugin's **Mini Games** section, styled in its own neon accent colour. The main window also holds a **Transaction History** ledger and a top-level **Settings** tab.
 
@@ -90,7 +91,8 @@ BAR 777 includes a full set of customisable message templates, each editable in 
 
 | Template | Trigger |
 |---|---|
-| Rules | Manually via **Send Rules** on the Game tab |
+| Rules | Manually via **Send Rules** on the session control bar (each line is sent as its own message) |
+| Advertise | Manually via **Advertise** on the session control bar |
 | Request Gil | Manually from the Game tab |
 | Request Gil (Buyer) | Manually, when someone else is paying for the player |
 | Start Rolls | When payment is verified (auto-send toggle) |
@@ -111,24 +113,131 @@ All outbound messages are queued with a one-second gap between each to stay with
 
 > **BAR 777 Door (Pre-Session)**
 >
-> ![BAR 777 Door (Pre-Session)](MiniGamesEmporium/Images/Screenshots/start-session-tab.png?v=2)
+> ![BAR 777 Door (Pre-Session)](Screenshots/start-session-tab.png?v=2)
 
 ---
 > **Game Tab: Queue Mode**
 >
-> ![Game Tab: Queue Mode](MiniGamesEmporium/Images/Screenshots/queue-mode.png?v=2)
+> ![Game Tab: Queue Mode](Screenshots/queue-mode.png?v=2)
 
 ---
 
 > **Game Tab: Walk-in Mode**
 >
-> ![Game Tab: Walk-in Mode](MiniGamesEmporium/Images/Screenshots/walk-in-mode.png?v=2)
+> ![Game Tab: Walk-in Mode](Screenshots/walk-in-mode.png?v=2)
 
 ---
 
 > **Chat Settings Tab**
 >
-> ![Chat Settings Tab](MiniGamesEmporium/Images/Screenshots/chat-settings.png?v=2)
+> ![Chat Settings Tab](Screenshots/chat-settings.png?v=2)
+
+---
+
+## Coin Collector
+
+Coin Collector is a party-based survival game built on the deathroll mechanic. The player rolls `/dice` for a starting number, then keeps rolling using their last result as the new maximum. Every roll that is not a 1 earns a coin; rolling a 1 ends their turn. Players take turns in the same session and the biggest hoard takes the pot.
+
+### How It Works
+
+1. The host opens the Coin Collector door, sets the entry cost, boosted pot, starting roll max, and win options, then clicks **Start Session**.
+2. The host invites the player to their party so everyone can see the rolls, then selects them from the party list.
+3. The host collects the entry cost via trade; once payment is verified the turn begins.
+4. The player rolls `/dice` for their starting number. That opening roll earns a coin too, and sets the ceiling for the next one.
+5. The player rolls `/dice <their last result>`. Every result other than a 1 earns a coin and becomes the new maximum. **Ask to Roll** tells them which command to type next.
+6. Rolling a 1 ends the turn and records their coin count on the leaderboard. The next player is pulled in and paid up the same way.
+7. Once everyone has played, the host clicks **Finish Game** to lock in the winner(s) and pay out the pot.
+
+### Game Options
+
+Set on the door before the session starts:
+
+| Option | Description |
+|---|---|
+| **Entry Cost** | Gil each player pays to take a turn |
+| **Boosted Pot** | Extra Gil added by the venue on top of trade revenue |
+| **Starting Roll Max** | Ceiling for the opening roll (default 999). At 999 the player opens with a plain `/dice`; set lower, they must roll `/dice <that number>` |
+| **Auto Win Count** | When on, a player who reaches the target coin count wins instantly |
+| **Allow Multiple Winners** | When on, everyone tied on the top coin count shares the pot; when off, the first player to reach it wins outright |
+| **Trades to Pot (%)** | Portion of trade revenue that feeds the pot; the remainder is held back for the venue |
+
+### Roll Detection
+
+Rolls are read from party and alliance chat and validated before they count. Only the player taking their turn is scored, and each roll's maximum must match their previous result - rolling `/dice 50` when the hint says `/dice 137` is ignored rather than scored. A stray `/dice` from anyone else in the party cannot corrupt a turn.
+
+### Statistics Panel
+
+The Statistics panel at the bottom of the Game tab shows the live pot and session figures:
+
+| Row | Description |
+|---|---|
+| **Total Pot** | Boosted Pot + the configured share of trade revenue, split between all winners; the **Announce Pot** button shouts it on demand |
+| **Boosted Pot** | Extra Gil added by the venue on top of trade revenue |
+| **Taken in Trades** | Total Gil collected from players this session |
+| **Kept from Trades** | Portion of trade revenue held back for the venue (shown only when Trades to Pot is below 100%) |
+| **Players Played** | Number of players who have taken a turn this session |
+| **Most Coins** | The highest coin count reached so far this session |
+| **Currently Winning** | The player (or players) on top of the leaderboard |
+
+**Trades to Pot (%)**, set on the door, controls how much of the trade revenue feeds the pot; whatever is not fed to the pot shows as Kept from Trades.
+
+### Automated Chat
+
+Coin Collector includes fully customisable message templates with toggleable auto-send:
+
+| Template | Trigger |
+|---|---|
+| Rules | Manually via **Send Rules** on the session control bar (each line is sent as its own message) |
+| Advertise | Manually via **Advertise** on the session control bar |
+| Request Gil | Manually from the Game tab |
+| Request Gil (Buyer) | Manually, when someone else is paying for the player |
+| Ask to Roll | Before each roll, with the next dice number and the player's coin count once they have one (auto-send toggle) |
+| Announce Score | When a turn ends and the player is not in the lead (auto-send toggle) |
+| Announce Lead | When a turn ends and the player is in the lead (auto-send toggle) |
+| Win Shout | On the winner screen, includes the winner's share of the pot |
+| Announce Pot | Posts the current pot on demand |
+
+All outbound messages are queued with a one-second gap between each to stay within FFXIV's chat rate limits.
+
+### Winner Payout
+
+When the session finishes, the winner screen shows each winner's share of the pot. The host can **Announce Winner**, **Trade Winner** to pay them by hand, or use **Auto Payout** to send their share automatically. A progress bar tracks how much of each winner's share has been paid out.
+
+### Screenshots
+
+> **Session Tab (Pre-Session)**
+>
+> ![Session Tab (Pre-Session)](Screenshots/cc-session.png)
+
+---
+
+> **Game Tab: Select Player**
+>
+> ![Game Tab: Select Player](Screenshots/cc-lobby.png)
+
+---
+
+> **Game Tab: Payment**
+>
+> ![Game Tab: Payment](Screenshots/cc-payment.png)
+
+---
+
+> **Game Tab: In Play**
+>
+> ![Game Tab: In Play](Screenshots/cc-game.png)
+
+---
+
+> **Game Tab: Finish Game**
+>
+> ![Game Tab: Finish Game](Screenshots/cc-finish.png)
+
+---
+
+> **Session Complete: Winner Payout**
+>
+> ![Session Complete: Winner Payout](Screenshots/cc-winner.png)
 
 ---
 
@@ -185,6 +294,8 @@ Deathroll Tournament includes a full set of customisable message templates, each
 
 | Template | Trigger |
 |---|---|
+| Rules | Manually via **Send Rules** on the session control bar (each line is sent as its own message) |
+| Advertise | Manually via **Advertise** on the session control bar |
 | Request Gil | Manually per player from the Registration table |
 | Request Gil (Buyer) | Manually, when someone else is paying a player's entry |
 | Announce Bracket | When the bracket is generated; posts the matchups |
@@ -221,25 +332,37 @@ If the Discord message is deleted, toggle **Enable** off then on to create a fre
 
 > **Session Tab (Pre-Session)**
 >
-> ![Session Tab (Pre-Session)](MiniGamesEmporium/Images/Screenshots/drt-session-tab.png)
+> ![Session Tab (Pre-Session)](Screenshots/drt-session-tab.png)
 
 ---
 
 > **Lobby (Registration)**
 >
-> ![Lobby (Registration)](MiniGamesEmporium/Images/Screenshots/drt-lobby.png)
+> ![Lobby (Registration)](Screenshots/drt-lobby.png)
 
 ---
 
 > **Bracket**
 >
-> ![Bracket](MiniGamesEmporium/Images/Screenshots/drt-bracket.png)
+> ![Bracket](Screenshots/drt-bracket.png)
 
 ---
 
 > **Example: Live Bracket Embed (Discord)**
 >
-> ![Example: Live Bracket Embed (Discord)](MiniGamesEmporium/Images/Screenshots/drt-example-bracket.png)
+> ![Example: Live Bracket Embed (Discord)](Screenshots/drt-example-bracket.png)
+
+---
+
+> **Example: Live Lobby Embed (Discord)**
+>
+> ![Example: Live Lobby Embed (Discord)](Screenshots/drt-example-lobby.png)
+
+---
+
+> **Web Spectator Tab**
+>
+> ![Web Spectator Tab](Screenshots/drt-webview.png)
 
 ---
 
@@ -297,8 +420,10 @@ Higher/Lower includes fully customisable message templates with toggleable auto-
 
 | Template | Trigger |
 |---|---|
-| Rules | Manually via **Send Rules** on the Game tab |
+| Rules | Manually via **Send Rules** on the session control bar (each line is sent as its own message) |
+| Advertise | Manually via **Advertise** on the session control bar |
 | Request Gil | Manually from the Game tab |
+| Request Gil (Buyer) | Manually, when someone else is paying for the player |
 | Let's Play | When payment is verified (auto-send toggle) |
 | Ask Guess | After each roll while awaiting the player's guess (auto-send toggle) |
 | Announce Score | When a turn ends and the player is not in the lead (auto-send toggle) |
@@ -316,31 +441,31 @@ When the session finishes, the winner screen shows each winner's share of the po
 
 > **Session Tab (Pre-Session)**
 >
-> ![Session Tab (Pre-Session)](MiniGamesEmporium/Images/Screenshots/HL-session.png)
+> ![Session Tab (Pre-Session)](Screenshots/HL-session.png)
 
 ---
 
 > **Game Tab: Select Player**
 >
-> ![Game Tab: Select Player](MiniGamesEmporium/Images/Screenshots/HL-lobby.png)
+> ![Game Tab: Select Player](Screenshots/HL-lobby.png)
 
 ---
 
 > **Game Tab: In Play**
 >
-> ![Game Tab: In Play](MiniGamesEmporium/Images/Screenshots/HL-game.png)
+> ![Game Tab: In Play](Screenshots/HL-game.png)
 
 ---
 
 > **Game Tab: Turn Complete**
 >
-> ![Game Tab: Turn Complete](MiniGamesEmporium/Images/Screenshots/HL-game-over.png)
+> ![Game Tab: Turn Complete](Screenshots/HL-game-over.png)
 
 ---
 
 > **Session Complete: Winner Payout**
 >
-> ![Session Complete: Winner Payout](MiniGamesEmporium/Images/Screenshots/HL-winner.png)
+> ![Session Complete: Winner Payout](Screenshots/HL-winner.png)
 
 ---
 
@@ -387,6 +512,8 @@ Raffle includes a full set of customisable message templates, each editable in t
 
 | Template | Trigger |
 |---|---|
+| Rules | Manually via **Send Rules** on the session control bar (each line is sent as its own message) |
+| Advertise | Manually via **Advertise** on the session control bar |
 | Request Gil | Manually from the Game tab |
 | Request Gil (Buyer) | Manually, when someone else is paying for a player's tickets |
 | Tickets Sold | Manually, shouts the current number of tickets sold |
@@ -406,25 +533,25 @@ Once a winner is drawn, the winner screen shows the pot, the amount traded to th
 
 > **Session Tab (Pre-Session)**
 >
-> ![Session Tab (Pre-Session)](MiniGamesEmporium/Images/Screenshots/raffle-session.png)
+> ![Session Tab (Pre-Session)](Screenshots/raffle-session.png)
 
 ---
 
 > **Game Tab: Lobby**
 >
-> ![Game Tab: Lobby](MiniGamesEmporium/Images/Screenshots/raffle-lobby.png)
+> ![Game Tab: Lobby](Screenshots/raffle-lobby.png)
 
 ---
 
 > **Game Tab: Draw**
 >
-> ![Game Tab: Draw](MiniGamesEmporium/Images/Screenshots/raffle-draw.png)
+> ![Game Tab: Draw](Screenshots/raffle-draw.png)
 
 ---
 
 > **Session Complete: Winner**
 >
-> ![Session Complete: Winner](MiniGamesEmporium/Images/Screenshots/raffle-win.png)
+> ![Session Complete: Winner](Screenshots/raffle-win.png)
 
 ---
 
@@ -476,6 +603,8 @@ Voting Madness includes a full set of customisable message templates, each edita
 
 | Template | Trigger |
 |---|---|
+| Rules | Manually via **Send Rules** on the session control bar (each line is sent as its own message) |
+| Advertise | Manually via **Advertise** on the session control bar |
 | Announce Options | Manually via **Announce Options** on the Game tab |
 | Vote Started | Manually via **Vote Started** on the Game tab |
 | Closing Time | Manually via **Closing Time** when a close time is set |
@@ -492,25 +621,31 @@ All outbound messages are queued with a one-second gap between each to stay with
 
 > **Session Tab (Pre-Session)**
 >
-> ![Session Tab (Pre-Session)](MiniGamesEmporium/Images/Screenshots/vm-session.png)
+> ![Session Tab (Pre-Session)](Screenshots/vm-session.png)
 
 ---
 
 > **Game Tab: Voting Open**
 >
-> ![Game Tab: Voting Open](MiniGamesEmporium/Images/Screenshots/vm-game.png)
+> ![Game Tab: Voting Open](Screenshots/vm-game.png)
 
 ---
 
 > **Game Tab: Vote Closed**
 >
-> ![Game Tab: Vote Closed](MiniGamesEmporium/Images/Screenshots/vm-closed.png)
+> ![Game Tab: Vote Closed](Screenshots/vm-closed.png)
 
 ---
 
 > **Chat Settings Tab**
 >
-> ![Chat Settings Tab](MiniGamesEmporium/Images/Screenshots/vm-chat.png)
+> ![Chat Settings Tab](Screenshots/vm-chat.png)
+
+---
+
+> **Settings Tab**
+>
+> ![Settings Tab](Screenshots/vm-settings.png)
 
 ---
 

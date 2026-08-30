@@ -20,6 +20,7 @@ public enum MiniGame
     RaidBoss,
     DealOrNoDeal,
     VotingMadness,
+    CoinCollector,
 }
 
 public sealed record MiniGameNavEntry(

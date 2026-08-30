@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.HigherLower.Automation;
 using MiniGamesEmporium.Games.HigherLower.Services;
@@ -25,8 +23,12 @@ public sealed class HigherLowerPanel : IDisposable
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
 
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.HigherLowerOrange;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard infoCard = new();
+
     private float trackedStartDoorSpanPx    = GameSessionDoorStyles.HigherLowerStartDoor.SeedTrackedContentSpanPx;
-    private float trackedGameInfoCardSpanPx = 140f;
 
     private readonly PluginConfiguration config;
     private readonly HigherLowerService higherLowerService;
@@ -60,6 +62,12 @@ public sealed class HigherLowerPanel : IDisposable
             case GameSection.Chat:     DrawChatSection(); break;
             case GameSection.Settings: DrawSettingsSection(); break;
         }
+    }
+
+    public bool DrawSessionActionButtons()
+    {
+        this.gameTab.DrawSessionActionButtons();
+        return true;
     }
 
     private void DrawGameSection()
@@ -98,18 +106,12 @@ public sealed class HigherLowerPanel : IDisposable
             DrawStartDoorBody);
     }
 
-    private void DrawGameInfoCard()
+    private void DrawGameInfoCard() =>
+        this.infoCard.Draw("##HLGameInfoCard", "Game Info", CardAccent, CardTitle, DrawGameInfoBody);
+
+    private static void DrawGameInfoBody()
     {
-        var containerH = MathF.Max(80f, this.trackedGameInfoCardSpanPx + 14f);
-        using var card = ImRaii.Child("##HLGameInfoCard", new Vector2(-1f, containerH), true, ImGuiWindowFlags.NoScrollbar);
-        if (!card.Success) return;
-        var topY = ImGui.GetCursorPosY();
-        ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.HigherLowerOrange, "Game Info");
-        ImGui.Separator();
-        ImGui.Spacing();
-        var wrapEnd = ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X;
-        ImGui.PushTextWrapPos(wrapEnd);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
         ImGui.TextDisabled("1.  Invite the player to your party so they can see the dice rolls.");
         ImGui.TextDisabled("2.  Select the player from the list of invited players.");
         ImGui.TextDisabled("3.  Collect the entry cost from the player before their turn begins.");
@@ -118,8 +120,6 @@ public sealed class HigherLowerPanel : IDisposable
         ImGui.TextDisabled("6.  Roll again - if correct the round count increases, if wrong the game ends.");
         ImGui.TextDisabled("7.  Click Finish Game and declare the winner.");
         ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        this.trackedGameInfoCardSpanPx = MathF.Max(80f, ImGui.GetCursorPosY() - topY);
     }
 
     private void DrawStartDoorBody()
@@ -135,13 +135,8 @@ public sealed class HigherLowerPanel : IDisposable
 
     private void DrawCentredStartButton()
     {
-        var startBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Session").X;
-        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - startBtnW) * 0.5f);
-        ImGui.PushStyleColor(ImGuiCol.Button,        GreenButton);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, GreenButtonHovered);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  GreenButtonActive);
-        var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Session", "##HLStartSessionDoor");
-        ImGui.PopStyleColor(3);
+        using var startColours = UIHelper.PushButtonColours(GreenButton, GreenButtonHovered, GreenButtonActive);
+        var clicked = UIHelper.CentredIconTextButton(FontAwesomeIcon.Play, "Start Session", "##HLStartSessionDoor");
         if (clicked)
             this.higherLowerService.StartSession();
     }

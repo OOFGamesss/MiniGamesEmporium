@@ -25,6 +25,8 @@ public sealed class RaffleGameTab
     private const float TrophySide = 140f;
 
     private static readonly Vector4 GoldColour = new(1f, 0.84f, 0f, 1f);
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.RaffleTeal;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
 
     private static readonly Vector4 PurpleBtn        = new(0.44f, 0.12f, 0.66f, 1f);
     private static readonly Vector4 PurpleBtnHovered = new(0.56f, 0.18f, 0.80f, 1f);
@@ -49,6 +51,7 @@ public sealed class RaffleGameTab
     private readonly AutoPayoutService autoPayoutService;
     private readonly PlayerInfoService playerInfo;
     private readonly ISharedImmediateTexture? trophyTexture;
+    private readonly ThemedCard card = new();
 
     private string comboFilter = string.Empty;
     private int donationInput = 0;
@@ -109,9 +112,10 @@ public sealed class RaffleGameTab
     {
         var showKept = state.TradesToPotPercentAtStart < 100;
         var bottomH  = GetStatsHeight(showKept);
-        var listH    = MathF.Max(80f, ImGui.GetContentRegionAvail().Y - bottomH - ImGui.GetStyle().ItemSpacing.Y);
-        using (var listChild = ImRaii.Child("##RaffleListRegion", new Vector2(-1f, listH), false, ImGuiWindowFlags.NoScrollbar))
-            if (listChild.Success) DrawPlayerList(state);
+        var listH    = MathF.Max(80f, ImGui.GetContentRegionAvail().Y - bottomH - ImGui.GetStyle().ItemSpacing.Y - ThemedCard.ChromeHeight());
+        var title    = $"Players ({this.service.ComputePlayersWithTickets()} / {state.Entries.Count} with tickets)";
+        this.card.Draw("##RafflePlayersCard", title, CardAccent, CardTitle, listH,
+            () => DrawPlayerList(state));
         DrawBottomStats(state, showKept);
     }
 
@@ -125,13 +129,8 @@ public sealed class RaffleGameTab
 
     private void DrawPlayerList(RaffleState state)
     {
-        var availH = ImGui.GetContentRegionAvail().Y;
-        var startY = ImGui.GetCursorPosY();
-        ImGui.TextColored(EmporiumNeonTheme.RaffleTeal, $"Players ({this.service.ComputePlayersWithTickets()} / {state.Entries.Count} with tickets)");
-        ImGui.Spacing();
         DrawAddPlayerCombo();
         ImGui.Spacing();
-        var tableH = MathF.Max(24f, availH - (ImGui.GetCursorPosY() - startY));
         if (state.Entries.Count == 0)
         {
             ImGui.TextDisabled("No players added yet.");
@@ -140,7 +139,7 @@ public sealed class RaffleGameTab
         int removeIdx = -1, tradeIdx = -1;
         using var table = ImRaii.Table("##RafflePlayerTable", 3,
             ImGuiTableFlags.BordersOuter | ImGuiTableFlags.BordersInnerH | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY,
-            new Vector2(-1f, tableH));
+            new Vector2(-1f, -1f));
         if (!table.Success) return;
         ImGui.TableSetupScrollFreeze(0, 1);
         ImGui.TableSetupColumn("#",            ImGuiTableColumnFlags.WidthFixed, 26f);
@@ -222,7 +221,7 @@ public sealed class RaffleGameTab
             ImGui.SameLine();
         }
 
-        using (Btn(PurpleBtn, PurpleBtnHovered, PurpleBtnActive))
+        using (UIHelper.PushButtonColours(PurpleBtn, PurpleBtnHovered, PurpleBtnActive))
             if (UIHelper.IconTextButton(FontAwesomeIcon.TicketAlt, "Tickets", $"##RaffleTickets{idx}"))
                 ImGui.OpenPopup($"##RaffleTicketPopup{idx}");
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("Manually grant or remove tickets (adds their value to the pot)");
@@ -414,28 +413,24 @@ public sealed class RaffleGameTab
 
     private void DrawSidePane(RaffleState state)
     {
-        if (DrawCloseCountdown(state))
-        {
-            ImGui.Spacing();
-            ImGui.Separator();
-            ImGui.Spacing();
-        }
-        DrawAnnounceButtons();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawDrawSection(state);
+        if (state.HasCloseTime)
+            this.card.Draw("##RaffleCloseCard", "Closing Time", CardAccent, CardTitle,
+                () => DrawCloseCountdown(state));
+
+        this.card.Draw("##RaffleShoutsCard", "Shouts", CardAccent, CardTitle,
+            DrawAnnounceButtons);
+
+        this.card.Draw("##RaffleDrawCard", "Draw Winner", CardAccent, CardTitle,
+            () => DrawDrawSection(state));
     }
 
-    private static bool DrawCloseCountdown(RaffleState state)
+    private static void DrawCloseCountdown(RaffleState state)
     {
-        if (!state.HasCloseTime) return false;
         var timeLeft = RaffleTimeUtil.FormatTimeLeft(state.CloseAtUtc);
         var colour   = timeLeft == "Closed" ? EmporiumNeonTheme.WarnAmber : EmporiumNeonTheme.RaffleTeal;
         ImGui.TextDisabled($"Closes at {RaffleTimeUtil.FormatCloseLabel(state.CloseHour, state.CloseMinute)} ST -");
         ImGui.SameLine();
         ImGui.TextColored(colour, timeLeft);
-        return true;
     }
 
     private void DrawBottomStats(RaffleState state, bool showKept)
@@ -512,11 +507,20 @@ public sealed class RaffleGameTab
         ImGui.TextColored(valueColour, value);
     }
 
+    public void DrawSessionActionButtons()
+    {
+        using (UIHelper.PushBlueButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Scroll, "Send Rules", "##RaffleSendRules"))
+                AnnounceRules.Execute(this.config, this.chatQueue);
+        ImGui.SameLine();
+        using (UIHelper.PushOrangeButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Advertise", "##RaffleAdvertise"))
+                Advertise.Execute(this.config, this.chatQueue);
+    }
+
     private void DrawAnnounceButtons()
     {
-        ImGui.TextColored(EmporiumNeonTheme.RaffleTeal, "Shouts");
-        ImGui.Spacing();
-        using (Btn(TealBtn, TealBtnHovered, TealBtnActive))
+        using (UIHelper.PushButtonColours(TealBtn, TealBtnHovered, TealBtnActive))
             if (UIHelper.IconTextButton(FontAwesomeIcon.TicketAlt, "Tickets Sold", "##RaffleAnnTickets"))
                 AnnounceTicketsSold.Execute(this.config, this.chatQueue);
         ImGui.SameLine();
@@ -524,12 +528,12 @@ public sealed class RaffleGameTab
             if (UIHelper.IconTextButton(FontAwesomeIcon.Clock, "Closing Time", "##RaffleAnnClosing"))
                 AnnounceClosingTime.Execute(this.config, this.chatQueue);
         if (this.config.Raffle.AutoJoinKeyword)
-            using (Btn(MagentaBtn, MagentaBtnHover, MagentaBtnActive))
+            using (UIHelper.PushButtonColours(MagentaBtn, MagentaBtnHover, MagentaBtnActive))
                 if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Join Reminder", "##RaffleAnnJoin"))
                     AnnounceJoinReminder.Execute(this.config, this.chatQueue);
         if (!this.service.AreNumbersHidden() && this.service.ComputeTicketsSold() > 0)
         {
-            using (Btn(TealBtn, TealBtnHovered, TealBtnActive))
+            using (UIHelper.PushButtonColours(TealBtn, TealBtnHovered, TealBtnActive))
                 if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Send All Numbers", "##RaffleSendAllNumbers"))
                     SendAllTicketNumbers();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Tells every player with tickets their numbers");
@@ -551,8 +555,6 @@ public sealed class RaffleGameTab
 
     private void DrawDrawSection(RaffleState state)
     {
-        ImGui.TextColored(EmporiumNeonTheme.RaffleTeal, "Draw Winner");
-        ImGui.Spacing();
         if (state.HasDrawn)
         {
             DrawResult(state);
@@ -618,39 +620,20 @@ public sealed class RaffleGameTab
                 this.service.ClearDraw();
     }
 
-    private void DrawRaffleComplete(RaffleState state)
+    private void DrawRaffleComplete(RaffleState state) =>
+        this.card.Draw("##RaffleWinnerCard", "Raffle Winner", CardAccent, GoldColour,
+            () => DrawRaffleCompleteBody(state));
+
+    private void DrawRaffleCompleteBody(RaffleState state)
     {
-        var avail      = ImGui.GetContentRegionAvail().X;
-        var startX     = ImGui.GetCursorPosX();
         var winnerName = PlayerInfoService.StripWorld(state.WinnerName ?? string.Empty);
         var number     = state.WinningNumber ?? 0;
 
-        ImGui.SetWindowFontScale(1.6f);
-        var nameW = ImGui.CalcTextSize(winnerName).X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - nameW) * 0.5f));
-        ImGui.TextColored(GoldColour, winnerName);
-        ImGui.SetWindowFontScale(1.0f);
-
-        const string subtitle = "RAFFLE WINNER!";
-        var subtitleW = ImGui.CalcTextSize(subtitle).X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - subtitleW) * 0.5f));
-        ImGui.TextColored(GoldColour, subtitle);
-
-        var numberText = $"Winning number {number}";
-        var numberW    = ImGui.CalcTextSize(numberText).X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - numberW) * 0.5f));
-        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, numberText);
+        UIHelper.CentreTextScaled(winnerName, GoldColour, 1.6f);
+        UIHelper.CentreText($"Winning number {number}", EmporiumNeonTheme.SuccessMint);
 
         ImGui.Spacing();
-
-        var trophySide = TrophySide * ImGuiHelpers.GlobalScale;
-        var tex = this.trophyTexture?.GetWrapOrDefault();
-        if (tex != null)
-        {
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - trophySide) * 0.5f));
-            ImGui.Image(tex.Handle, new Vector2(trophySide, trophySide));
-        }
-
+        DrawTrophy();
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -659,91 +642,86 @@ public sealed class RaffleGameTab
         var paid      = state.WinnerPayoutGil;
         var remaining = Math.Max(0L, pot - paid);
 
-        var labelColW = MathF.Max(ImGui.CalcTextSize("Pot:").X, MathF.Max(ImGui.CalcTextSize("Traded:").X, ImGui.CalcTextSize("Remaining:").X));
-        var valueColW = MathF.Max(ImGui.CalcTextSize($"{pot:N0} Gil").X, MathF.Max(ImGui.CalcTextSize($"{paid:N0} Gil").X, ImGui.CalcTextSize($"{remaining:N0} Gil").X));
-        var spacing   = ImGui.GetStyle().ItemSpacing.X;
-        var blockW    = labelColW + spacing + valueColW;
-        var rowX      = startX + MathF.Max(0f, (avail - blockW) * 0.5f);
-        var valueX    = rowX + labelColW + spacing;
-
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(GoldColour, "Pot:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(GoldColour, $"{pot:N0} Gil");
-
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, "Traded:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(EmporiumNeonTheme.SuccessMint, $"{paid:N0} Gil");
-
-        ImGui.SetCursorPosX(rowX);
-        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Remaining:");
-        ImGui.SameLine(valueX);
-        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, $"{remaining:N0} Gil");
-
+        DrawPayoutFigures(pot, paid, remaining);
         ImGui.Spacing();
 
         if (!this.config.Raffle.Chat.AutoAnnounceWinner)
         {
-            var annBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Bullhorn, "Announce Winner").X;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - annBtnW) * 0.5f));
             using (UIHelper.PushYellowButtonColours())
-                if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Winner", "##RaffleWinAnn"))
+                if (UIHelper.CentredIconTextButton(FontAwesomeIcon.Bullhorn, "Announce Winner", "##RaffleWinAnn"))
                     AnnounceWinner.Execute(this.config, this.chatQueue, state.WinnerName!, number, pot);
             ImGui.Spacing();
         }
 
-        var tradeBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Coins, "Trade Winner").X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - tradeBtnW) * 0.5f));
+        var payoutRunning = this.autoPayoutService.IsRunningFor(winnerName);
+        var payoutIcon    = payoutRunning ? FontAwesomeIcon.Stop : FontAwesomeIcon.MoneyBillWave;
+        var payoutLabel   = payoutRunning ? "Stop Auto Payout" : "Auto Payout";
+        UIHelper.CentreNextButtonRow((FontAwesomeIcon.Coins, "Trade Winner"), (payoutIcon, payoutLabel));
+
         using (UIHelper.PushAmberButtonColours())
             if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade Winner", "##RaffleWinTrade"))
                 SendTradeRequest.Execute(winnerName, this.chatQueue);
 
-        ImGui.Spacing();
-
-        DrawRaffleAutoPayoutButton(winnerName, remaining, avail, startX);
-
+        ImGui.SameLine();
+        DrawRaffleAutoPayoutButton(winnerName, remaining);
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
-        var progress   = pot > 0 ? MathF.Min(1f, (float)paid / pot) : 1f;
-        var pctOverlay = $"{progress * 100f:F0}% paid out";
-        ImGui.SetCursorPosX(startX);
-        ImGui.ProgressBar(progress, new Vector2(avail, ImGui.GetFrameHeight()), pctOverlay);
+        var progress = pot > 0 ? MathF.Min(1f, (float)paid / pot) : 1f;
+        ImGui.ProgressBar(progress, new Vector2(-1f, ImGui.GetFrameHeight()), $"{progress * 100f:F0}% paid out");
 
         ImGui.Spacing();
-        var redrawW = UIHelper.CalcButtonSize(FontAwesomeIcon.Redo, "Clear / Re-draw").X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - redrawW) * 0.5f));
         using (UIHelper.PushRedButtonColours())
-            if (UIHelper.IconTextButton(FontAwesomeIcon.Redo, "Clear / Re-draw", "##RaffleWinRedraw"))
+            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.Redo, "Clear / Re-draw", "##RaffleWinRedraw"))
                 this.service.ClearDraw();
     }
 
-    private void DrawRaffleAutoPayoutButton(string winnerName, long remaining, float avail, float startX)
+    private void DrawTrophy()
+    {
+        var tex = this.trophyTexture?.GetWrapOrDefault();
+        if (tex == null) return;
+        var side = TrophySide * ImGuiHelpers.GlobalScale;
+        UIHelper.CentreNext(side);
+        ImGui.Image(tex.Handle, new Vector2(side, side));
+    }
+
+    private static void DrawPayoutFigures(long pot, long paid, long remaining)
+    {
+        var labelColW = MathF.Max(ImGui.CalcTextSize("Pot:").X, MathF.Max(ImGui.CalcTextSize("Traded:").X, ImGui.CalcTextSize("Remaining:").X));
+        var valueColW = MathF.Max(ImGui.CalcTextSize($"{pot:N0} Gil").X, MathF.Max(ImGui.CalcTextSize($"{paid:N0} Gil").X, ImGui.CalcTextSize($"{remaining:N0} Gil").X));
+        var spacing   = ImGui.GetStyle().ItemSpacing.X;
+        var blockW    = labelColW + spacing + valueColW;
+        var rowX      = ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - blockW) * 0.5f);
+        var valueX    = rowX + labelColW + spacing;
+
+        DrawFigureRow(rowX, valueX, "Pot:",       $"{pot:N0} Gil",       GoldColour);
+        DrawFigureRow(rowX, valueX, "Traded:",    $"{paid:N0} Gil",      EmporiumNeonTheme.SuccessMint);
+        DrawFigureRow(rowX, valueX, "Remaining:", $"{remaining:N0} Gil", EmporiumNeonTheme.WarnAmber);
+    }
+
+    private static void DrawFigureRow(float rowX, float valueX, string label, string value, Vector4 colour)
+    {
+        ImGui.SetCursorPosX(rowX);
+        ImGui.TextColored(colour, label);
+        ImGui.SameLine(valueX);
+        ImGui.TextColored(colour, value);
+    }
+
+    private void DrawRaffleAutoPayoutButton(string winnerName, long remaining)
     {
         if (this.autoPayoutService.IsRunningFor(winnerName))
         {
-            var stopBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, "Stop Auto Payout").X;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - stopBtnW) * 0.5f));
             using var red = UIHelper.PushRedButtonColours();
             if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Auto Payout", "##RaffleWinStopPayout"))
                 this.autoPayoutService.Stop();
+            return;
         }
-        else
-        {
-            using var disabled = ImRaii.Disabled(remaining <= 0 || this.autoPayoutService.IsRunning);
-            var autoBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.MoneyBillWave, "Auto Payout").X;
-            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - autoBtnW) * 0.5f));
-            using var green = UIHelper.PushGreenButtonColours();
-            if (UIHelper.IconTextButton(FontAwesomeIcon.MoneyBillWave, "Auto Payout", "##RaffleWinAutoPayout"))
-                this.autoPayoutService.Start(winnerName, this.service.GetWinnerRemaining, this.service.IsSessionActive);
-        }
+
+        using var disabled = ImRaii.Disabled(remaining <= 0 || this.autoPayoutService.IsRunning);
+        using var green    = UIHelper.PushGreenButtonColours();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.MoneyBillWave, "Auto Payout", "##RaffleWinAutoPayout"))
+            this.autoPayoutService.Start(winnerName, this.service.GetWinnerRemaining, this.service.IsSessionActive);
     }
 
-    private static ImRaii.ColorDisposable Btn(Vector4 normal, Vector4 hovered, Vector4 active) =>
-        new ImRaii.ColorDisposable()
-            .Push(ImGuiCol.Button,        normal)
-            .Push(ImGuiCol.ButtonHovered, hovered)
-            .Push(ImGuiCol.ButtonActive,  active);
 }

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.Games.CoinCollector.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.HigherLower.Config;
@@ -22,6 +22,7 @@ public sealed class PresetExportPayload
     public RaffleExportEntry? Raffle { get; set; }
     public HigherLowerExportEntry? HigherLower { get; set; }
     public VotingMadnessExportEntry? VotingMadness { get; set; }
+    public CoinCollectorExportEntry? CoinCollector { get; set; }
     public DiscordExportEntry? Discord { get; set; }
     public string? QueueKeyword { get; set; }
     public QueueConfig? QueueJoinChannels { get; set; }
@@ -106,6 +107,19 @@ public sealed class VotingMadnessExportEntry
     public int CloseHour { get; set; } = -1;
     public int CloseMinute { get; set; } = 0;
     public VotingMadnessChatConfig Chat { get; set; } = new();
+}
+
+[Serializable]
+public sealed class CoinCollectorExportEntry
+{
+    public int EntryCost { get; set; } = 100_000;
+    public long BoostedPot { get; set; } = 0L;
+    public int StartingRollMax { get; set; } = 999;
+    public bool AutoWinCount { get; set; } = true;
+    public int TargetCoins { get; set; } = 5;
+    public bool AllowMultipleWinners { get; set; } = true;
+    public int TradesToPotPercent { get; set; } = 100;
+    public CoinCollectorChatConfig Chat { get; set; } = new();
 }
 
 [Serializable]

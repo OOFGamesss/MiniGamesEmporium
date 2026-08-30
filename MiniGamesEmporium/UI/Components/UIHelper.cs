@@ -105,14 +105,12 @@ internal static class UIHelper
     internal static void DrawStartSessionHeading(Vector4 colour)
     {
         const string label = "Start a Session";
-        const float scale = 1.35f;
-        ImGui.SetWindowFontScale(scale);
+        using var font = PushScaledFont(1.35f);
         var textSize = ImGui.CalcTextSize(label);
         var availX = ImGui.GetContentRegionAvail().X;
         var cursorX = ImGui.GetCursorPosX();
         ImGui.SetCursorPosX(cursorX + MathF.Max(0f, (availX - textSize.X) * 0.5f));
         ImGui.TextColored(colour, label);
-        ImGui.SetWindowFontScale(1f);
     }
 
     internal static ImRaii.ColorDisposable PushGreenButtonColours() =>
@@ -150,6 +148,102 @@ internal static class UIHelper
             .Push(ImGuiCol.Button,        new Vector4(0.60f, 0.25f, 0.02f, 1f))
             .Push(ImGuiCol.ButtonHovered, new Vector4(0.80f, 0.35f, 0.03f, 1f))
             .Push(ImGuiCol.ButtonActive,  new Vector4(0.45f, 0.18f, 0.01f, 1f));
+
+    internal static ImRaii.ColorDisposable PushGoldButtonColours() =>
+        PushButtonColours(
+            new Vector4(0.72f, 0.55f, 0f, 1f),
+            new Vector4(0.88f, 0.68f, 0f, 1f),
+            new Vector4(0.58f, 0.44f, 0f, 1f));
+
+    internal static ImRaii.ColorDisposable PushButtonColours(Vector4 normal, Vector4 hovered, Vector4 active) =>
+        new ImRaii.ColorDisposable()
+            .Push(ImGuiCol.Button,        normal)
+            .Push(ImGuiCol.ButtonHovered, hovered)
+            .Push(ImGuiCol.ButtonActive,  active);
+
+    internal static void CentreNext(float itemWidth) =>
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f, (ImGui.GetContentRegionAvail().X - itemWidth) * 0.5f));
+
+    internal static void CentreText(string text, Vector4 colour)
+    {
+        CentreNext(ImGui.CalcTextSize(text).X);
+        ImGui.TextColored(colour, text);
+    }
+
+    internal static void CentreTextDisabled(string text)
+    {
+        CentreNext(ImGui.CalcTextSize(text).X);
+        ImGui.TextDisabled(text);
+    }
+
+    internal static void CentreTextScaled(string text, Vector4 colour, float fontScale)
+    {
+        using var font = PushScaledFont(fontScale);
+        CentreNext(ImGui.CalcTextSize(text).X);
+        ImGui.TextColored(colour, text);
+    }
+
+    internal static void CentreValueRowScaled(
+        string id, string value, Vector4 valueColour, float fontScale,
+        string leftLabel, string rightLabel, Vector4 rightColour)
+    {
+        Vector2 valueSize;
+        using (PushScaledFont(fontScale))
+            valueSize = ImGui.CalcTextSize(value);
+
+        using var tbl = ImRaii.Table(id, 3, ImGuiTableFlags.None, new Vector2(-1f, 0f));
+        if (!tbl.Success) return;
+        ImGui.TableSetupColumn($"{id}L", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn($"{id}M", ImGuiTableColumnFlags.WidthFixed,
+            valueSize.X + ImGui.GetStyle().CellPadding.X * 2f);
+        ImGui.TableSetupColumn($"{id}R", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableNextRow();
+
+        var labelOffset = MathF.Max(0f, (valueSize.Y - ImGui.GetTextLineHeight()) * 0.5f);
+
+        ImGui.TableSetColumnIndex(0);
+        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + labelOffset);
+        ImGui.TextDisabled(leftLabel);
+
+        ImGui.TableSetColumnIndex(1);
+        using (PushScaledFont(fontScale))
+            ImGui.TextColored(valueColour, value);
+
+        ImGui.TableSetColumnIndex(2);
+        ImGui.SetCursorPosY(ImGui.GetCursorPosY() + labelOffset);
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + MathF.Max(0f,
+            ImGui.GetContentRegionAvail().X - ImGui.CalcTextSize(rightLabel).X));
+        ImGui.TextColored(rightColour, rightLabel);
+    }
+
+    internal static ScaledFontScope PushScaledFont(float fontScale)
+    {
+        ImGui.SetWindowFontScale(fontScale);
+        return default;
+    }
+
+    internal readonly struct ScaledFontScope : IDisposable
+    {
+        public void Dispose() => ImGui.SetWindowFontScale(1f);
+    }
+
+    internal static bool CentredIconTextButton(FontAwesomeIcon icon, string label, string id)
+    {
+        CentreNext(CalcButtonSize(icon, label).X);
+        return IconTextButton(icon, label, id);
+    }
+
+    internal static void CentreNextButtonRow(params (FontAwesomeIcon Icon, string Label)[] buttons)
+    {
+        var style = ImGui.GetStyle();
+        var total = 0f;
+        for (var i = 0; i < buttons.Length; i++)
+        {
+            if (i > 0) total += style.ItemSpacing.X;
+            total += CalcButtonSize(buttons[i].Icon, buttons[i].Label).X;
+        }
+        CentreNext(total);
+    }
 
     internal static int DrawPagination(int currentPage, int totalPages, string id)
     {

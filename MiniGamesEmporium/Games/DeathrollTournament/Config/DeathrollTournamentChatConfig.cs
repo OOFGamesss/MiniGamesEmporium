@@ -11,6 +11,14 @@ public class DeathrollTournamentChatConfig
     public bool UseCustomTurnReminderMessage { get; set; } = false;
     public string TurnReminderMessage { get; set; } =
         "/tell {player} it's your turn, please stop erping!";
+    public string AdvertiseMessage { get; set; } =
+        "/shout Deathroll Tournament sign-ups are OPEN! {entrycost} gil to enter, {playercount} players registered so far. Last one standing takes {prize}!";
+    public string RulesMessage { get; set; } =
+        "/party ==========  HOW TO PLAY  ==========\n" +
+        "/party  {entrycost} gil to enter the Deathroll Tournament, {playercount} players signed up so far.\n" +
+        "/party  Each match is a deathroll: roll /random, then keep rolling from the last number.\n" +
+        "/party  Roll a 1 and you lose that game. Win your match to move up the bracket.\n" +
+        "/party  Last one standing takes {prize}!";
     public string RequestGilMessage { get; set; } =
         "/tell {player} Please pay {entrycost} Gil to enter the Deathroll Tournament!";
     public string RequestGilBuyerMessage { get; set; } =

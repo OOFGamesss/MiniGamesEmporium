@@ -21,6 +21,11 @@ using MiniGamesEmporium.UI.Components;
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollDiscordWebhookTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.DeathrollTournamentPink;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private const int   UrlBufferLength      = 1536;
     private const int   UsernameBufferLength = 128;
     private const int   AliasBufferLength    = 64;
@@ -69,26 +74,11 @@ public sealed class DeathrollDiscordWebhookTab
         SyncDraftsToEntries();
         EnsureAppearanceInitialised();
 
-        ImGuiHelpers.ScaledDummy(8f);
-        UIHelper.SectionHeader("Webhook setup", EmporiumNeonTheme.DeathrollTournamentPink);
-        DrawSetupGuide();
-        ImGui.Separator();
-        ImGuiHelpers.ScaledDummy(6f);
-
-        UIHelper.SectionHeader("Webhook URLs", EmporiumNeonTheme.DeathrollTournamentPink);
-        DrawWebhookList();
-
-        ImGuiHelpers.ScaledDummy(6f);
-        UIHelper.SectionHeader("Webhook appearance (Delete original webhook to reset)", EmporiumNeonTheme.DeathrollTournamentPink);
-        DrawAppearanceRows();
-
-        ImGuiHelpers.ScaledDummy(10f);
-        UIHelper.SectionHeader("What this posts", EmporiumNeonTheme.DeathrollTournamentPink);
-        DrawPostDescription();
-
-        ImGuiHelpers.ScaledDummy(10f);
-        UIHelper.SectionHeader("Discord Preview", EmporiumNeonTheme.DeathrollTournamentPink);
-        DrawPreviewPair();
+        this.card.Draw("##DRDiscSetupCard", "Webhook setup", CardAccent, CardTitle, DrawSetupGuide);
+        this.card.Draw("##DRDiscUrlsCard", "Webhook URLs", CardAccent, CardTitle, DrawWebhookList);
+        this.card.Draw("##DRDiscLookCard", "Webhook appearance (Delete original webhook to reset)", CardAccent, CardTitle, DrawAppearanceRows);
+        this.card.Draw("##DRDiscPostsCard", "What this posts", CardAccent, CardTitle, DrawPostDescription);
+        this.card.Draw("##DRDiscPreviewCard", "Discord Preview", CardAccent, CardTitle, DrawPreviewPair);
     }
 
     private List<DeathrollTournamentDiscordEntry> Entries => _config.DeathrollTournament.DiscordWebhooks;

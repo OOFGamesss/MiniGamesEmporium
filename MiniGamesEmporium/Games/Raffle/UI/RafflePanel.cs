@@ -20,10 +20,14 @@ public sealed class RafflePanel : IDisposable
     private static readonly Vector4 GreenButton        = new(0.04f, 0.42f, 0.16f, 1f);
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
+
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.RaffleTeal;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard infoCard = new();
     private const string DoorSurfaceStart    = "StartDoor";
 
     private float trackedStartDoorSpanPx    = GameSessionDoorStyles.RaffleStartDoor.SeedTrackedContentSpanPx;
-    private float trackedGameInfoCardSpanPx = 96f;
 
     private readonly PluginConfiguration config;
     private readonly RaffleService service;
@@ -66,6 +70,12 @@ public sealed class RafflePanel : IDisposable
             case GameSection.Chat:     DrawChatSection(); break;
             case GameSection.Settings: DrawSettingsSection(); break;
         }
+    }
+
+    public bool DrawSessionActionButtons()
+    {
+        this.gameTab.DrawSessionActionButtons();
+        return true;
     }
 
     private void DrawGameSection()
@@ -111,25 +121,17 @@ public sealed class RafflePanel : IDisposable
         this.venueCredit.Draw();
     }
 
-    private void DrawGameInfoCard()
+    private void DrawGameInfoCard() =>
+        this.infoCard.Draw("##RaffleGameInfoCard", "Game Info", CardAccent, CardTitle, DrawGameInfoBody);
+
+    private static void DrawGameInfoBody()
     {
-        var containerH = MathF.Max(96f, this.trackedGameInfoCardSpanPx + 14f);
-        using var card = ImRaii.Child("##RaffleGameInfoCard", new Vector2(-1f, containerH), true, ImGuiWindowFlags.NoScrollbar);
-        if (!card.Success) return;
-        var topY = ImGui.GetCursorPosY();
-        ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.RaffleTeal, "Game Info");
-        ImGui.Separator();
-        ImGui.Spacing();
-        var wrapEnd = ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X;
-        ImGui.PushTextWrapPos(wrapEnd);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
         ImGui.TextDisabled("1.  Players trade Gil to buy tickets - each ticket gets the next number in the pool.");
         ImGui.TextDisabled("2.  Set a ticket cost (or 0 for free), a per-player limit and an optional closing time.");
         ImGui.TextDisabled("3.  When ready, click Draw Winner and roll /random for the highest ticket number.");
         ImGui.TextDisabled("4.  The player holding that number wins the whole pot.");
         ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        this.trackedGameInfoCardSpanPx = MathF.Max(96f, ImGui.GetCursorPosY() - topY);
     }
 
     private void DrawStartDoorBody()
@@ -145,13 +147,8 @@ public sealed class RafflePanel : IDisposable
 
     private void DrawStartButton()
     {
-        var btnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Session").X;
-        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - btnW) * 0.5f);
-        ImGui.PushStyleColor(ImGuiCol.Button,        GreenButton);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, GreenButtonHovered);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  GreenButtonActive);
-        var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Session", "##RaffleStartSession");
-        ImGui.PopStyleColor(3);
+        using var startColours = UIHelper.PushButtonColours(GreenButton, GreenButtonHovered, GreenButtonActive);
+        var clicked = UIHelper.CentredIconTextButton(FontAwesomeIcon.Play, "Start Session", "##RaffleStartSession");
         if (clicked) this.service.StartSession();
     }
 }

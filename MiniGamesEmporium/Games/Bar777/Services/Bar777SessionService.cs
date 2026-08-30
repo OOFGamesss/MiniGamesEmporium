@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Models;

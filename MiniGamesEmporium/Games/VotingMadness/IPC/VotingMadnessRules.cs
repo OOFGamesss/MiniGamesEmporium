@@ -1,9 +1,7 @@
 using System;
-
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.VotingMadness.Services;
 using MiniGamesEmporium.Games.VotingMadness.Utility;

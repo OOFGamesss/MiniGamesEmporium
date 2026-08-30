@@ -1,9 +1,6 @@
 using System;
-using System.Linq;
 using System.Numerics;
-
 using Dalamud.Bindings.ImGui;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.UI.Components;
 
@@ -12,6 +9,11 @@ using MiniGamesEmporium.UI.Components;
 namespace MiniGamesEmporium.Games.HigherLower.UI.Tabs;
 public sealed class HigherLowerChatSettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.HigherLowerOrange;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
 
     public HigherLowerChatSettingsTab(PluginConfiguration config) => this.config = config;
@@ -19,25 +21,20 @@ public sealed class HigherLowerChatSettingsTab
     public void Draw()
     {
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.HigherLowerOrange, "Higher/Lower");
+        ImGui.TextColored(CardAccent, "Higher/Lower");
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Chat Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        DrawPlaceholderReference();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawManualSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawAutoSection();
+        this.card.Draw("##HLChatPlaceholders", "Available Placeholders", CardAccent, CardTitle, DrawPlaceholderReference);
+        this.card.Draw("##HLChatManual", "Manual Trigger Messages", CardAccent, CardTitle, DrawManualSection);
+        this.card.Draw("##HLChatAuto", "Auto-Send Toggles", CardAccent, CardTitle, DrawAutoSection);
     }
 
     private static readonly (string Token, string Desc)[] Placeholders =
     [
         ("{player}",       "Player name; @World included only for /tell messages"),
+        ("{buyername}",    "Name of the player paying on someone else's behalf (Request Gil (Buyer) message only)"),
         ("{cost}",         "Entry cost in Gil"),
         ("{rounds}",       "Number of rounds correct"),
         ("{totalpot}",     "Total pot in Gil"),
@@ -46,30 +43,21 @@ public sealed class HigherLowerChatSettingsTab
         ("{highestround}", "Target rounds to lead (or player's own rounds when winning) - Announce messages only"),
     ];
 
-    private static void DrawPlaceholderReference()
-    {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Available Placeholders");
-        ImGui.Spacing();
-        var descColX = Placeholders.Max(p => ImGui.CalcTextSize(p.Token).X) + 20f;
-        foreach (var (token, desc) in Placeholders)
-            DrawPlaceholderRow(token, desc, descColX);
-    }
-
-    private static void DrawPlaceholderRow(string token, string desc, float descColX)
-    {
-        ImGui.TextColored(new Vector4(1f, 0.80f, 0.30f, 1f), token);
-        ImGui.SameLine(descColX);
-        ImGui.TextDisabled(desc);
-    }
+    private static void DrawPlaceholderReference() => PlaceholderReference.Draw(Placeholders);
 
     private void DrawManualSection()
     {
         var chat = this.config.HigherLower.Chat;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Manual Trigger Messages");
+        DrawMessageField(
+            "Advertise",
+            "Button: 'Advertise' on the top-left of the session control bar. Shouted to the zone to pull in new players.",
+            "##HLAdvertiseMsg",
+            () => chat.AdvertiseMessage,
+            v  => { chat.AdvertiseMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMultilineMessageField(
             "Rules",
-            "Button: 'Send Rules' on the top-left of the Game panel.",
+            "Button: 'Send Rules' on the top-left of the session control bar. Each line is sent as its own message.",
             "##HLRulesMsg",
             () => chat.RulesMessage,
             v  => { chat.RulesMessage = v; this.config.Save(); });
@@ -87,6 +75,13 @@ public sealed class HigherLowerChatSettingsTab
             "##HLTellAmountMsg",
             () => chat.TellAmountRequestMessage,
             v  => { chat.TellAmountRequestMessage = v; this.config.Save(); });
+        ImGui.Spacing();
+        DrawMessageField(
+            "Request Gil (Buyer)",
+            "Button: 'Request Gil (Buyer)' shown when another player is paying for this player.",
+            "##HLTellBuyerMsg",
+            () => chat.RequestGilBuyerMessage,
+            v  => { chat.RequestGilBuyerMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
             "Let's Play",
@@ -127,8 +122,6 @@ public sealed class HigherLowerChatSettingsTab
     private void DrawAutoSection()
     {
         var chat = this.config.HigherLower.Chat;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Auto-Send Toggles");
-        ImGui.Spacing();
         {
             var toggle = chat.AutoSendLetsPlay;
             if (ImGui.Checkbox("Auto Let's Play##HLAutoLetsPlay", ref toggle))

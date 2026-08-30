@@ -1,8 +1,9 @@
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.Games.CoinCollector.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.HigherLower.Config;
@@ -40,6 +41,7 @@ public sealed class PresetManagerTab
     private bool exportRaffle = true;
     private bool exportHigherLower = true;
     private bool exportVotingMadness = true;
+    private bool exportCoinCollector = true;
     private bool exportDiscord = false;
     private bool exportQueue = true;
 
@@ -323,8 +325,8 @@ public sealed class PresetManagerTab
     {
         if (this.parsedImportPayload == null) return;
         var payload  = this.parsedImportPayload;
-        var detected = BuildSectionItems(payload.Bar777 != null, payload.DeathrollTournament != null, payload.Raffle != null, payload.HigherLower != null, payload.VotingMadness != null, payload.Discord != null, payload.QueueKeyword != null);
-        var missing  = BuildSectionItems(payload.Bar777 == null, payload.DeathrollTournament == null, payload.Raffle == null, payload.HigherLower == null, payload.VotingMadness == null, payload.Discord == null, payload.QueueKeyword == null);
+        var detected = BuildSectionItems(payload.Bar777 != null, payload.DeathrollTournament != null, payload.Raffle != null, payload.HigherLower != null, payload.VotingMadness != null, payload.CoinCollector != null, payload.Discord != null, payload.QueueKeyword != null);
+        var missing  = BuildSectionItems(payload.Bar777 == null, payload.DeathrollTournament == null, payload.Raffle == null, payload.HigherLower == null, payload.VotingMadness == null, payload.CoinCollector == null, payload.Discord == null, payload.QueueKeyword == null);
         if (detected.Count > 0)
         {
             ImGui.TextColored(EmporiumNeonTheme.SuccessMint, "Detected:");
@@ -360,14 +362,15 @@ public sealed class PresetManagerTab
         }
     }
 
-    private static List<string> BuildSectionItems(bool bar777, bool deathroll, bool raffle, bool higherlower, bool votingMadness, bool discord, bool queue)
+    private static List<string> BuildSectionItems(bool bar777, bool deathroll, bool raffle, bool higherlower, bool votingMadness, bool coinCollector, bool discord, bool queue)
     {
-        var parts = new List<string>(7);
+        var parts = new List<string>(8);
         if (bar777)        parts.Add("BAR 777");
         if (deathroll)     parts.Add("Deathroll Tournament");
         if (raffle)        parts.Add("Raffle");
         if (higherlower)   parts.Add("Higher/Lower");
         if (votingMadness) parts.Add("Voting Madness");
+        if (coinCollector) parts.Add("Coin Collector");
         if (discord)       parts.Add("Discord Webhook");
         if (queue)         parts.Add("Queue Actions");
         return parts;
@@ -424,6 +427,7 @@ public sealed class PresetManagerTab
         ImGui.Checkbox("Raffle",               ref this.exportRaffle);
         ImGui.Checkbox("Higher/Lower",         ref this.exportHigherLower);
         ImGui.Checkbox("Voting Madness",       ref this.exportVotingMadness);
+        ImGui.Checkbox("Coin Collector",       ref this.exportCoinCollector);
         ImGui.Checkbox("Discord Webhook",      ref this.exportDiscord);
         if (this.exportDiscord)
         {
@@ -438,13 +442,13 @@ public sealed class PresetManagerTab
 
     private void DrawExportConfirmButtons()
     {
-        var noneSelected = !this.exportBar777 && !this.exportDeathroll && !this.exportRaffle && !this.exportHigherLower && !this.exportVotingMadness && !this.exportDiscord && !this.exportQueue;
+        var noneSelected = !this.exportBar777 && !this.exportDeathroll && !this.exportRaffle && !this.exportHigherLower && !this.exportVotingMadness && !this.exportCoinCollector && !this.exportDiscord && !this.exportQueue;
         {
             using var disabled = ImRaii.Disabled(noneSelected);
             if (UIHelper.IconTextButton(FontAwesomeIcon.Clipboard, "Copy to Clipboard", "##ExportCopy"))
             {
                 var str = this.presetService.BuildExportString(
-                    this.exportBar777, this.exportDeathroll, this.exportRaffle, this.exportHigherLower, this.exportVotingMadness, this.exportDiscord, this.exportQueue);
+                    this.exportBar777, this.exportDeathroll, this.exportRaffle, this.exportHigherLower, this.exportVotingMadness, this.exportCoinCollector, this.exportDiscord, this.exportQueue);
                 ImGui.SetClipboardText(str);
                 ImGui.CloseCurrentPopup();
             }
@@ -479,6 +483,8 @@ public sealed class PresetManagerTab
         DrawHigherLowerSection(this.config.HigherLower);
         ImGui.Spacing();
         DrawVotingMadnessSection(this.config.VotingMadness);
+        ImGui.Spacing();
+        DrawCoinCollectorSection(this.config.CoinCollector);
         ImGui.Spacing();
         DrawQueueSection(this.config.QueueKeyword, this.config.QueueJoinChannels);
     }
@@ -522,6 +528,7 @@ public sealed class PresetManagerTab
         DrawBoolRow("Auto Send Join Queue",   c.AutoSendJoinQueue);
         DrawBoolRow("Auto Send Reminder",     c.AutoSendReminderToPlay);
         DrawRow("Reminder Threshold",   c.ReminderQueueThreshold.ToString());
+        DrawRow("Advertise Message",    c.AdvertiseMessage);
         DrawRow("Rules Message",        c.RulesMessage);
         DrawRow("Start Rolls",          c.StartRollsMessage);
         DrawRow("Request Gil",          c.TellAmountRequestMessage);
@@ -611,6 +618,8 @@ public sealed class PresetManagerTab
         DrawBoolRow("Auto Betting Open",       c.AutoAnnounceBettingOpen);
         DrawBoolRow("Auto Bet Winners",        c.AutoAnnounceBetWinners);
         DrawBoolRow("Custom Turn Reminder",    c.UseCustomTurnReminderMessage);
+        DrawRow("Advertise Message",      c.AdvertiseMessage);
+        DrawRow("Rules Message",          c.RulesMessage);
         DrawRow("Announce Bracket",       c.AnnounceBracketMessage);
         DrawRow("Announce Matchup",       c.AnnounceMatchupMessage);
         DrawRow("Announce Prize",         c.AnnouncePrizeMessage);
@@ -698,6 +707,8 @@ public sealed class PresetManagerTab
         using var t = ImRaii.Table("##VotingMadnessChat", 2, ImGuiTableFlags.RowBg);
         if (!t.Success) return;
         SetupPreviewColumns();
+        DrawRow("Advertise Message", c.AdvertiseMessage);
+        DrawRow("Rules Message", c.RulesMessage);
         DrawRow("Announce Options", c.AnnounceOptionsMessage);
         DrawRow("Vote Started", c.VoteStartedMessage);
         DrawRow("Closing Time", c.AnnounceClosingTimeMessage);
@@ -729,14 +740,60 @@ public sealed class PresetManagerTab
         DrawBoolRow("Auto Send Loss",      c.AutoSendLoss);
         DrawBoolRow("Auto Send Let's Play", c.AutoSendLetsPlay);
         DrawBoolRow("Auto Send Ask Guess", c.AutoSendAskGuess);
+        DrawRow("Advertise Message",   c.AdvertiseMessage);
         DrawRow("Rules Message",       c.RulesMessage);
         DrawRow("Request Gil",         c.TellAmountRequestMessage);
+        DrawRow("Request Gil (Buyer)", c.RequestGilBuyerMessage);
         DrawRow("Win Shout",           c.WinShoutMessage);
         DrawRow("Loss (Unlucky)",      c.LossUnluckyMessage);
         DrawRow("Loss (Winning)",      c.LossWinningMessage);
         DrawRow("Let's Play",          c.LetsPlayMessage);
         DrawRow("Ask Guess",           c.AskGuessMessage);
         DrawRow("Announce Pot",        c.AnnouncePotMessage);
+    }
+
+    private static void DrawCoinCollectorSection(CoinCollectorConfig c)
+    {
+        ImGui.TextColored(EmporiumNeonTheme.CoinCollectorIndigo, "Coin Collector");
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawCoinCollectorGameRows(c);
+        ImGui.Spacing();
+        ImGui.TextDisabled("Chat Messages");
+        DrawCoinCollectorChatRows(c.Chat);
+    }
+
+    private static void DrawCoinCollectorGameRows(CoinCollectorConfig c)
+    {
+        using var t = ImRaii.Table("##CoinCollectorGame", 2, ImGuiTableFlags.RowBg);
+        if (!t.Success) return;
+        SetupPreviewColumns();
+        DrawRow("Entry Cost",                 c.EntryCost.ToString("N0") + " gil");
+        DrawRow("Boosted Pot",                c.BoostedPot.ToString("N0") + " gil");
+        DrawRow("Starting Roll Max",          c.StartingRollMax.ToString());
+        DrawRow("Target Coins",               c.TargetCoins.ToString());
+        DrawBoolRow("Auto Win Count",         c.AutoWinCount);
+        DrawBoolRow("Allow Multiple Winners", c.AllowMultipleWinners);
+        DrawRow("Trades to Pot",              c.TradesToPotPercent + "%");
+    }
+
+    private static void DrawCoinCollectorChatRows(CoinCollectorChatConfig c)
+    {
+        using var t = ImRaii.Table("##CoinCollectorChat", 2, ImGuiTableFlags.RowBg);
+        if (!t.Success) return;
+        SetupPreviewColumns();
+        DrawBoolRow("Auto Send Score/Lead",  c.AutoSendLoss);
+        DrawBoolRow("Auto Send Ask to Roll", c.AutoSendAskRoll);
+        DrawRow("Advertise Message", c.AdvertiseMessage);
+        DrawRow("Rules Message",     c.RulesMessage);
+        DrawRow("Request Gil",       c.TellAmountRequestMessage);
+        DrawRow("Request Gil (Buyer)", c.RequestGilBuyerMessage);
+        DrawRow("Win Shout",         c.WinShoutMessage);
+        DrawRow("Announce Score",    c.LossUnluckyMessage);
+        DrawRow("Announce Lead",     c.LossWinningMessage);
+        DrawRow("Ask to Roll",       c.AskRollMessage);
+        DrawRow("Ask to Roll (Coins)", c.AskRollWithCoinsMessage);
+        DrawRow("Announce Pot",      c.AnnouncePotMessage);
     }
 
     private static void DrawRaffleSection(RaffleConfig r)
@@ -773,6 +830,8 @@ public sealed class PresetManagerTab
         SetupPreviewColumns();
         DrawBoolRow("Auto Announce Winner",  c.AutoAnnounceWinner);
         DrawBoolRow("Auto Send Ticket Numbers", c.AutoSendTicketNumbers);
+        DrawRow("Advertise Message",    c.AdvertiseMessage);
+        DrawRow("Rules Message",        c.RulesMessage);
         DrawRow("Announce Pot",         c.AnnouncePotMessage);
         DrawRow("Tickets Sold",         c.AnnounceTicketsSoldMessage);
         DrawRow("Closing Time",         c.AnnounceClosingTimeMessage);

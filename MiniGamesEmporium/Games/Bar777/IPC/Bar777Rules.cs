@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
-
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Games.Bar777.Utility;

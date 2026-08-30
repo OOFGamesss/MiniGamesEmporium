@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -20,9 +21,13 @@ public sealed class VotingMadnessGameTab
     private static readonly Vector4 LimeBtnHovered = new(0.50f, 0.75f, 0.10f, 1f);
     private static readonly Vector4 LimeBtnActive  = new(0.60f, 0.90f, 0.15f, 1f);
 
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.VotingMadnessLime;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
     private readonly PluginConfiguration config;
     private readonly VotingMadnessService service;
     private readonly ChatQueueService chatQueue;
+    private readonly ThemedCard card = new();
 
     public VotingMadnessGameTab(PluginConfiguration config, VotingMadnessService service, ChatQueueService chatQueue)
     {
@@ -53,21 +58,14 @@ public sealed class VotingMadnessGameTab
         {
             if (body.Success)
             {
-                DrawShouts(state);
-                ImGui.Spacing();
-                ImGui.Separator();
-                ImGui.Spacing();
-                DrawActions(state);
-                ImGui.Spacing();
-                ImGui.Separator();
-                ImGui.Spacing();
-                DrawStatus(state);
-                ImGui.Spacing();
-                DrawBarChart(state);
-                ImGui.Spacing();
-                ImGui.Separator();
-                ImGui.Spacing();
-                DrawVoterTable();
+                this.card.Draw("##VMShoutsCard", "Shouts", CardAccent, CardTitle, () => DrawShouts(state));
+                this.card.Draw("##VMActionsCard", "Actions", CardAccent, CardTitle, () => DrawActions(state));
+                this.card.Draw("##VMResultsCard", "Results", CardAccent, CardTitle, () => DrawResultsBody(state));
+
+                var rows    = this.service.GetPlayerRows();
+                var votersH = MathF.Max(160f, ImGui.GetContentRegionAvail().Y - ThemedCard.ChromeHeight());
+                this.card.Draw("##VMVotersCard", $"Voters ({rows.Count})", CardAccent, CardTitle, votersH,
+                    () => DrawVoterTable(rows));
             }
         }
 
@@ -77,44 +75,43 @@ public sealed class VotingMadnessGameTab
         DrawBottomStats(state);
     }
 
+    private void DrawResultsBody(VotingMadnessState state)
+    {
+        DrawStatus(state);
+        ImGui.Spacing();
+        DrawBarChart(state);
+    }
+
     private void DrawStatus(VotingMadnessState state)
     {
-        if (state.IsVotingClosed)
-        {
-            ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Voting closed");
-            var (winners, votes, percent, isTie) = this.service.GetResult();
-            if (winners.Count == 0)
-            {
-                ImGui.TextDisabled("No votes were cast.");
-            }
-            else if (isTie)
-            {
-                ImGui.TextColored(EmporiumNeonTheme.WarnAmber,
-                    $"Tie: {string.Join(", ", winners)} ({percent:0}% / {votes} votes each)");
-            }
-            else
-            {
-                ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime,
-                    $"Leading: {winners[0]} ({percent:0}% / {votes} votes)");
-            }
-        }
-        else
+        if (!state.IsVotingClosed)
         {
             ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime, "Listening for votes");
+            return;
         }
+
+        ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "Voting closed");
+        var (winners, votes, percent, isTie) = this.service.GetResult();
+        if (winners.Count == 0)
+            ImGui.TextDisabled("No votes were cast.");
+        else if (isTie)
+            ImGui.TextColored(EmporiumNeonTheme.WarnAmber,
+                $"Tie: {string.Join(", ", winners)} ({percent:0}% / {votes} votes each)");
+        else
+            ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime,
+                $"Leading: {winners[0]} ({percent:0}% / {votes} votes)");
     }
 
     private void DrawBarChart(VotingMadnessState state)
     {
-        ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime, "Results");
-        ImGui.Spacing();
-        var total = Math.Max(1, this.service.ComputeTotalVotes());
-        var barH  = 22f;
-        var avail = ImGui.GetContentRegionAvail().X;
+        var total  = Math.Max(1, this.service.ComputeTotalVotes());
+        var barH   = 22f;
+        var avail  = ImGui.GetContentRegionAvail().X;
+        var startX = ImGui.GetCursorPosX();
         var labelW = 0f;
         foreach (var option in state.Options)
             labelW = MathF.Max(labelW, ImGui.CalcTextSize(option.Keyword).X);
-        labelW = MathF.Min(160f, labelW + 8f);
+        labelW += 8f;
         var countW = 48f;
         var barW   = MathF.Max(40f, avail - labelW - countW - 16f);
 
@@ -125,7 +122,7 @@ public sealed class VotingMadnessGameTab
             var colour = new Vector4(option.ColourR, option.ColourG, option.ColourB, option.ColourA);
 
             ImGui.TextColored(colour, option.Keyword);
-            ImGui.SameLine(labelW);
+            ImGui.SameLine(startX + labelW);
             var cursor = ImGui.GetCursorScreenPos();
             var dl = ImGui.GetWindowDrawList();
             dl.AddRectFilled(cursor, cursor + new Vector2(barW, barH), ImGui.GetColorU32(new Vector4(0.12f, 0.12f, 0.14f, 1f)), 3f);
@@ -137,12 +134,20 @@ public sealed class VotingMadnessGameTab
         }
     }
 
+    public void DrawSessionActionButtons()
+    {
+        using (UIHelper.PushBlueButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Scroll, "Send Rules", "##VMSendRules"))
+                AnnounceRules.Execute(this.config, this.service, this.chatQueue);
+        ImGui.SameLine();
+        using (UIHelper.PushOrangeButtonColours())
+            if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Advertise", "##VMAdvertise"))
+                Advertise.Execute(this.config, this.service, this.chatQueue);
+    }
+
     private void DrawShouts(VotingMadnessState state)
     {
-        ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime, "Shouts");
-        ImGui.Spacing();
-
-        using (Btn(LimeBtn, LimeBtnHovered, LimeBtnActive))
+        using (UIHelper.PushButtonColours(LimeBtn, LimeBtnHovered, LimeBtnActive))
             if (UIHelper.IconTextButton(FontAwesomeIcon.List, "Announce Options", "##VMAnnOptions"))
                 AnnounceOptions.Execute(this.config, this.service, this.chatQueue);
         ImGui.SameLine();
@@ -173,9 +178,6 @@ public sealed class VotingMadnessGameTab
 
     private void DrawActions(VotingMadnessState state)
     {
-        ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime, "Actions");
-        ImGui.Spacing();
-
         if (!state.IsVotingClosed)
         {
             using (UIHelper.PushRedButtonColours())
@@ -193,14 +195,11 @@ public sealed class VotingMadnessGameTab
         }
     }
 
-    private void DrawVoterTable()
+    private void DrawVoterTable(IReadOnlyList<(string PlayerName, string World, string VotesLabel)> rows)
     {
-        var rows = this.service.GetPlayerRows();
-        ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime, $"Voters ({rows.Count})");
-        ImGui.Spacing();
         using var table = ImRaii.Table("##VMVoterTable", 4,
             ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY,
-            new Vector2(-1f, MathF.Max(120f, ImGui.GetContentRegionAvail().Y)));
+            new Vector2(-1f, -1f));
         if (!table.Success) return;
         ImGui.TableSetupColumn("Player", ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("World", ImGuiTableColumnFlags.WidthFixed, 120f);
@@ -262,16 +261,4 @@ public sealed class VotingMadnessGameTab
         ImGui.TextColored(valueColour, value);
     }
 
-    private static IDisposable Btn(Vector4 btn, Vector4 hovered, Vector4 active)
-    {
-        ImGui.PushStyleColor(ImGuiCol.Button, btn);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, hovered);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, active);
-        return new PopColors(3);
-    }
-
-    private sealed class PopColors(int count) : IDisposable
-    {
-        public void Dispose() => ImGui.PopStyleColor(count);
-    }
 }

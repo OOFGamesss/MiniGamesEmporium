@@ -16,12 +16,26 @@ jobs:
       - name: Send Discord Webhook
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           MANIFEST=MiniGamesEmporium/MiniGamesEmporium.json
 
           NAME=$(jq -r '.Name' "$MANIFEST")
           CHANGELOG=$(jq -r '.Changelog' "$MANIFEST")
           ICON_URL=$(jq -r '.IconUrl // empty' "$MANIFEST")
+
+          if [ -n "$ICON_URL" ] && [ "$ICON_URL" != "null" ]; then
+            ICON_FILE=$(basename "${ICON_URL%%[?]*}")
+            ICON_API="https://api.github.com/repos/OOFGamesss/OOFGamesPlugins/contents/images/$ICON_FILE"
+            ICON_SHA=$(curl -sf -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$ICON_API" | jq -r '.sha // empty' | cut -c1-8)
+            if [ -n "$ICON_SHA" ]; then
+              case "$ICON_URL" in
+                *[?]*) ICON_URL="$ICON_URL&v=$ICON_SHA" ;;
+                *) ICON_URL="$ICON_URL?v=$ICON_SHA" ;;
+              esac
+            fi
+            echo "Icon: $ICON_URL"
+          fi
 
           NEW_VERSION=$(grep -oPm1 '(?<=<Version>)[^<]+' MiniGamesEmporium/MiniGamesEmporium.csproj || echo "0.0.0.1")
 

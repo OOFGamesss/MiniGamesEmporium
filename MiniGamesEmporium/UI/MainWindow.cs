@@ -7,6 +7,8 @@ using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Utility;
 using MiniGamesEmporium.Games.Bar777.Services;
+using MiniGamesEmporium.Games.CoinCollector.Services;
+using MiniGamesEmporium.Games.CoinCollector.Utility;
 using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
@@ -93,6 +95,7 @@ public sealed class MainWindow : Window, IDisposable
     private readonly HigherLowerService higherLowerService;
     private readonly RaffleService raffleService;
     private readonly VotingMadnessService votingMadnessService;
+    private readonly CoinCollectorService coinCollectorService;
     private readonly DrtWebviewService drtWebviewService;
     private readonly PluginConfiguration config;
 
@@ -110,6 +113,7 @@ public sealed class MainWindow : Window, IDisposable
     private bool pendingHLStopConfirm;
     private bool pendingRaffleStopConfirm;
     private bool pendingVotingMadnessStopConfirm;
+    private bool pendingCoinCollectorStopConfirm;
     private float trackedPausedDoorSpanPx = GameSessionDoorStyles.PausedSessionDoor.SeedTrackedContentSpanPx;
 
     public MainWindow(
@@ -128,7 +132,8 @@ public sealed class MainWindow : Window, IDisposable
         HigherLowerService higherLowerService,
         PlayerInfoService playerInfoService,
         RaffleService raffleService,
-        VotingMadnessService votingMadnessService)
+        VotingMadnessService votingMadnessService,
+        CoinCollectorService coinCollectorService)
         : base("Mini Games Emporium##MGE_Main_v2")
     {
         SizeConstraints = new WindowSizeConstraints
@@ -139,7 +144,7 @@ public sealed class MainWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         this.transactionHistoryTab = new TransactionHistoryTab(historyService);
         this.sessionHistoryTab     = new SessionHistoryTab(historyService);
-        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, chatQueue, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService, votingMadnessService);
+        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, chatQueue, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService, votingMadnessService, coinCollectorService);
         this.presetManagerTab      = new PresetManagerTab(config, presetService);
         this.settingsTab           = new SettingsTab(config);
         this.supportTab            = new SupportTab();
@@ -150,6 +155,7 @@ public sealed class MainWindow : Window, IDisposable
         this.higherLowerService    = higherLowerService;
         this.raffleService         = raffleService;
         this.votingMadnessService  = votingMadnessService;
+        this.coinCollectorService  = coinCollectorService;
         this.drtWebviewService     = drtWebviewService;
         this.config                = config;
     }
@@ -370,6 +376,7 @@ public sealed class MainWindow : Window, IDisposable
         MiniGame.HigherLower         => this.higherLowerService.IsSessionActive(),
         MiniGame.Raffle              => this.raffleService.IsSessionActive(),
         MiniGame.VotingMadness       => this.votingMadnessService.IsSessionActive(),
+        MiniGame.CoinCollector       => this.coinCollectorService.IsSessionActive(),
         _ => false,
     };
 
@@ -380,6 +387,7 @@ public sealed class MainWindow : Window, IDisposable
         MiniGame.HigherLower         => HigherLowerGameIds.DisplayName,
         MiniGame.Raffle              => RaffleGameIds.DisplayName,
         MiniGame.VotingMadness       => VotingMadnessGameIds.DisplayName,
+        MiniGame.CoinCollector       => CoinCollectorGameIds.DisplayName,
         _ => string.Empty,
     };
 
@@ -527,6 +535,7 @@ public sealed class MainWindow : Window, IDisposable
             case MiniGame.HigherLower:         this.pendingHLStopConfirm = true; break;
             case MiniGame.Raffle:              this.pendingRaffleStopConfirm = true; break;
             case MiniGame.VotingMadness:       this.pendingVotingMadnessStopConfirm = true; break;
+            case MiniGame.CoinCollector:       this.pendingCoinCollectorStopConfirm = true; break;
         }
     }
 
@@ -560,10 +569,11 @@ public sealed class MainWindow : Window, IDisposable
             MiniGame.HigherLower         => "HL",
             MiniGame.Raffle              => "Raffle",
             MiniGame.VotingMadness       => "VM",
+            MiniGame.CoinCollector       => "CC",
             _ => null,
         };
         if (idSuffix == null) return;
-        DrawSessionControlStrip(DisplayNameOf(this.selectedGame), idSuffix, () => RequestStopConfirm(this.selectedGame));
+        DrawSessionControlStrip(this.selectedGame, DisplayNameOf(this.selectedGame), idSuffix, () => RequestStopConfirm(this.selectedGame));
     }
 
     private bool IsBar777SessionActive()
@@ -572,7 +582,7 @@ public sealed class MainWindow : Window, IDisposable
         return session != null && Bar777GameIds.Matches(session.GameName);
     }
 
-    private void DrawSessionControlStrip(string gameName, string idSuffix, Action onStop)
+    private void DrawSessionControlStrip(MiniGame game, string gameName, string idSuffix, Action onStop)
     {
         var isPaused   = !this.sessionService.IsFocused(gameName);
         var pauseLabel = isPaused ? ContinueSessionLabel : "Pause Session";
@@ -583,7 +593,11 @@ public sealed class MainWindow : Window, IDisposable
             + style.ItemSpacing.X
             + UIHelper.CalcButtonSize(FontAwesomeIcon.Stop, StopSessionLabel).X;
 
-        var rightEdge = ImGui.GetWindowContentRegionMin().X + ImGui.GetContentRegionAvail().X;
+        var rightEdge = ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X;
+
+        if (!isPaused && this.miniGamesTab.DrawSessionActionButtons(game))
+            ImGui.SameLine();
+
         ImGui.SetCursorPosX(MathF.Max(ImGui.GetCursorPosX(), rightEdge - totalWidth));
 
         var pauseClicked = isPaused
@@ -642,6 +656,9 @@ public sealed class MainWindow : Window, IDisposable
 
         DrawStopConfirmPopup(ref this.pendingVotingMadnessStopConfirm, "##VMStopConfirm", EmporiumNeonTheme.VotingMadnessLime,
             "Stop Session?", "All votes and session data will be cleared and written to session history.", "Stop Session", this.votingMadnessService.StopSession);
+
+        DrawStopConfirmPopup(ref this.pendingCoinCollectorStopConfirm, "##CCStopConfirm", EmporiumNeonTheme.CoinCollectorIndigo,
+            "Stop Coin Collector session?", "All session stats will be reset.", "Stop Session", this.coinCollectorService.CancelSession);
     }
 
     private void DrawStopConfirmPopup(ref bool pending, string id, Vector4 titleColour, string title, string message, string stopLabel, Action onConfirm)

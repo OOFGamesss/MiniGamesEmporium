@@ -20,10 +20,14 @@ public sealed class VotingMadnessPanel
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
 
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.VotingMadnessLime;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard infoCard = new();
+
     private const string DoorSurfaceStart    = "StartDoor";
 
     private float trackedStartDoorSpanPx    = GameSessionDoorStyles.VotingMadnessStartDoor.SeedTrackedContentSpanPx;
-    private float trackedGameInfoCardSpanPx = 120f;
 
     private readonly PluginConfiguration config;
     private readonly VotingMadnessService service;
@@ -57,6 +61,12 @@ public sealed class VotingMadnessPanel
             case GameSection.Chat:     DrawChatSection(); break;
             case GameSection.Settings: DrawSettingsSection(); break;
         }
+    }
+
+    public bool DrawSessionActionButtons()
+    {
+        this.gameTab.DrawSessionActionButtons();
+        return true;
     }
 
     private void DrawGameSection()
@@ -99,25 +109,17 @@ public sealed class VotingMadnessPanel
         this.venueCredit.Draw();
     }
 
-    private void DrawGameInfoCard()
+    private void DrawGameInfoCard() =>
+        this.infoCard.Draw("##VMGameInfoCard", "Game Info", CardAccent, CardTitle, DrawGameInfoBody);
+
+    private static void DrawGameInfoBody()
     {
-        var containerH = MathF.Max(96f, this.trackedGameInfoCardSpanPx + 14f);
-        using var card = ImRaii.Child("##VMGameInfoCard", new Vector2(-1f, containerH), true, ImGuiWindowFlags.NoScrollbar);
-        if (!card.Success) return;
-        var topY = ImGui.GetCursorPosY();
-        ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime, "Game Info");
-        ImGui.Separator();
-        ImGui.Spacing();
-        var wrapEnd = ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X;
-        ImGui.PushTextWrapPos(wrapEnd);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
         ImGui.TextDisabled("1.  Add at least two voting keywords and choose which chats to listen on.");
         ImGui.TextDisabled("2.  Decide whether players may pick multiple options and whether they may vote more than once.");
         ImGui.TextDisabled("3.  Start the session and players cast votes by saying a keyword in chat (host messages are ignored).");
         ImGui.TextDisabled("4.  Watch the live bar chart and voter table, then stop the vote and announce the winner.");
         ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        this.trackedGameInfoCardSpanPx = MathF.Max(96f, ImGui.GetCursorPosY() - topY);
     }
 
     private void DrawStartDoorBody()
@@ -134,16 +136,10 @@ public sealed class VotingMadnessPanel
     private void DrawStartButton()
     {
         var canStart = VotingMadnessPreSessionSettingsFields.CanStart(this.config);
-        var startBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Session").X;
-        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - startBtnW) * 0.5f);
         using (ImRaii.Disabled(!canStart))
+        using (UIHelper.PushButtonColours(GreenButton, GreenButtonHovered, GreenButtonActive))
         {
-            ImGui.PushStyleColor(ImGuiCol.Button,        GreenButton);
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, GreenButtonHovered);
-            ImGui.PushStyleColor(ImGuiCol.ButtonActive,  GreenButtonActive);
-            var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Session", "##VMStartSessionDoor");
-            ImGui.PopStyleColor(3);
-            if (clicked)
+            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.Play, "Start Session", "##VMStartSessionDoor"))
                 this.service.StartSession();
         }
         var duplicateTooltip = VotingMadnessPreSessionSettingsFields.GetDuplicateOptionsTooltip(this.config);

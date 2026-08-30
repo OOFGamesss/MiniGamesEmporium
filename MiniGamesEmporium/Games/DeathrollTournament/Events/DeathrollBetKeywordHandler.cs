@@ -1,6 +1,5 @@
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;

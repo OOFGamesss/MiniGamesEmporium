@@ -32,6 +32,8 @@ public static class EmporiumNeonTheme
     public static readonly Vector4 VotingMadnessLimeDim = new(0.40f, 0.55f, 0.04f, 1f);
     public static readonly Vector4 RaffleTeal = new(0.10f, 0.85f, 0.72f, 1f);
     public static readonly Vector4 RaffleTealDim = new(0.05f, 0.46f, 0.40f, 1f);
+    public static readonly Vector4 CoinCollectorIndigo = new(0.42f, 0.28f, 1f, 1f);
+    public static readonly Vector4 CoinCollectorIndigoDim = new(0.22f, 0.14f, 0.55f, 1f);
     public static readonly Vector4 NeonCyan = new(0.2f, 0.98f, 0.95f, 1f);
     public static readonly Vector4 NeonMagenta = new(0.95f, 0.25f, 0.85f, 1f);
     public static readonly Vector4 WinGold = new(1f, 0.92f, 0.2f, 1f);
@@ -41,6 +43,14 @@ public static class EmporiumNeonTheme
     public static readonly Vector4 EmporiumPurple = new(0.22f, 0.07f, 0.36f, 1f);
     public static readonly Vector4 EmporiumPurpleHovered = new(0.32f, 0.10f, 0.50f, 1f);
     public static readonly Vector4 EmporiumPurpleActive = new(0.44f, 0.12f, 0.66f, 1f);
+    public static Vector4 Secondary(Vector4 primary) => Lighten(primary, 0.45f);
+
+    private static Vector4 Lighten(Vector4 colour, float amount) =>
+        new(colour.X + (1f - colour.X) * amount,
+            colour.Y + (1f - colour.Y) * amount,
+            colour.Z + (1f - colour.Z) * amount,
+            colour.W);
+
     public const float StartDoorPanelWidth = 420f;
     public const float StartDoorEstimatedBodyHeight = 400f;
     public const float PausedDoorEstimatedBodyHeight = 180f;

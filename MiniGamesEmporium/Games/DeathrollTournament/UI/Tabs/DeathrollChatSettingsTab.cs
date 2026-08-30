@@ -8,6 +8,11 @@ using System.Numerics;
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollChatSettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.DeathrollTournamentPink;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
 
     public DeathrollChatSettingsTab(PluginConfiguration config) => this.config = config;
@@ -15,62 +20,61 @@ public sealed class DeathrollChatSettingsTab
     public void Draw()
     {
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, "Deathroll Tournament");
+        ImGui.TextColored(CardAccent, "Deathroll Tournament");
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Chat Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        DrawPlaceholderReference();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawManualSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawAutoSection();
+        this.card.Draw("##DRChatPlaceholders", "Available Placeholders", CardAccent, CardTitle, DrawPlaceholderReference);
+        this.card.Draw("##DRChatManual", "Manual Trigger Messages", CardAccent, CardTitle, DrawManualSection);
+        this.card.Draw("##DRChatAuto", "Auto-Send Toggles", CardAccent, CardTitle, DrawAutoSection);
     }
 
-    private static void DrawPlaceholderReference()
-    {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Available Placeholders");
-        ImGui.Spacing();
-        DrawPlaceholderRow("{buyername}",   "Buyer's full name always including @World (e.g. Jane Doe@Omega) - buyer request message only");
-        DrawPlaceholderRow("{player1}",     "First player in the current match");
-        DrawPlaceholderRow("{player2}",     "Second player in the current match");
-        DrawPlaceholderRow("{winner}",      "Tournament winner name");
-        DrawPlaceholderRow("{round}",       "Current round label  (e.g. \"Round 1\", \"Final\")");
-        DrawPlaceholderRow("{prize}",       "The winner's prize - \"100,000 Gil\" for a Gil pot, or the item name / custom text otherwise");
-        DrawPlaceholderRow("{entrycost}",   "Entry cost per player in Gil");
-        DrawPlaceholderRow("{boostedpot}",  "Boosted pot amount in Gil");
-        DrawPlaceholderRow("{playercount}", "Number of players in the tournament");
-        DrawPlaceholderRow("{random10}",    "The tied /random 10 value (used in the re-roll message)");
-        DrawPlaceholderRow("{firstplayer}", "The player who won the order roll and goes first");
-        DrawPlaceholderRow("{roundwinner}", "The player who won a game within the best-of series");
-        DrawPlaceholderRow("{matchwinner}", "The player who won the entire match (series)");
-        DrawPlaceholderRow("{matchloser}",  "The player who lost the entire match (series)");
-        DrawPlaceholderRow("{roundscore}",  "Current score formatted as winner-wins - loser-wins (e.g. 1 - 0)");
-        DrawPlaceholderRow("{roundsleft}",  "Maximum games still playable in the series");
-        DrawPlaceholderRow("{betunit}",       "Gil required per bet");
-        DrawPlaceholderRow("{betkeyword}",    "The configured bet chat keyword (e.g. !bet)");
-        DrawPlaceholderRow("{bettarget}",     "The entrant a bet was placed on - bet gil request message only");
-        DrawPlaceholderRow("{bettingpot}",    "Total betting pot in Gil");
-        DrawPlaceholderRow("{betwinners}",    "Bettors who correctly bet on the tournament winner, joined by \", \"");
-        DrawPlaceholderRow("{url}",           "Live web spectator link - only filled in while a web session is running (Webview tab)");
-    }
+    private static readonly (string Token, string Desc)[] Placeholders =
+    [
+        ("{buyername}",   "Buyer's full name always including @World (e.g. Jane Doe@Omega) - buyer request message only"),
+        ("{player1}",     "First player in the current match"),
+        ("{player2}",     "Second player in the current match"),
+        ("{winner}",      "Tournament winner name"),
+        ("{round}",       "Current round label  (e.g. \"Round 1\", \"Final\")"),
+        ("{prize}",       "The winner's prize - \"100,000 Gil\" for a Gil pot, or the item name / custom text otherwise"),
+        ("{entrycost}",   "Entry cost per player in Gil"),
+        ("{boostedpot}",  "Boosted pot amount in Gil"),
+        ("{playercount}", "Number of players in the tournament"),
+        ("{random10}",    "The tied /random 10 value (used in the re-roll message)"),
+        ("{firstplayer}", "The player who won the order roll and goes first"),
+        ("{roundwinner}", "The player who won a game within the best-of series"),
+        ("{matchwinner}", "The player who won the entire match (series)"),
+        ("{matchloser}",  "The player who lost the entire match (series)"),
+        ("{roundscore}",  "Current score formatted as winner-wins - loser-wins (e.g. 1 - 0)"),
+        ("{roundsleft}",  "Maximum games still playable in the series"),
+        ("{betunit}",     "Gil required per bet"),
+        ("{betkeyword}",  "The configured bet chat keyword (e.g. !bet)"),
+        ("{bettarget}",   "The entrant a bet was placed on - bet gil request message only"),
+        ("{bettingpot}",  "Total betting pot in Gil"),
+        ("{betwinners}",  "Bettors who correctly bet on the tournament winner, joined by \", \""),
+        ("{url}",         "Live web spectator link - only filled in while a web session is running (Webview tab)"),
+    ];
 
-    private static void DrawPlaceholderRow(string token, string desc)
-    {
-        ImGui.TextColored(new Vector4(1f, 0.80f, 0.30f, 1f), token);
-        ImGui.SameLine(110f);
-        ImGui.TextDisabled(desc);
-    }
+    private static void DrawPlaceholderReference() => PlaceholderReference.Draw(Placeholders);
 
 
     private void DrawManualSection()
     {
         var chat = this.config.DeathrollTournament.Chat;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Manual Trigger Messages");
+        DrawMessageField(
+            "Advertise",
+            "Button: 'Advertise' on the top-left of the session control bar. Shouted to the zone to pull in new sign-ups.",
+            "##DRAdvertiseMsg",
+            () => chat.AdvertiseMessage,
+            v  => { chat.AdvertiseMessage = v; this.config.Save(); });
+        ImGui.Spacing();
+        DrawMultilineMessageField(
+            "Rules",
+            "Button: 'Send Rules' on the top-left of the session control bar. Each line is sent as its own message.",
+            "##DRRulesMsg",
+            () => chat.RulesMessage,
+            v  => { chat.RulesMessage = v; this.config.Save(); });
         ImGui.Spacing();
         ImGui.TextUnformatted("Turn Reminder");
         ImGui.TextDisabled("Bell button next to a player's name in the bracket. By default it copies a /tell command to your clipboard; enable this to send a custom message instead.");
@@ -209,8 +213,6 @@ public sealed class DeathrollChatSettingsTab
 
     private void DrawAutoSection()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Auto-Send Toggles");
-        ImGui.Spacing();
         {
             var toggle = this.config.DeathrollTournament.Chat.AutoAnnounceMatchup;
             if (ImGui.Checkbox("Auto Announce Matchup##DRAutoMatchup", ref toggle))
@@ -309,6 +311,16 @@ public sealed class DeathrollChatSettingsTab
             ImGui.SameLine();
             ImGui.TextDisabled("- fires automatically once the tournament winner and bet payouts are determined");
         }
+    }
+
+    private static void DrawMultilineMessageField(string label, string hint, string id, System.Func<string> get, System.Action<string> set)
+    {
+        ImGui.TextUnformatted(label);
+        ImGui.TextDisabled(hint);
+        var val = get();
+        ImGui.SetNextItemWidth(-1f);
+        if (ImGui.InputTextMultiline(id, ref val, 1024, new Vector2(-1f, ImGui.GetTextLineHeight() * 6f)))
+            set(val);
     }
 
     private void DrawMessageField(string label, string hint, string id, System.Func<string> get, System.Action<string> set)

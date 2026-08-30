@@ -17,9 +17,9 @@ public sealed class QueuePanel
     private string comboFilter = string.Empty;
     public QueuePanel(Bar777SessionService bar777SessionService) => this.bar777SessionService = bar777SessionService;
     private const float QueueListMinScrollHeightPx = 96f;
-    private static readonly Vector4 ReminderButton        = new(0.04f, 0.42f, 0.16f, 1f);
-    private static readonly Vector4 ReminderButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
-    private static readonly Vector4 ReminderButtonActive  = new(0.10f, 0.70f, 0.28f, 1f);
+    private static readonly Vector4 ReminderButton        = new(0.52f, 0.40f, 0.02f, 1f);
+    private static readonly Vector4 ReminderButtonHovered = new(0.72f, 0.58f, 0.03f, 1f);
+    private static readonly Vector4 ReminderButtonActive  = new(0.38f, 0.28f, 0.01f, 1f);
     private static readonly Vector4 ReminderSentButton        = new(0.28f, 0.28f, 0.28f, 1f);
     private static readonly Vector4 ReminderSentButtonHovered = new(0.38f, 0.38f, 0.38f, 1f);
     private static readonly Vector4 ReminderSentButtonActive  = new(0.48f, 0.48f, 0.48f, 1f);
@@ -42,7 +42,8 @@ public sealed class QueuePanel
         Action? onToBackQueue = null,
         Action? onRemoveFromQueue = null,
         bool isQueuePaused = false,
-        Action? onToggleQueuePause = null)
+        Action? onToggleQueuePause = null,
+        Action? onNextPlayerUp = null)
     {
         ImGui.TextColored(EmporiumNeonTheme.NeonMagenta, "Player queue");
         if (onAnnounceKeyword != null)
@@ -53,6 +54,14 @@ public sealed class QueuePanel
             if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Announce Keyword", "##AnnounceKw"))
                 onAnnounceKeyword.Invoke();
             ImGui.PopStyleColor(3);
+        }
+        if (onNextPlayerUp != null)
+        {
+            using (UIHelper.PushYellowButtonColours())
+            {
+                if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Next Player Up", "##NextPlayerUpBtn"))
+                    onNextPlayerUp.Invoke();
+            }
         }
         if (onToggleQueuePause != null)
         {

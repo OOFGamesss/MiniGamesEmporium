@@ -68,6 +68,16 @@ public static class GameSessionDoorStyles
         SeedTrackedContentSpanPx = 280f,
         ShellInsetBottom = 8f,
     };
+    public static GameSessionDoorStyle CoinCollectorStartDoor => new()
+    {
+        PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
+        InnerPadX = EmporiumNeonTheme.StartDoorInnerPadX,
+        MinOuterContainerHeight = EmporiumNeonTheme.DoorContainerMinHeight,
+        MinTrackedContentSpan = 260f,
+        ContentBottomBleedPx = 12f,
+        SeedTrackedContentSpanPx = EmporiumNeonTheme.StartDoorEstimatedBodyHeight,
+        ShellInsetBottom = 8f,
+    };
     public static GameSessionDoorStyle PausedSessionDoor => new()
     {
         PanelContentWidth = EmporiumNeonTheme.StartDoorPanelWidth,
@@ -86,6 +96,7 @@ public static class KnownGameDoorModules
     public const string HigherLower         = "HigherLower";
     public const string Raffle              = "Raffle";
     public const string VotingMadness       = "VotingMadness";
+    public const string CoinCollector       = "CoinCollector";
 }
 public static class GameSessionDoorHost
 {

@@ -1,3 +1,4 @@
+using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI.Components;
@@ -8,6 +9,11 @@ using MiniGamesEmporium.UI.Components;
 namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
 public sealed class Bar777SettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.Bar777Red;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
     public Bar777SettingsTab(PluginConfiguration config)
     {
@@ -16,25 +22,22 @@ public sealed class Bar777SettingsTab
     public void Draw()
     {
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.Bar777Red, this.config.Bar777.CustomName);
+        ImGui.TextColored(CardAccent, this.config.Bar777.CustomName);
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        Bar777PreSessionSettingsFields.Draw(this.config);
+        var locked = this.config.ActiveSession != null;
+        if (locked)
+            SessionLockNotice.Draw(
+                "A session is active. Session defaults are locked until you stop the session.");
+        else
+            this.card.Draw("##B7SettingsCard", "Session Defaults", CardAccent, CardTitle,
+                () => Bar777PreSessionSettingsFields.Draw(this.config));
         if (this.config.Bar777.UseQueue)
-        {
-            ImGui.Spacing();
-            ImGui.Separator();
-            ImGui.Spacing();
-            Bar777QueueKeywordFields.Draw(this.config, "SettingsTab");
-        }
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.Bar777Red, "Automation");
-        ImGui.Spacing();
-        DrawAutoCatchRollToggle();
+            this.card.Draw("##B7QueueCard", "Queue Keyword", CardAccent, CardTitle,
+                () => Bar777QueueKeywordFields.Draw(this.config, "SettingsTab"));
+        this.card.Draw("##B7AutomationCard", "Automation", CardAccent, CardTitle, DrawAutoCatchRollToggle);
     }
 
     private void DrawAutoCatchRollToggle()

@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Dalamud.Game.Chat;
 using Dalamud.Game.Text;
 using Dalamud.Plugin.Services;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.HigherLower.Models;
 using MiniGamesEmporium.Games.HigherLower.Utility;

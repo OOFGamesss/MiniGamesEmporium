@@ -10,6 +10,11 @@ using System.Numerics;
 namespace MiniGamesEmporium.Games.Bar777.UI.Tabs;
 public sealed class Bar777ChatSettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.Bar777Red;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
     public Bar777ChatSettingsTab(PluginConfiguration config)
     {
@@ -18,32 +23,19 @@ public sealed class Bar777ChatSettingsTab
     public void Draw()
     {
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.Bar777Red, this.config.Bar777.CustomName);
+        ImGui.TextColored(CardAccent, this.config.Bar777.CustomName);
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Chat Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        DrawChannelSelector();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawPlaceholderReference();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawManualMessageSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawAutoMessageSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawAutoSendTogglesSection();
+        this.card.Draw("##B7ChatChannel", "Chat Channel", CardAccent, CardTitle, DrawChannelSelector);
+        this.card.Draw("##B7ChatPlaceholders", "Available Placeholders", CardAccent, CardTitle, DrawPlaceholderReference);
+        this.card.Draw("##B7ChatManual", "Manual Trigger Messages", CardAccent, CardTitle, DrawManualMessageSection);
+        this.card.Draw("##B7ChatAutoMsg", "Auto Messages", CardAccent, CardTitle, DrawAutoMessageSection);
+        this.card.Draw("##B7ChatAutoToggles", "Auto-Send Toggles", CardAccent, CardTitle, DrawAutoSendTogglesSection);
     }
     private void DrawChannelSelector()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Chat Channel");
         ImGui.TextDisabled("Changes messages set for /say, /party and /alliance to a channel of your choice");
         ImGui.Spacing();
         var channel = this.config.Bar777.Chat.Channel;
@@ -65,36 +57,34 @@ public sealed class Bar777ChatSettingsTab
             this.config.Save();
         }
     }
-    private static void DrawPlaceholderReference()
-    {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Available Placeholders");
-        ImGui.Spacing();
-        DrawPlaceholderRow("{player}",      "Player name; @World included only for /tell messages (e.g. John Doe@Omega)");
-        DrawPlaceholderRow("{buyername}",   "Buyer's full name always including @World (e.g. Jane Doe@Omega) - buyer request message only");
-        DrawPlaceholderRow("{position}",    "Player's position in the waiting list");
-        DrawPlaceholderRow("{cost}",        "Cost per roll in Gil");
-        DrawPlaceholderRow("{maxcost}",     "Cost per roll × max rolls");
-        DrawPlaceholderRow("{rolls}",       "Max rolls allowed per session");
-        DrawPlaceholderRow("{boughtrolls}", "Rolls this player actually purchased");
-        DrawPlaceholderRow("{remaining}",   "Rolls remaining");
-        DrawPlaceholderRow("{totalpot}",    "Total pot in Gil");
-        DrawPlaceholderRow("{keyword}",     "Queue join keyword");
-    }
+    private static readonly (string Token, string Desc)[] Placeholders =
+    [
+        ("{player}",      "Player name; @World included only for /tell messages (e.g. John Doe@Omega)"),
+        ("{buyername}",   "Buyer's full name always including @World (e.g. Jane Doe@Omega) - buyer request message only"),
+        ("{position}",    "Player's position in the waiting list"),
+        ("{cost}",        "Cost per roll in Gil"),
+        ("{maxcost}",     "Cost per roll × max rolls"),
+        ("{rolls}",       "Max rolls allowed per session"),
+        ("{boughtrolls}", "Rolls this player actually purchased"),
+        ("{remaining}",   "Rolls remaining"),
+        ("{totalpot}",    "Total pot in Gil"),
+        ("{keyword}",     "Queue join keyword"),
+    ];
 
-    private static void DrawPlaceholderRow(string token, string desc)
-    {
-        ImGui.TextColored(new Vector4(1f, 0.80f, 0.30f, 1f), token);
-        ImGui.SameLine(110f);
-        ImGui.TextDisabled(desc);
-    }
+    private static void DrawPlaceholderReference() => PlaceholderReference.Draw(Placeholders);
 
     private void DrawManualMessageSection()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Manual Trigger Messages");
+        DrawMessageField(
+            "Advertise",
+            "Button: 'Advertise' on the top-left of the session control bar. Shouted to the zone to pull in new players.",
+            "##Bar777AdvertiseMsg",
+            () => this.config.Bar777.Chat.AdvertiseMessage,
+            v => { this.config.Bar777.Chat.AdvertiseMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMultilineMessageField(
             "Rules",
-            "Button: 'Send Rules' on the top-left of the Game panel.",
+            "Button: 'Send Rules' on the top-left of the session control bar. Each line is sent as its own message.",
             "##RulesMsg",
             () => this.config.Bar777.Chat.RulesMessage,
             v => { this.config.Bar777.Chat.RulesMessage = v; this.config.Save(); });
@@ -143,8 +133,6 @@ public sealed class Bar777ChatSettingsTab
     }
     private void DrawAutoMessageSection()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Auto Messages");
-        ImGui.Spacing();
         DrawMessageField(
             "Halfway",
             "Auto-sent when half the rolls are used.",
@@ -182,8 +170,6 @@ public sealed class Bar777ChatSettingsTab
     }
     private void DrawAutoSendTogglesSection()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Auto-Send Toggles");
-        ImGui.Spacing();
         {
             var toggle = this.config.Bar777.Chat.AutoStartRolls;
             if (ImGui.Checkbox("Auto Start Rolls##AutoStartRollsToggle", ref toggle))

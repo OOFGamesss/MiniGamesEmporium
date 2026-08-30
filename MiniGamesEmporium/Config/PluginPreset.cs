@@ -1,5 +1,6 @@
 using System;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.Games.CoinCollector.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.HigherLower.Config;
 using MiniGamesEmporium.Games.Raffle.Config;
@@ -20,4 +21,5 @@ public sealed class PluginPreset
     public RaffleConfig Raffle { get; set; } = new();
     public HigherLowerConfig HigherLower { get; set; } = new();
     public VotingMadnessConfig VotingMadness { get; set; } = new();
+    public CoinCollectorConfig CoinCollector { get; set; } = new();
 }

@@ -9,6 +9,11 @@ using System.Numerics;
 namespace MiniGamesEmporium.Games.Raffle.UI.Tabs;
 public sealed class RaffleChatSettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.RaffleTeal;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
 
     public RaffleChatSettingsTab(PluginConfiguration config) => this.config = config;
@@ -16,53 +21,44 @@ public sealed class RaffleChatSettingsTab
     public void Draw()
     {
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.RaffleTeal, "Raffle");
+        ImGui.TextColored(CardAccent, "Raffle");
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Chat Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        DrawPlaceholderReference();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawMessageFields();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawAutoSection();
+        this.card.Draw("##RaffleChatPlaceholders", "Available Placeholders", CardAccent, CardTitle, DrawPlaceholderReference);
+        this.card.Draw("##RaffleChatTemplates", "Message Templates", CardAccent, CardTitle, DrawMessageFields);
+        this.card.Draw("##RaffleChatAuto", "Auto-Send Toggles", CardAccent, CardTitle, DrawAutoSection);
     }
 
-    private static void DrawPlaceholderReference()
-    {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Available Placeholders");
-        ImGui.Spacing();
-        DrawPlaceholderRow("{ticketcost}",    "Ticket cost in Gil");
-        DrawPlaceholderRow("{totalpot}",      "Total pot in Gil");
-        DrawPlaceholderRow("{boostedpot}",    "Boosted pot amount in Gil");
-        DrawPlaceholderRow("{ticketssold}",   "Number of tickets sold so far");
-        DrawPlaceholderRow("{maxtickets}",    "Maximum tickets per player");
-        DrawPlaceholderRow("{closetime}",     "Closing time as HH:mm Server Time");
-        DrawPlaceholderRow("{timeleft}",      "Time remaining until close");
-        DrawPlaceholderRow("{keyword}",       "The auto-join keyword");
-        DrawPlaceholderRow("{winner}",        "The drawn winner's name");
-        DrawPlaceholderRow("{winningnumber}", "The winning ticket number");
-        DrawPlaceholderRow("{player}",        "Registered player name (request messages)");
-        DrawPlaceholderRow("{buyername}",     "The buyer's full name including @World (buyer request only)");
-        DrawPlaceholderRow("{numbers}",       "The player's ticket numbers (ticket numbers tell only)");
-    }
+    private static readonly (string Token, string Desc)[] Placeholders =
+    [
+        ("{ticketcost}",    "Ticket cost in Gil"),
+        ("{totalpot}",      "Total pot in Gil"),
+        ("{boostedpot}",    "Boosted pot amount in Gil"),
+        ("{ticketssold}",   "Number of tickets sold so far"),
+        ("{maxtickets}",    "Maximum tickets per player"),
+        ("{closetime}",     "Closing time as HH:mm Server Time"),
+        ("{timeleft}",      "Time remaining until close"),
+        ("{keyword}",       "The auto-join keyword"),
+        ("{winner}",        "The drawn winner's name"),
+        ("{winningnumber}", "The winning ticket number"),
+        ("{player}",        "Registered player name (request messages)"),
+        ("{buyername}",     "The buyer's full name including @World (buyer request only)"),
+        ("{numbers}",       "The player's ticket numbers (ticket numbers tell only)"),
+    ];
 
-    private static void DrawPlaceholderRow(string token, string desc)
-    {
-        ImGui.TextColored(new Vector4(1f, 0.80f, 0.30f, 1f), token);
-        ImGui.SameLine(140f);
-        ImGui.TextDisabled(desc);
-    }
+    private static void DrawPlaceholderReference() => PlaceholderReference.Draw(Placeholders);
 
     private void DrawMessageFields()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Message Templates");
-        ImGui.Spacing();
         var chat = this.config.Raffle.Chat;
+        DrawMessageField("Advertise", "Button: 'Advertise' on the top-left of the session control bar. Shouted to the zone to pull in new ticket buyers.",
+            "##RaffleAdvertiseMsg", () => chat.AdvertiseMessage, v => { chat.AdvertiseMessage = v; this.config.Save(); });
+        ImGui.Spacing();
+        DrawMultilineMessageField("Rules", "Button: 'Send Rules' on the top-left of the session control bar. Each line is sent as its own message.",
+            "##RaffleRulesMsg", () => chat.RulesMessage, v => { chat.RulesMessage = v; this.config.Save(); });
+        ImGui.Spacing();
         DrawMessageField("Announce Pot", "Button: 'Announce Pot' in the game panel.",
             "##RaffleAnnPotMsg", () => chat.AnnouncePotMessage, v => { chat.AnnouncePotMessage = v; this.config.Save(); });
         ImGui.Spacing();
@@ -93,8 +89,6 @@ public sealed class RaffleChatSettingsTab
 
     private void DrawAutoSection()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Auto-Send Toggles");
-        ImGui.Spacing();
         var toggle = this.config.Raffle.Chat.AutoAnnounceWinner;
         if (ImGui.Checkbox("Auto Announce Winner##RaffleAutoWinner", ref toggle))
         {
@@ -118,6 +112,16 @@ public sealed class RaffleChatSettingsTab
             ImGui.TextDisabled("Shuffle mode: held back until you close the raffle, then use 'Send All Numbers'.");
             ImGui.Unindent();
         }
+    }
+
+    private static void DrawMultilineMessageField(string label, string hint, string id, Func<string> get, Action<string> set)
+    {
+        ImGui.TextUnformatted(label);
+        ImGui.TextDisabled(hint);
+        var val = get();
+        ImGui.SetNextItemWidth(-1f);
+        if (ImGui.InputTextMultiline(id, ref val, 1024, new Vector2(-1f, ImGui.GetTextLineHeight() * 6f)))
+            set(val);
     }
 
     private static void DrawMessageField(string label, string hint, string id, Func<string> get, Action<string> set)

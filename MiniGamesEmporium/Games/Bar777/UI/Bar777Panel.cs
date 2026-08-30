@@ -9,7 +9,6 @@ using MiniGamesEmporium.Games.Bar777.UI.Components;
 using MiniGamesEmporium.Games.Bar777.UI.Tabs;
 using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Services;
-
 using MiniGamesEmporium.UI.Components;
 using MiniGamesEmporium.Utility;
 using System;
@@ -24,10 +23,14 @@ public sealed class Bar777Panel : IDisposable
     private static readonly Vector4 GreenButton = new(0.04f, 0.42f, 0.16f, 1f);
     private static readonly Vector4 GreenButtonHovered = new(0.06f, 0.58f, 0.22f, 1f);
     private static readonly Vector4 GreenButtonActive = new(0.10f, 0.70f, 0.28f, 1f);
+
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.Bar777Red;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard infoCard = new();
     private const float GameTabQueueSectionWidthPx = 312f;
     private const string DoorSurfaceStart = "StartDoor";
     private float trackedBar777StartDoorSpanPx = GameSessionDoorStyles.Bar777StartDoor.SeedTrackedContentSpanPx;
-    private float trackedGameInfoCardSpanPx = 140f;
     private readonly PluginConfiguration config;
     private readonly Bar777SessionService bar777SessionService;
     private readonly Bar777GameTab gameTab;
@@ -65,6 +68,12 @@ public sealed class Bar777Panel : IDisposable
             case GameSection.Settings: DrawSettingsSection(); break;
         }
     }
+    public bool DrawSessionActionButtons()
+    {
+        this.gameTab.DrawSessionActionButtons();
+        return true;
+    }
+
     private void DrawGameSection()
     {
         var session = this.bar777SessionService.GetActiveSession();
@@ -139,7 +148,10 @@ public sealed class Bar777Panel : IDisposable
             {
                 if (this.bar777SessionService.IsQueuePaused) this.bar777SessionService.ResumeQueue();
                 else this.bar777SessionService.PauseQueue();
-            });
+            },
+            onNextPlayerUp: currentForSidebar == null
+                ? null
+                : () => AnnounceNextPlayerUp.Execute(currentForSidebar, this.config, this.chatQueue));
     }
     private void DrawChatSection()
     {
@@ -158,19 +170,12 @@ public sealed class Bar777Panel : IDisposable
             DrawBar777DoorStartBody);
     }
 
-    private void DrawGameInfoDoorCard()
+    private void DrawGameInfoDoorCard() =>
+        this.infoCard.Draw("##Bar777GameInfoCard", "Game Info", CardAccent, CardTitle, DrawGameInfoBody);
+
+    private static void DrawGameInfoBody()
     {
-        var containerH = MathF.Max(80f, this.trackedGameInfoCardSpanPx + 14f);
-        using var card = ImRaii.Child("##Bar777GameInfoCard", new Vector2(-1f, containerH), true, ImGuiWindowFlags.NoScrollbar);
-        if (!card.Success)
-            return;
-        var topY = ImGui.GetCursorPosY();
-        ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.Bar777Red, "Game Info");
-        ImGui.Separator();
-        ImGui.Spacing();
-        var wrapEnd = ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X;
-        ImGui.PushTextWrapPos(wrapEnd);
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X);
         ImGui.TextDisabled("1.  Collect the entry cost from the player before their rolls begin.");
         ImGui.TextDisabled("2.  The player types /random in chat the configured number of times (roll count).");
         ImGui.TextDisabled("3.  If they roll the winning number, they win the entire pot.");
@@ -178,8 +183,6 @@ public sealed class Bar777Panel : IDisposable
         ImGui.TextDisabled("5.  Use Walk-in for smaller venues, or Queue for larger venues with 10 or more players.");
         ImGui.TextDisabled("6.  Queue players join via a chat keyword and receive an alert when they are coming up next.");
         ImGui.PopTextWrapPos();
-        ImGui.Spacing();
-        this.trackedGameInfoCardSpanPx = MathF.Max(80f, ImGui.GetCursorPosY() - topY);
     }
     private void DrawBar777DoorStartBody()
     {
@@ -206,13 +209,8 @@ public sealed class Bar777Panel : IDisposable
             playerForSession = Bar777GameIds.WalkInPlayerPlaceholder;
         else
             playerForSession = queue.Count > 0 ? queue[0] : Bar777GameIds.WaitingPlayerPlaceholder;
-        var startBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.Play, "Start Session").X;
-        ImGui.SetCursorPosX((ImGui.GetWindowWidth() - startBtnW) * 0.5f);
-        ImGui.PushStyleColor(ImGuiCol.Button, GreenButton);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, GreenButtonHovered);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, GreenButtonActive);
-        var clicked = UIHelper.IconTextButton(FontAwesomeIcon.Play, "Start Session", "##StartBar777Door");
-        ImGui.PopStyleColor(3);
+        using var startColours = UIHelper.PushButtonColours(GreenButton, GreenButtonHovered, GreenButtonActive);
+        var clicked = UIHelper.CentredIconTextButton(FontAwesomeIcon.Play, "Start Session", "##StartBar777Door");
         if (clicked)
             this.bar777SessionService.StartSession(Bar777GameIds.DisplayName, playerForSession);
     }

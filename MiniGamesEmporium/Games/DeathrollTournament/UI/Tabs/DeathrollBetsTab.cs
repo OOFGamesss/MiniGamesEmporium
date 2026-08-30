@@ -21,6 +21,11 @@ using System.Numerics;
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollBetsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.DeathrollTournamentPink;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private static readonly Vector4 YellButtonColour        = new(0.72f, 0.55f, 0.00f, 1f);
     private static readonly Vector4 YellButtonColourHovered = new(0.88f, 0.68f, 0.00f, 1f);
     private static readonly Vector4 YellButtonColourActive  = new(0.58f, 0.44f, 0.00f, 1f);
@@ -66,7 +71,7 @@ public sealed class DeathrollBetsTab
     public void Draw()
     {
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, "Betting");
+        ImGui.TextColored(CardAccent, "Betting");
         ImGui.Separator();
         ImGui.Spacing();
         if (!this.deathrollService.IsSessionActive())
@@ -79,7 +84,7 @@ public sealed class DeathrollBetsTab
             ImGui.TextDisabled("Betting is disabled for this session.");
             return;
         }
-        DrawShouts();
+        this.card.Draw("##DRBetShoutsCard", "Shouts", CardAccent, CardTitle, DrawShouts);
         var panelH        = GetPotPanelHeight();
         var outerPad      = ImGui.GetStyle().ItemSpacing.Y;
         var bottomReserve = panelH + outerPad * 2f;
@@ -87,32 +92,27 @@ public sealed class DeathrollBetsTab
         using (var scroll = ImRaii.Child("##DeathrollBetsScroll", new Vector2(-1f, scrollH), false))
         {
             if (scroll.Success)
-            {
-                var state = this.deathrollService.GetState();
-                if (state != null && state.TournamentWinner != null)
-                {
-                    DrawPayoutSummary(state);
-                    ImGui.Spacing();
-                    ImGui.Separator();
-                    ImGui.Spacing();
-                }
-                if (!this.deathrollService.HasActiveTournament())
-                {
-                    DrawAddBetRow();
-                    ImGui.Spacing();
-                }
-                DrawUnresolvedSection();
-                DrawBetsTable();
-            }
+                DrawBetsBody();
         }
         ImGui.Spacing();
         DrawPotSummary();
     }
 
+    private void DrawBetsBody()
+    {
+        var state = this.deathrollService.GetState();
+        if (state != null && state.TournamentWinner != null)
+            this.card.Draw("##DRBetPayoutCard", "Payouts", CardAccent, CardTitle, () => DrawPayoutSummary(state));
+        if (!this.deathrollService.HasActiveTournament())
+            this.card.Draw("##DRBetAddCard", "Add Bet", CardAccent, CardTitle, DrawAddBetRow);
+        DrawUnresolvedSection();
+        var bets = this.config.DeathrollTournament.Bets;
+        this.card.Draw("##DRBetTableCard", $"Bets ({bets.Count(b => b.IsPaid)} / {bets.Count} paid)",
+            CardAccent, CardTitle, DrawBetsTable);
+    }
+
     private void DrawShouts()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Shouts");
-        ImGui.Spacing();
         using (UIHelper.PushBlueButtonColours())
             if (UIHelper.IconTextButton(FontAwesomeIcon.Play, "Announce Betting Open", "##DRShoutBettingOpen"))
                 AnnounceBettingOpen.Execute(this.config, this.chatQueue);
@@ -120,9 +120,6 @@ public sealed class DeathrollBetsTab
         using (UIHelper.PushBlueButtonColours())
             if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Announce Betting Pot", "##DRShoutBettingPot"))
                 AnnounceBettingPot.Execute(this.config, this.chatQueue, this.bettingService.ComputeBettingPot());
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
     }
 
     private void DrawPotSummary()
@@ -160,8 +157,6 @@ public sealed class DeathrollBetsTab
 
     private void DrawAddBetRow()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Add Bet");
-        ImGui.Spacing();
         var addBtnW = UIHelper.CalcButtonSize(FontAwesomeIcon.UserPlus, "Add Bet").X;
         var comboW  = MathF.Max(120f, (ImGui.GetContentRegionAvail().X - addBtnW - ImGui.GetStyle().ItemSpacing.X * 2f) / 2f);
 
@@ -229,8 +224,6 @@ public sealed class DeathrollBetsTab
     private void DrawBetsTable()
     {
         var bets = this.config.DeathrollTournament.Bets;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, $"Bets ({bets.Count(b => b.IsPaid)} / {bets.Count} paid)");
-        ImGui.Spacing();
         if (bets.Count == 0)
         {
             ImGui.TextDisabled("No bets placed yet.");
@@ -409,13 +402,12 @@ public sealed class DeathrollBetsTab
         var startX = ImGui.GetCursorPosX();
         var winnerName = PlayerInfoService.StripWorld(state.TournamentWinner ?? string.Empty);
 
-        ImGui.SetWindowFontScale(1.6f);
-        var nameW = ImGui.CalcTextSize(winnerName).X;
-        ImGui.SetWindowFontScale(1.0f);
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - nameW) * 0.5f));
-        ImGui.SetWindowFontScale(1.6f);
-        ImGui.TextColored(GoldColour, winnerName);
-        ImGui.SetWindowFontScale(1.0f);
+        using (UIHelper.PushScaledFont(1.6f))
+        {
+            var nameW = ImGui.CalcTextSize(winnerName).X;
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - nameW) * 0.5f));
+            ImGui.TextColored(GoldColour, winnerName);
+        }
 
         var subtitle = state.BetPayouts.Count switch
         {
@@ -510,11 +502,12 @@ public sealed class DeathrollBetsTab
         var name      = PlayerInfoService.StripWorld(payout.BettorName);
         var remaining = Math.Max(0L, payout.ShareGil - payout.PaidGil);
 
-        ImGui.SetWindowFontScale(1.3f);
-        var nameW = ImGui.CalcTextSize(name).X;
-        ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - nameW) * 0.5f));
-        ImGui.TextColored(GoldColour, name);
-        ImGui.SetWindowFontScale(1.0f);
+        using (UIHelper.PushScaledFont(1.3f))
+        {
+            var nameW = ImGui.CalcTextSize(name).X;
+            ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - nameW) * 0.5f));
+            ImGui.TextColored(GoldColour, name);
+        }
 
         var subtitle = $"Correctly bet on {tournamentWinnerName}!";
         ImGui.SetCursorPosX(startX + MathF.Max(0f, (avail - ImGui.CalcTextSize(subtitle).X) * 0.5f));

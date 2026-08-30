@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using Dalamud.Configuration;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.Games.CoinCollector.Config;
+using MiniGamesEmporium.Games.CoinCollector.Models;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.DeathrollTournament.State;
@@ -27,6 +29,7 @@ public class PluginConfiguration : IPluginConfiguration
     public HigherLowerConfig HigherLower { get; set; } = new();
     public RaffleConfig Raffle { get; set; } = new();
     public VotingMadnessConfig VotingMadness { get; set; } = new();
+    public CoinCollectorConfig CoinCollector { get; set; } = new();
     public string QueueKeyword { get; set; } = "!join";
     public QueueConfig QueueJoinChannels { get; set; } = new();
     public List<PluginPreset> Presets { get; set; } = new();
@@ -39,6 +42,8 @@ public class PluginConfiguration : IPluginConfiguration
     public VotingMadnessState? VotingMadnessSession { get; set; } = null;
     public ActiveSession? ActiveSession { get; set; } = null;
     public ActiveSession? HigherLowerActiveSession { get; set; } = null;
+    public CoinCollectorTurnState? CoinCollectorSession { get; set; } = null;
+    public ActiveSession? CoinCollectorActiveSession { get; set; } = null;
     public List<string> QueuedPlayers { get; set; } = new();
 
     public bool HasMigratedHistoryToLiteDb { get; set; } = false;

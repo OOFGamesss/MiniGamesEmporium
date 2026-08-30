@@ -1,5 +1,4 @@
 using System;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 

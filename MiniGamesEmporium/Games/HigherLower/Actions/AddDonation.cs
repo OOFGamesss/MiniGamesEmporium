@@ -1,5 +1,4 @@
 using System;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.HigherLower.Utility;
 using MiniGamesEmporium.Models;

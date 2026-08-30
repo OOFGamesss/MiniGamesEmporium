@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using MiniGamesEmporium.Config;
@@ -10,6 +9,11 @@ using MiniGamesEmporium.UI.Components;
 namespace MiniGamesEmporium.Games.VotingMadness.UI.Tabs;
 public sealed class VotingMadnessChatSettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.VotingMadnessLime;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
 
     public VotingMadnessChatSettingsTab(PluginConfiguration config) => this.config = config;
@@ -30,35 +34,25 @@ public sealed class VotingMadnessChatSettingsTab
     public void Draw()
     {
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.VotingMadnessLime, "Voting Madness");
+        ImGui.TextColored(CardAccent, "Voting Madness");
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Chat Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        DrawPlaceholderReference();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawManualSection();
+        this.card.Draw("##VMChatPlaceholders", "Available Placeholders", CardAccent, CardTitle, DrawPlaceholderReference);
+        this.card.Draw("##VMChatManual", "Manual Trigger Messages", CardAccent, CardTitle, DrawManualSection);
     }
 
-    private static void DrawPlaceholderReference()
-    {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Available Placeholders");
-        ImGui.Spacing();
-        var descColX = Placeholders.Max(p => ImGui.CalcTextSize(p.Token).X) + 20f;
-        foreach (var (token, desc) in Placeholders)
-        {
-            ImGui.TextColored(new Vector4(1f, 0.80f, 0.30f, 1f), token);
-            ImGui.SameLine(descColX);
-            ImGui.TextDisabled(desc);
-        }
-    }
+    private static void DrawPlaceholderReference() => PlaceholderReference.Draw(Placeholders);
 
     private void DrawManualSection()
     {
         var chat = this.config.VotingMadness.Chat;
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Manual Trigger Messages");
+        DrawMessageField("Advertise", "Button: 'Advertise' on the top-left of the session control bar. Shouted to the zone to pull in more voters.",
+            "##VMAdvertiseMsg", () => chat.AdvertiseMessage, v => { chat.AdvertiseMessage = v; this.config.Save(); });
+        ImGui.Spacing();
+        DrawMultilineMessageField("Rules", "Button: 'Send Rules' on the top-left of the session control bar. Each line is sent as its own message.",
+            "##VMRulesMsg", () => chat.RulesMessage, v => { chat.RulesMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField("Announce Options", "Button: 'Announce Options' on the Game panel.",
             "##VMOptionsMsg", () => chat.AnnounceOptionsMessage, v => { chat.AnnounceOptionsMessage = v; this.config.Save(); });
@@ -80,6 +74,16 @@ public sealed class VotingMadnessChatSettingsTab
         ImGui.Spacing();
         DrawMessageField("Announce Tie", "Used instead of the winning vote message when options are tied.",
             "##VMTieMsg", () => chat.AnnounceTieMessage, v => { chat.AnnounceTieMessage = v; this.config.Save(); });
+    }
+
+    private static void DrawMultilineMessageField(string title, string hint, string id, Func<string> getter, Action<string> setter)
+    {
+        ImGui.TextUnformatted(title);
+        ImGui.TextDisabled(hint);
+        var value = getter();
+        ImGui.SetNextItemWidth(-1f);
+        if (ImGui.InputTextMultiline(id, ref value, 1024, new Vector2(-1f, ImGui.GetTextLineHeight() * 6f)))
+            setter(value);
     }
 
     private static void DrawMessageField(string title, string hint, string id, Func<string> getter, Action<string> setter)

@@ -6,6 +6,8 @@ namespace MiniGamesEmporium.Games.VotingMadness.Config;
 [Serializable]
 public class VotingMadnessChatConfig
 {
+    public string AdvertiseMessage { get; set; } =
+        "/shout Voting Madness is open! Have your say on: {options}. Voting closes at {closetime} ST, come and cast your vote!";
     public string AnnounceOptionsMessage { get; set; } =
         "/yell Vote now! Options: {options}. Say your choice in chat!";
     public string VoteStartedMessage { get; set; } =
@@ -20,4 +22,9 @@ public class VotingMadnessChatConfig
         "/yell Current standings: {standings}";
     public string AnnounceTieMessage { get; set; } =
         "/yell It's a tie between {winner}! Each has {percent}% ({votes} of {totalvotes} votes).";
+    public string RulesMessage { get; set; } =
+        "/party ==========  HOW TO VOTE  ==========\n" +
+        "/party  Voting Madness is open! The options are: {options}.\n" +
+        "/party  Say your choice in chat to cast your vote, one vote per person.\n" +
+        "/party  Voting closes at {closetime} ST and the most popular option wins!";
 }

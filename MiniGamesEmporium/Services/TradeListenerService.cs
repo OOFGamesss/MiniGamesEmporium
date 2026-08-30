@@ -3,6 +3,8 @@ using Dalamud.Plugin.Services;
 using ECommons.GameHelpers;
 using MiniGamesEmporium.Games.Bar777.Services;
 using MiniGamesEmporium.Games.Bar777.Utility;
+using MiniGamesEmporium.Games.CoinCollector.Services;
+using MiniGamesEmporium.Games.CoinCollector.Utility;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
 using MiniGamesEmporium.Games.HigherLower.Services;
@@ -22,9 +24,10 @@ public sealed class TradeListenerService : IDisposable
     private readonly DeathrollBettingService deathrollBettingService;
     private readonly HigherLowerService higherLowerService;
     private readonly RaffleService raffleService;
+    private readonly CoinCollectorService coinCollectorService;
     private readonly IPluginLog log;
 
-    public TradeListenerService(Bar777SessionService bar777SessionService, SessionService sessionService, DeathrollTournamentService deathrollService, DeathrollBettingService deathrollBettingService, HigherLowerService higherLowerService, RaffleService raffleService, IPluginLog log)
+    public TradeListenerService(Bar777SessionService bar777SessionService, SessionService sessionService, DeathrollTournamentService deathrollService, DeathrollBettingService deathrollBettingService, HigherLowerService higherLowerService, RaffleService raffleService, CoinCollectorService coinCollectorService, IPluginLog log)
     {
         this.bar777SessionService     = bar777SessionService;
         this.sessionService           = sessionService;
@@ -32,6 +35,7 @@ public sealed class TradeListenerService : IDisposable
         this.deathrollBettingService  = deathrollBettingService;
         this.higherLowerService       = higherLowerService;
         this.raffleService            = raffleService;
+        this.coinCollectorService     = coinCollectorService;
         this.log                      = log;
         TradeDetectionManager.OnTradeEnd += OnTradeEnd;
     }
@@ -68,6 +72,10 @@ public sealed class TradeListenerService : IDisposable
             {
                 this.raffleService.TryAutoAddTickets(name, result.ReceivedGil, world);
             }
+            else if (CoinCollectorGameIds.Matches(focused))
+            {
+                this.coinCollectorService.TryVerifyPayment(name, result.ReceivedGil, world);
+            }
         }
         else if (result.ReceivedGil < 0)
         {
@@ -78,6 +86,7 @@ public sealed class TradeListenerService : IDisposable
             this.deathrollBettingService.TryRecordBetPayout(name, amountSent);
             this.higherLowerService.TryRecordWinnerPayout(name, amountSent);
             this.raffleService.TryRecordWinnerPayout(name, amountSent);
+            this.coinCollectorService.TryRecordWinnerPayout(name, amountSent);
         }
     }
 }

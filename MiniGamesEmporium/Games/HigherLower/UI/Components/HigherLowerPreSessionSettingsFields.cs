@@ -1,9 +1,6 @@
 using System;
-
 using Dalamud.Bindings.ImGui;
-
 using ECommons.ImGuiMethods;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.UI.Components;
 

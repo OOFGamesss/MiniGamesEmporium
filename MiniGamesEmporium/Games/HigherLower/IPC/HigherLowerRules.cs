@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
 using Dalamud.Plugin;
 using Dalamud.Plugin.Ipc;
 using Dalamud.Plugin.Services;
-
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.HigherLower.Models;
 using MiniGamesEmporium.Games.HigherLower.Services;

@@ -1,3 +1,4 @@
+using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using ECommons.ImGuiMethods;
@@ -12,6 +13,11 @@ using System;
 namespace MiniGamesEmporium.Games.Raffle.UI.Tabs;
 public sealed class RaffleSettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.RaffleTeal;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
 
     public RaffleSettingsTab(PluginConfiguration config) => this.config = config;
@@ -21,27 +27,34 @@ public sealed class RaffleSettingsTab
         using var scroll = ImRaii.Child("##RaffleSettingsScroll");
         if (!scroll) return;
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.RaffleTeal, "Raffle");
+        ImGui.TextColored(CardAccent, "Raffle");
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Settings");
         ImGui.Separator();
         ImGui.Spacing();
+        if (this.config.RaffleSession != null)
+        {
+            SessionLockNotice.Draw(
+                "A session is active. Tickets, pot, shuffle mode and closing time are locked until you stop the session.");
+        }
+        else
+        {
+            this.card.Draw("##RaffleTicketCard", "Tickets and Pot", CardAccent, CardTitle, DrawTicketAndPotBody);
+            this.card.Draw("##RaffleShuffleCard", "Shuffle Mode", CardAccent, CardTitle,
+                () => RaffleShuffleModeFields.Draw(this.config, "Settings"));
+            this.card.Draw("##RaffleCloseCard", "Closing Time", CardAccent, CardTitle,
+                () => RaffleCloseTimeFields.DrawConfig(this.config, "Settings", -1f));
+        }
+        this.card.Draw("##RaffleJoinCard", "Auto Join", CardAccent, CardTitle,
+            () => RaffleAutoJoinFields.Draw(this.config, "Settings", -1f));
+    }
+
+    private void DrawTicketAndPotBody()
+    {
         DrawTicketCost();
         DrawBoostedPot();
         DrawMaxTickets();
         DrawTradesToPotPercent();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        RaffleShuffleModeFields.Draw(this.config, "Settings");
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        RaffleCloseTimeFields.DrawConfig(this.config, "Settings", -1f);
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        RaffleAutoJoinFields.Draw(this.config, "Settings", -1f);
     }
 
     private void DrawTicketCost()

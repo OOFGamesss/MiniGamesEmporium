@@ -1,14 +1,12 @@
 using System;
 using System.IO;
 using System.Numerics;
-
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using Dalamud.Utility;
-
 using MiniGamesEmporium.UI.Components;
 
 /// <summary>Renders the Support tab with FAQ, Discord invite and website links.</summary>

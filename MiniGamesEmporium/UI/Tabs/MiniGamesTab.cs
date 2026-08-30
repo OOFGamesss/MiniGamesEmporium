@@ -5,6 +5,8 @@ using Dalamud.Plugin.Services;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.UI;
 using MiniGamesEmporium.Games.Bar777.Services;
+using MiniGamesEmporium.Games.CoinCollector.Services;
+using MiniGamesEmporium.Games.CoinCollector.UI;
 using MiniGamesEmporium.Games.DeathrollTournament.Discord;
 using MiniGamesEmporium.Games.DeathrollTournament.Services;
 using MiniGamesEmporium.Games.DeathrollTournament.UI;
@@ -47,6 +49,7 @@ public sealed class MiniGamesTab : IDisposable
     private readonly RaidBossPanel raidBossPanel;
     private readonly DealOrNoDealPanel dealOrNoDealPanel;
     private readonly VotingMadnessPanel votingMadnessPanel;
+    private readonly CoinCollectorPanel coinCollectorPanel;
     private readonly Bar777SessionService bar777SessionService;
     private bool showWinAlert;
     private string winAlertPlayer = string.Empty;
@@ -68,7 +71,8 @@ public sealed class MiniGamesTab : IDisposable
         HigherLowerService higherLowerService,
         PlayerInfoService playerInfoService,
         RaffleService raffleService,
-        VotingMadnessService votingMadnessService)
+        VotingMadnessService votingMadnessService,
+        CoinCollectorService coinCollectorService)
     {
         this.bar777SessionService     = bar777SessionService;
         this.bar777Panel              = new Bar777Panel(config, bar777SessionService, chatQueue, historyService, autoPayoutService);
@@ -83,20 +87,22 @@ public sealed class MiniGamesTab : IDisposable
         this.raidBossPanel            = new RaidBossPanel();
         this.dealOrNoDealPanel        = new DealOrNoDealPanel();
         this.votingMadnessPanel       = new VotingMadnessPanel(config, votingMadnessService, chatQueue);
+        this.coinCollectorPanel       = new CoinCollectorPanel(config, coinCollectorService, chatQueue, autoPayoutService, playerInfoService, historyService);
         this.NavEntries =
         [
             new(MiniGame.Bar777, () => config.Bar777.CustomName, FontAwesomeIcon.Dice, EmporiumNeonTheme.Bar777Red, Bar777Panel.Sections),
+            new(MiniGame.CoinCollector, () => "Coin Collector", FontAwesomeIcon.Coins, EmporiumNeonTheme.CoinCollectorIndigo, CoinCollectorPanel.Sections),
             new(MiniGame.DeathrollTournament, () => "Deathroll Tournament", FontAwesomeIcon.Skull, EmporiumNeonTheme.DeathrollTournamentPink, DeathrollTournamentPanel.Sections),
-            new(MiniGame.Raffle, () => "Raffle", FontAwesomeIcon.TicketAlt, EmporiumNeonTheme.RaffleTeal, RafflePanel.Sections),
             new(MiniGame.HigherLower, () => "Higher/Lower", FontAwesomeIcon.ArrowsAltV, EmporiumNeonTheme.HigherLowerOrange, HigherLowerPanel.Sections),
+            new(MiniGame.Raffle, () => "Raffle", FontAwesomeIcon.TicketAlt, EmporiumNeonTheme.RaffleTeal, RafflePanel.Sections),
             new(MiniGame.VotingMadness, () => "Voting Madness", FontAwesomeIcon.PollH, EmporiumNeonTheme.VotingMadnessLime, VotingMadnessPanel.Sections),
-            new(MiniGame.MinefieldGambit, () => "Minefield Gambit", FontAwesomeIcon.Bomb, EmporiumNeonTheme.MinefieldGreen, NoSections),
+            new(MiniGame.EightBallPool, () => "8 Ball Pool", FontAwesomeIcon.Circle, EmporiumNeonTheme.EightBallPoolPurple, NoSections),
             new(MiniGame.BeerPong, () => "Beer Pong", FontAwesomeIcon.Beer, EmporiumNeonTheme.BeerPongWhite, NoSections),
             new(MiniGame.Darts, () => "Darts", FontAwesomeIcon.Bullseye, EmporiumNeonTheme.DartsBlue, NoSections),
-            new(MiniGame.EightBallPool, () => "8 Ball Pool", FontAwesomeIcon.Circle, EmporiumNeonTheme.EightBallPoolPurple, NoSections),
-            new(MiniGame.RussianRoulette, () => "Russian Roulette", FontAwesomeIcon.Crosshairs, EmporiumNeonTheme.RussianRouletteCyan, NoSections),
-            new(MiniGame.RaidBoss, () => "Raid Boss", FontAwesomeIcon.Dragon, EmporiumNeonTheme.RaidBossFuchsia, NoSections),
             new(MiniGame.DealOrNoDeal, () => "Deal or No Deal", FontAwesomeIcon.Briefcase, EmporiumNeonTheme.DealOrNoDealGold, NoSections),
+            new(MiniGame.MinefieldGambit, () => "Minefield Gambit", FontAwesomeIcon.Bomb, EmporiumNeonTheme.MinefieldGreen, NoSections),
+            new(MiniGame.RaidBoss, () => "Raid Boss", FontAwesomeIcon.Dragon, EmporiumNeonTheme.RaidBossFuchsia, NoSections),
+            new(MiniGame.RussianRoulette, () => "Russian Roulette", FontAwesomeIcon.Crosshairs, EmporiumNeonTheme.RussianRouletteCyan, NoSections),
         ];
         bar777SessionService.WinDetected += OnWinDetected;
     }
@@ -115,6 +121,7 @@ public sealed class MiniGamesTab : IDisposable
         this.deathrollTournamentPanel.Dispose();
         this.rafflePanel.Dispose();
         this.higherLowerPanel.Dispose();
+        this.coinCollectorPanel.Dispose();
     }
 
     public void Draw(MiniGame game, GameSection section)
@@ -134,8 +141,20 @@ public sealed class MiniGamesTab : IDisposable
             case MiniGame.RaidBoss:            this.raidBossPanel.Draw(); break;
             case MiniGame.DealOrNoDeal:        this.dealOrNoDealPanel.Draw(); break;
             case MiniGame.VotingMadness:       this.votingMadnessPanel.DrawSection(section); break;
+            case MiniGame.CoinCollector:       this.coinCollectorPanel.DrawSection(section); break;
         }
     }
+
+    public bool DrawSessionActionButtons(MiniGame game) => game switch
+    {
+        MiniGame.Bar777              => this.bar777Panel.DrawSessionActionButtons(),
+        MiniGame.CoinCollector       => this.coinCollectorPanel.DrawSessionActionButtons(),
+        MiniGame.DeathrollTournament => this.deathrollTournamentPanel.DrawSessionActionButtons(),
+        MiniGame.HigherLower         => this.higherLowerPanel.DrawSessionActionButtons(),
+        MiniGame.Raffle              => this.rafflePanel.DrawSessionActionButtons(),
+        MiniGame.VotingMadness       => this.votingMadnessPanel.DrawSessionActionButtons(),
+        _ => false,
+    };
 
     private void DrawWinAlertPopup()
     {

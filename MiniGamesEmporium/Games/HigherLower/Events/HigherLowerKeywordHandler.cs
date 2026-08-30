@@ -1,6 +1,5 @@
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
-
 using MiniGamesEmporium.Games.HigherLower.Utility;
 using MiniGamesEmporium.Services;
 

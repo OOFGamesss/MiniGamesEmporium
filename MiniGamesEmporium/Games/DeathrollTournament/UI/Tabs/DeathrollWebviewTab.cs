@@ -16,6 +16,11 @@ using System.Numerics;
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollWebviewTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.DeathrollTournamentPink;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private const float FieldWidth = 320f;
 
     private static readonly Vector4 Positive = new(0.35f, 0.95f, 0.50f, 1f);
@@ -41,14 +46,14 @@ public sealed class DeathrollWebviewTab
 
     public void Draw()
     {
-        DrawIntroSection();
-        DrawVenueSection();
-        DrawSessionSection();
+        this.card.Draw("##DRWebIntroCard", "Web Spectator", CardAccent, CardTitle, DrawIntroSection);
+        if (this.webviewService.SessionId == null)
+            this.card.Draw("##DRWebVenueCard", "Venue", CardAccent, CardTitle, DrawVenueSection);
+        this.card.Draw("##DRWebSessionCard", "Session", CardAccent, CardTitle, DrawSessionSection);
     }
 
     private static void DrawIntroSection()
     {
-        UIHelper.SectionHeader("Web Spectator", EmporiumNeonTheme.DeathrollTournamentPink);
         ImGui.TextWrapped(
             "Mirror this tournament to the OOF Games website so anyone can watch the bracket live in a browser.");
         ImGuiHelpers.ScaledDummy(8f);
@@ -56,10 +61,6 @@ public sealed class DeathrollWebviewTab
 
     private void DrawVenueSection()
     {
-        if (this.webviewService.SessionId != null) return;
-
-        UIHelper.SectionHeader("Venue", EmporiumNeonTheme.DeathrollTournamentPink);
-
         var drt = this.config.DeathrollTournament;
         var scale = ImGuiHelpers.GlobalScale;
 
@@ -98,7 +99,6 @@ public sealed class DeathrollWebviewTab
 
     private void DrawSessionSection()
     {
-        UIHelper.SectionHeader("Session", EmporiumNeonTheme.DeathrollTournamentPink);
 
         var live = this.webviewService.SessionId != null;
 

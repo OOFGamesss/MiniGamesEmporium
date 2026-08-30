@@ -1,5 +1,6 @@
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.Bar777.Config;
+using MiniGamesEmporium.Games.CoinCollector.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Config;
 using MiniGamesEmporium.Games.HigherLower.Config;
 using MiniGamesEmporium.Games.Raffle.Config;
@@ -67,6 +68,7 @@ public sealed class PresetService
         ApplyRaffleSettings(preset.Raffle);
         ApplyHigherLowerSettings(preset.HigherLower);
         ApplyVotingMadnessSettings(preset.VotingMadness);
+        ApplyCoinCollectorSettings(preset.CoinCollector);
         this.config.QueueKeyword = preset.QueueKeyword;
         this.config.QueueJoinChannels = DeepClone(preset.QueueJoinChannels);
         this.config.ActivePresetIndex = index;
@@ -110,6 +112,7 @@ public sealed class PresetService
         Raffle = CaptureRaffle(),
         HigherLower = CaptureHigherLower(),
         VotingMadness = CaptureVotingMadness(),
+        CoinCollector = CaptureCoinCollector(),
     };
 
     private Bar777Config CaptureBar777()
@@ -216,6 +219,22 @@ public sealed class PresetService
         };
     }
 
+    private CoinCollectorConfig CaptureCoinCollector()
+    {
+        var s = this.config.CoinCollector;
+        return new CoinCollectorConfig
+        {
+            EntryCost            = s.EntryCost,
+            BoostedPot           = s.BoostedPot,
+            StartingRollMax      = s.StartingRollMax,
+            AutoWinCount         = s.AutoWinCount,
+            TargetCoins          = s.TargetCoins,
+            AllowMultipleWinners = s.AllowMultipleWinners,
+            TradesToPotPercent   = s.TradesToPotPercent,
+            Chat                 = DeepClone(s.Chat),
+        };
+    }
+
     private void ApplyBar777Settings(Bar777Config b)
     {
         this.config.Bar777.CustomName         = b.CustomName;
@@ -300,7 +319,19 @@ public sealed class PresetService
         this.config.VotingMadness.Chat               = DeepClone(v.Chat);
     }
 
-    public string BuildExportString(bool bar777, bool deathroll, bool raffle, bool higherlower, bool votingMadness, bool discord, bool queue)
+    private void ApplyCoinCollectorSettings(CoinCollectorConfig c)
+    {
+        this.config.CoinCollector.EntryCost            = c.EntryCost;
+        this.config.CoinCollector.BoostedPot           = c.BoostedPot;
+        this.config.CoinCollector.StartingRollMax      = c.StartingRollMax;
+        this.config.CoinCollector.AutoWinCount         = c.AutoWinCount;
+        this.config.CoinCollector.TargetCoins          = c.TargetCoins;
+        this.config.CoinCollector.AllowMultipleWinners = c.AllowMultipleWinners;
+        this.config.CoinCollector.TradesToPotPercent   = c.TradesToPotPercent;
+        this.config.CoinCollector.Chat                 = DeepClone(c.Chat);
+    }
+
+    public string BuildExportString(bool bar777, bool deathroll, bool raffle, bool higherlower, bool votingMadness, bool coinCollector, bool discord, bool queue)
     {
         var payload = new PresetExportPayload
         {
@@ -309,6 +340,7 @@ public sealed class PresetService
             Raffle              = raffle        ? CaptureRaffleExport()         : null,
             HigherLower         = higherlower   ? CaptureHigherLowerExport()    : null,
             VotingMadness       = votingMadness ? CaptureVotingMadnessExport()  : null,
+            CoinCollector       = coinCollector ? CaptureCoinCollectorExport()  : null,
             Discord             = discord       ? CaptureDiscordExport()        : null,
             QueueKeyword        = queue         ? this.config.QueueKeyword      : null,
             QueueJoinChannels   = queue         ? DeepClone(this.config.QueueJoinChannels) : null,
@@ -367,6 +399,7 @@ public sealed class PresetService
         Raffle              = BuildRaffleFromPayload(payload.Raffle, def),
         HigherLower         = BuildHigherLowerFromPayload(payload.HigherLower, def),
         VotingMadness       = BuildVotingMadnessFromPayload(payload.VotingMadness, def),
+        CoinCollector       = BuildCoinCollectorFromPayload(payload.CoinCollector, def),
         QueueKeyword        = payload.QueueKeyword        ?? def?.QueueKeyword        ?? "!join",
         QueueJoinChannels   = payload.QueueJoinChannels  != null
             ? DeepClone(payload.QueueJoinChannels)
@@ -514,6 +547,23 @@ public sealed class PresetService
         };
     }
 
+    private static CoinCollectorConfig BuildCoinCollectorFromPayload(CoinCollectorExportEntry? entry, PluginPreset? def)
+    {
+        if (entry == null)
+            return def != null ? DeepClone(def.CoinCollector) : new CoinCollectorConfig();
+        return new CoinCollectorConfig
+        {
+            EntryCost            = entry.EntryCost,
+            BoostedPot           = entry.BoostedPot,
+            StartingRollMax      = entry.StartingRollMax,
+            AutoWinCount         = entry.AutoWinCount,
+            TargetCoins          = entry.TargetCoins,
+            AllowMultipleWinners = entry.AllowMultipleWinners,
+            TradesToPotPercent   = entry.TradesToPotPercent,
+            Chat                 = DeepClone(entry.Chat),
+        };
+    }
+
     private Bar777ExportEntry CaptureBar777Export()
     {
         var s = this.config.Bar777;
@@ -607,6 +657,22 @@ public sealed class PresetService
             CloseHour          = s.CloseHour,
             CloseMinute        = s.CloseMinute,
             Chat               = DeepClone(s.Chat),
+        };
+    }
+
+    private CoinCollectorExportEntry CaptureCoinCollectorExport()
+    {
+        var s = this.config.CoinCollector;
+        return new CoinCollectorExportEntry
+        {
+            EntryCost            = s.EntryCost,
+            BoostedPot           = s.BoostedPot,
+            StartingRollMax      = s.StartingRollMax,
+            AutoWinCount         = s.AutoWinCount,
+            TargetCoins          = s.TargetCoins,
+            AllowMultipleWinners = s.AllowMultipleWinners,
+            TradesToPotPercent   = s.TradesToPotPercent,
+            Chat                 = DeepClone(s.Chat),
         };
     }
 

@@ -1,3 +1,4 @@
+using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
 using ECommons.ImGuiMethods;
@@ -12,6 +13,11 @@ using System;
 namespace MiniGamesEmporium.Games.DeathrollTournament.UI.Tabs;
 public sealed class DeathrollSettingsTab
 {
+    private static readonly Vector4 CardAccent = EmporiumNeonTheme.DeathrollTournamentPink;
+    private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
+
+    private readonly ThemedCard card = new();
+
     private readonly PluginConfiguration config;
 
     public DeathrollSettingsTab(PluginConfiguration config) => this.config = config;
@@ -21,37 +27,34 @@ public sealed class DeathrollSettingsTab
         using var scroll = ImRaii.Child("##DeathrollSettingsScroll");
         if (!scroll) return;
         ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.DeathrollTournamentPink, "Deathroll Tournament");
+        ImGui.TextColored(CardAccent, "Deathroll Tournament");
         ImGui.SameLine(0, 4);
         ImGui.TextUnformatted("Settings");
         ImGui.Separator();
         ImGui.Spacing();
-        DrawEntryCost();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DeathrollPrizeFields.Draw(this.config, "Settings", -1f);
-        if (this.config.DeathrollTournament.PrizeType == DeathrollPrizeType.Gil)
+        var locked = this.config.DeathrollSession != null;
+        if (locked)
+            SessionLockNotice.Draw(
+                "A session is active. Entry cost, prize, betting and best-of defaults are locked until you stop the session. Adjust best-of for the next tournament on the Bracket tab.");
+        else
         {
-            ImGui.Spacing();
-            DrawBoostedPot();
+            this.card.Draw("##DRSetEntryCard", "Entry Cost", CardAccent, CardTitle, DrawEntryCost);
+            this.card.Draw("##DRSetPrizeCard", "Prize", CardAccent, CardTitle, DrawPrizeBody);
         }
+        this.card.Draw("##DRSetJoinCard", "Auto Join", CardAccent, CardTitle, DrawAutoJoinSection);
+        if (!locked)
+            this.card.Draw("##DRSetBetCard", "Betting", CardAccent, CardTitle, DrawBettingSection);
+        this.card.Draw("##DRSetNextCard", "Match Progression", CardAccent, CardTitle, DrawAutoNextMatchSection);
+        if (!locked)
+            this.card.Draw("##DRSetBestOfCard", "Best-of per Round (defaults)", CardAccent, CardTitle, DrawBestOfSection);
+    }
+
+    private void DrawPrizeBody()
+    {
+        DeathrollPrizeFields.Draw(this.config, "Settings", -1f);
+        if (this.config.DeathrollTournament.PrizeType != DeathrollPrizeType.Gil) return;
         ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawAutoJoinSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawBettingSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawAutoNextMatchSection();
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        DrawBestOfSection();
+        DrawBoostedPot();
     }
 
     private void DrawEntryCost()
@@ -89,8 +92,6 @@ public sealed class DeathrollSettingsTab
 
     private void DrawAutoNextMatchSection()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Match Progression");
-        ImGui.Spacing();
         var autoNext = this.config.DeathrollTournament.AutoNextMatch;
         if (ImGui.Checkbox("Auto Next Match##DRAutoNextMatch", ref autoNext))
         {
@@ -126,8 +127,6 @@ public sealed class DeathrollSettingsTab
 
     private void DrawBestOfSection()
     {
-        ImGui.TextColored(EmporiumNeonTheme.NeonCyan, "Best-of per Round (defaults)");
-        ImGui.Spacing();
         ImGui.TextDisabled("These are the default values applied when starting a new tournament.");
         ImGui.TextDisabled("Adjust them in the game panel before clicking Start Tournament.");
         ImGui.Spacing();

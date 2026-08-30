@@ -6,6 +6,8 @@ namespace MiniGamesEmporium.Games.Raffle.Config;
 [Serializable]
 public class RaffleChatConfig
 {
+    public string AdvertiseMessage { get; set; } =
+        "/shout Raffle is LIVE! Tickets are {ticketcost} gil each, up to {maxtickets} per person. The pot is already {totalpot} gil and the draw is at {closetime} ST. Say {keyword} to enter!";
     public string AnnouncePotMessage { get; set; } =
         "/yell Current Raffle Pot: {totalpot} Gil!";
     public string AnnounceTicketsSoldMessage { get; set; } =
@@ -23,6 +25,12 @@ public class RaffleChatConfig
         "/tell {player} Please trade {ticketcost} Gil per ticket to enter the raffle! You can buy up to {maxtickets} tickets!";
     public string RequestGilBuyerMessage { get; set; } =
         "/tell {buyername} Please trade Gil to buy raffle tickets for {player}! Tickets are {ticketcost} Gil each, max {maxtickets} tickets per person!";
+    public string RulesMessage { get; set; } =
+        "/party ==========  HOW TO PLAY  ==========\n" +
+        "/party  Raffle tickets are {ticketcost} gil each, up to {maxtickets} per person.\n" +
+        "/party  Say {keyword} in chat to enter, then trade the gil to claim your tickets.\n" +
+        "/party  The draw is at {closetime} ST and one ticket is pulled at random.\n" +
+        "/party  Current pot: {totalpot} gil!";
     public string TicketNumbersMessage { get; set; } =
         "/tell {player} Your raffle ticket number(s): {numbers}. Good luck in the draw!";
     public bool AutoSendTicketNumbers { get; set; } = false;

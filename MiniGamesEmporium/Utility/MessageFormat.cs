@@ -1,5 +1,4 @@
 using System;
-
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
