@@ -7,7 +7,7 @@ namespace MiniGamesEmporium.Games.CoinCollector.Config;
 public class CoinCollectorChatConfig
 {
     public string TellAmountRequestMessage { get; set; } =
-        "/p {player} please trade {cost} gil to enter Coin Collector!";
+        "/tell {player} Please trade {cost} gil to enter Coin Collector!";
     public string RequestGilBuyerMessage { get; set; } =
         "/tell {buyername} Please trade {cost} Gil to enter Coin Collector for {player}!";
     public string WinShoutMessage { get; set; } =

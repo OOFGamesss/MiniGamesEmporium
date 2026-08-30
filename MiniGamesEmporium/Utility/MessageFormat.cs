@@ -10,9 +10,19 @@ namespace MiniGamesEmporium.Utility;
 public static class MessageFormat
 {
     public static string DisplayPlayer(string template, string playerName) =>
-        template.TrimStart().StartsWith("/tell", StringComparison.OrdinalIgnoreCase)
+        IsTellTemplate(template)
             ? playerName
             : PlayerInfoService.StripWorld(playerName);
+
+    private static bool IsTellTemplate(string template)
+    {
+        var trimmed = template.TrimStart();
+        return StartsWithCommand(trimmed, "/tell") || StartsWithCommand(trimmed, "/t");
+    }
+
+    private static bool StartsWithCommand(string text, string command) =>
+        text.StartsWith(command, StringComparison.OrdinalIgnoreCase)
+        && (text.Length == command.Length || char.IsWhiteSpace(text[command.Length]));
 
     public static string Position(int queuePosition) =>
         queuePosition == 0 ? "next" : $"#{queuePosition}";
