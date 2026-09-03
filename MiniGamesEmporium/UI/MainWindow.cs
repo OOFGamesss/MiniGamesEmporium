@@ -55,7 +55,8 @@ public sealed class MainWindow : Window, IDisposable
 
     private const int PreDrawColourCount = 5;
     private const float MinSidebarWidth = 190f;
-    private const float MinContentWidth = 680f;
+    private const float MinContentWidth = 400f;
+    private const float MinWindowHeight = 320f;
     private const float GameIndent = 18f;
     private const float SectionIndent = 36f;
     private const string ActivePillLabel = "ACTIVE";
@@ -115,6 +116,7 @@ public sealed class MainWindow : Window, IDisposable
     private bool pendingVotingMadnessStopConfirm;
     private bool pendingCoinCollectorStopConfirm;
     private float trackedPausedDoorSpanPx = GameSessionDoorStyles.PausedSessionDoor.SeedTrackedContentSpanPx;
+    private float lastSidebarWidth = MinSidebarWidth;
 
     public MainWindow(
         PluginConfiguration config,
@@ -138,7 +140,7 @@ public sealed class MainWindow : Window, IDisposable
     {
         SizeConstraints = new WindowSizeConstraints
         {
-            MinimumSize = new Vector2(MinSidebarWidth + MinContentWidth, 450),
+            MinimumSize = new Vector2(MinSidebarWidth + MinContentWidth, MinWindowHeight),
             MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
         };
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
@@ -177,12 +179,25 @@ public sealed class MainWindow : Window, IDisposable
 
     public override void PreDraw()
     {
+        ApplySizeConstraints();
         var deep = new Vector4(0.04f, 0.02f, 0.07f, 0.97f);
         ImGui.PushStyleColor(ImGuiCol.WindowBg,         deep);
         ImGui.PushStyleColor(ImGuiCol.TitleBg,          deep);
         ImGui.PushStyleColor(ImGuiCol.TitleBgActive,    EmporiumNeonTheme.EmporiumPurpleActive);
         ImGui.PushStyleColor(ImGuiCol.TitleBgCollapsed, deep);
         ImGui.PushStyleColor(ImGuiCol.Border,           new Vector4(0.42f, 0.08f, 0.62f, 0.60f));
+    }
+
+    private void ApplySizeConstraints()
+    {
+        var scale   = ImGuiHelpers.GlobalScale;
+        var sidebar = UiLayoutState.HideNavSidebar ? 0f : this.lastSidebarWidth;
+        var chrome  = PanelEdgeTag.Size() + ImGui.GetStyle().ItemSpacing.X;
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(sidebar + chrome + MinContentWidth * scale, MinWindowHeight * scale),
+            MaximumSize = new Vector2(float.MaxValue, float.MaxValue),
+        };
     }
 
     public override void PostDraw()
@@ -194,13 +209,22 @@ public sealed class MainWindow : Window, IDisposable
     {
         using var theme = new EmporiumNeonTheme.Scope();
 
-        using (var sidebar = ImRaii.Child("##MGE_Sidebar", new Vector2(CalcSidebarWidth(), 0f), true))
+        var shellHeight = ImGui.GetContentRegionAvail().Y;
+
+        if (!UiLayoutState.HideNavSidebar)
         {
-            if (sidebar.Success)
-                DrawSidebar();
+            this.lastSidebarWidth = CalcSidebarWidth();
+            using (var sidebar = ImRaii.Child("##MGE_Sidebar", new Vector2(this.lastSidebarWidth, 0f), true))
+            {
+                if (sidebar.Success)
+                    DrawSidebar();
+            }
+
+            ImGui.SameLine(0f, 0f);
         }
 
-        ImGui.SameLine();
+        DrawSidebarEdgeTag(shellHeight);
+        ImGui.SameLine(0f, ImGui.GetStyle().ItemSpacing.X);
 
         using (var content = ImRaii.Child(
                    "##MGE_Content",
@@ -555,6 +579,14 @@ public sealed class MainWindow : Window, IDisposable
             case SettingsSection.WebviewSetup:  this.settingsTab.DrawWebviewSetupSection(); break;
             case SettingsSection.OtherSettings: this.settingsTab.DrawOtherSettingsSection(); break;
         }
+    }
+
+    private void DrawSidebarEdgeTag(float height)
+    {
+        var hidden = UiLayoutState.HideNavSidebar;
+        if (!PanelEdgeTag.DrawVertical("##MGE_SidebarTag", height, hidden, EmporiumNeonTheme.EmporiumPurpleActive, "the navigation sidebar", panelOnRight: false))
+            return;
+        UiLayoutState.HideNavSidebar = !hidden;
     }
 
     private void DrawSessionControls()

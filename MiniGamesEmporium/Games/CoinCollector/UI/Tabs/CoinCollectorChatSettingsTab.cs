@@ -12,6 +12,8 @@ public sealed class CoinCollectorChatSettingsTab
     private static readonly Vector4 CardAccent = EmporiumNeonTheme.CoinCollectorIndigo;
     private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
 
+    private const float NameCapFieldWidth = 180f;
+
     private readonly ThemedCard card = new();
 
     private readonly PluginConfiguration config;
@@ -41,6 +43,12 @@ public sealed class CoinCollectorChatSettingsTab
         ("{winningamount}", "Winner's share of the pot (Win Shout message only)"),
         ("{rollmax}",       "Number to roll next, blank for the opening roll (Ask to Roll message only)"),
         ("{highestcoins}",  "Coins needed to lead (or the player's own coins when winning) - Announce messages only"),
+        ("{position}",      "The player's current leaderboard position, or 'next' if they have not played yet"),
+        ("{leader}",        "Name of whoever is currently in the lead, comma separated for a tie"),
+        ("{leaderboard}",   "Ranked list of the top players and their coins, e.g. 1. Alice (7), 2. Bob (5)"),
+        ("{wrongmax}",      "The number the player wrongly rolled out of (Wrong Roll message only)"),
+        ("{attempt}",       "Which paid turn the player is on, when they bought several"),
+        ("{attempts}",      "How many paid turns the player bought in total"),
     ];
 
     private static void DrawPlaceholderReference() => PlaceholderReference.Draw(Placeholders);
@@ -84,6 +92,20 @@ public sealed class CoinCollectorChatSettingsTab
             v  => { chat.RequestGilBuyerMessage = v; this.config.Save(); });
         ImGui.Spacing();
         DrawMessageField(
+            "Payment Received",
+            "Sent when Auto Begin on Payment starts the turn, telling the player they may roll.",
+            "##CCPaymentReceivedMsg",
+            () => chat.PaymentReceivedMessage,
+            v  => { chat.PaymentReceivedMessage = v; this.config.Save(); });
+        ImGui.Spacing();
+        DrawMessageField(
+            "Wrong Roll",
+            "Button: 'Send Correction' on the Current Roll card when a player rolls out of the wrong number.",
+            "##CCWrongRollMsg",
+            () => chat.WrongRollMessage,
+            v  => { chat.WrongRollMessage = v; this.config.Save(); });
+        ImGui.Spacing();
+        DrawMessageField(
             "Ask to Roll",
             "Button: 'Ask to Roll' shown while waiting for the player's opening dice roll.",
             "##CCAskRollMsg",
@@ -122,26 +144,50 @@ public sealed class CoinCollectorChatSettingsTab
     private void DrawAutoSection()
     {
         var chat = this.config.CoinCollector.Chat;
+
+        var askRoll = chat.AutoSendAskRoll;
+        if (SettingToggle.Draw("Auto Ask to Roll", "##CCAutoAskRoll",
+                "fires automatically after each roll with the next dice number", ref askRoll))
         {
-            var toggle = chat.AutoSendAskRoll;
-            if (ImGui.Checkbox("Auto Ask to Roll##CCAutoAskRoll", ref toggle))
-            {
-                chat.AutoSendAskRoll = toggle;
-                this.config.Save();
-            }
-            ImGui.SameLine();
-            ImGui.TextDisabled("- fires automatically after each roll with the next dice number");
+            chat.AutoSendAskRoll = askRoll;
+            this.config.Save();
         }
         ImGui.Spacing();
+
+        var loss = chat.AutoSendLoss;
+        if (SettingToggle.Draw("Auto Announce Score/Lead", "##CCAutoLoss",
+                "auto-sends Announce Score or Announce Lead when a player busts", ref loss))
         {
-            var toggle = chat.AutoSendLoss;
-            if (ImGui.Checkbox("Auto Announce Score/Lead##CCAutoLoss", ref toggle))
-            {
-                chat.AutoSendLoss = toggle;
-                this.config.Save();
-            }
-            ImGui.SameLine();
-            ImGui.TextDisabled("- auto-sends Announce Score or Announce Lead when a player busts");
+            chat.AutoSendLoss = loss;
+            this.config.Save();
+        }
+        ImGui.Spacing();
+
+        var wrongRoll = chat.AutoSendWrongRoll;
+        if (SettingToggle.Draw("Auto Send Wrong Roll", "##CCAutoWrongRoll",
+                "posts the correction message when a player rolls out of the wrong number", ref wrongRoll))
+        {
+            chat.AutoSendWrongRoll = wrongRoll;
+            this.config.Save();
+        }
+        ImGui.Spacing();
+
+        var payment = chat.AutoSendPaymentReceived;
+        if (SettingToggle.Draw("Auto Send Payment Received", "##CCAutoPaymentReceived",
+                "sent when Auto Begin on Payment starts the turn; that toggle lives under Settings", ref payment))
+        {
+            chat.AutoSendPaymentReceived = payment;
+            this.config.Save();
+        }
+        ImGui.Spacing();
+
+        var names = chat.LeaderboardNamesInMessage;
+        if (SettingToggle.DrawIntField("Names in {leaderboard} Messages", "##CCLeaderboardNames",
+                "How many ranked players the {leaderboard} placeholder lists before summarising.",
+                ref names, 1, 20, 1, NameCapFieldWidth))
+        {
+            chat.LeaderboardNamesInMessage = names;
+            this.config.Save();
         }
     }
 

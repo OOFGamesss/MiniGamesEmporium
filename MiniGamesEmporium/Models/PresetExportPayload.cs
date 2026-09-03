@@ -120,6 +120,11 @@ public sealed class CoinCollectorExportEntry
     public bool AllowMultipleWinners { get; set; } = true;
     public int TradesToPotPercent { get; set; } = 100;
     public CoinCollectorChatConfig Chat { get; set; } = new();
+    public bool TradeOnRequestGil { get; set; } = false;
+    public bool AutoBeginOnPayment { get; set; } = false;
+    public bool AutoEndTurn { get; set; } = false;
+    public int AutoEndTurnDelayMs { get; set; } = 3000;
+    public bool AllowMultipleAttempts { get; set; } = true;
 }
 
 [Serializable]

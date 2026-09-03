@@ -89,23 +89,24 @@ public sealed class Bar777Panel : IDisposable
             {
                 this.gameTab.Draw(skipLeadingSpacing: true);
                 var statsHWalkIn = Bar777StatsTab.GetInlineHeight(showQueue: false, showKept: this.config.Bar777.TradesToPotPercent < 100);
-                var targetYWalkIn = ImGui.GetContentRegionMax().Y - statsHWalkIn;
+                var reserveWalkIn = CollapsiblePanels.StatsReserveHeight(PanelKeys.Bar777Stats, statsHWalkIn);
+                var targetYWalkIn = ImGui.GetContentRegionMax().Y - reserveWalkIn;
                 if (targetYWalkIn > ImGui.GetCursorPosY())
                     ImGui.SetCursorPosY(targetYWalkIn);
-                this.bar777StatsTab.DrawInline(showQueue: false);
+                DrawStatsStrip(showQueue: false);
             }
             return;
         }
         var splitHeightPx = MathF.Max(140f, ImGui.GetContentRegionAvail().Y);
         using var split = ImRaii.Table(
-            "##Bar777_GameQueueSplit_v2",
-            2,
+            "##Bar777_GameQueueSplit_v3",
+            CollapsiblePanels.SideColumnCount(PanelKeys.Bar777Queue),
             ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV,
             new Vector2(-1, splitHeightPx));
         if (!split.Success)
             return;
         ImGui.TableSetupColumn("##Bar777_GameCol", ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("##Bar777_QueueCol", ImGuiTableColumnFlags.WidthFixed, GameTabQueueSectionWidthPx);
+        CollapsiblePanels.SetupSideColumns(PanelKeys.Bar777Queue, "##Bar777_Queue", GameTabQueueSectionWidthPx);
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         {
@@ -115,13 +116,18 @@ public sealed class Bar777Panel : IDisposable
             {
                 this.gameTab.Draw(skipLeadingSpacing: true);
                 var statsH = Bar777StatsTab.GetInlineHeight(showQueue: true, showKept: this.config.Bar777.TradesToPotPercent < 100);
-                var targetY = ImGui.GetContentRegionMax().Y - statsH;
+                var reserve = CollapsiblePanels.StatsReserveHeight(PanelKeys.Bar777Stats, statsH);
+                var targetY = ImGui.GetContentRegionMax().Y - reserve;
                 if (targetY > ImGui.GetCursorPosY())
                     ImGui.SetCursorPosY(targetY);
-                this.bar777StatsTab.DrawInline(showQueue: true);
+                DrawStatsStrip(showQueue: true);
             }
         }
+
         ImGui.TableSetColumnIndex(1);
+        if (!CollapsiblePanels.DrawSideTag(PanelKeys.Bar777Queue, "##Bar777_QueueTag", EmporiumNeonTheme.Bar777Red, "the queue"))
+            return;
+        ImGui.TableSetColumnIndex(2);
         var live = this.bar777SessionService.GetActiveSession();
         var activeName =
             live is { PlayerName: { Length: > 0 } pn } ? pn.Trim() : null;
@@ -158,6 +164,10 @@ public sealed class Bar777Panel : IDisposable
         using var scroll = ImRaii.Child("##Bar777ChatScroll", new Vector2(-1f, -1f), false);
         if (scroll.Success) this.bar777ChatSettingsTab.Draw();
     }
+    private void DrawStatsStrip(bool showQueue) =>
+        CollapsiblePanels.DrawStatsStrip(PanelKeys.Bar777Stats, "##Bar777StatsTag",
+            EmporiumNeonTheme.Bar777Red, "the stats panel", () => this.bar777StatsTab.DrawInline(showQueue));
+
     private void DrawStartSessionDoor()
     {
         DrawGameInfoDoorCard();

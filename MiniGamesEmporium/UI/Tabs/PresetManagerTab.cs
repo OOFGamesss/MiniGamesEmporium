@@ -1,4 +1,4 @@
-﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
@@ -761,6 +761,21 @@ public sealed class PresetManagerTab
         ImGui.Spacing();
         ImGui.TextDisabled("Chat Messages");
         DrawCoinCollectorChatRows(c.Chat);
+        ImGui.Spacing();
+        ImGui.TextDisabled("Automation");
+        DrawCoinCollectorAutomationRows(c);
+    }
+
+    private static void DrawCoinCollectorAutomationRows(CoinCollectorConfig c)
+    {
+        using var t = ImRaii.Table("##CoinCollectorAutomation", 2, ImGuiTableFlags.RowBg);
+        if (!t.Success) return;
+        SetupPreviewColumns();
+        DrawBoolRow("Trade with Request Gil", c.TradeOnRequestGil);
+        DrawBoolRow("Auto Begin on Payment", c.AutoBeginOnPayment);
+        DrawBoolRow("Auto End Turn",         c.AutoEndTurn);
+        DrawRow("Auto End Turn Delay",       c.AutoEndTurnDelayMs + " ms");
+        DrawBoolRow("Allow Multiple Attempts", c.AllowMultipleAttempts);
     }
 
     private static void DrawCoinCollectorGameRows(CoinCollectorConfig c)
@@ -782,8 +797,11 @@ public sealed class PresetManagerTab
         using var t = ImRaii.Table("##CoinCollectorChat", 2, ImGuiTableFlags.RowBg);
         if (!t.Success) return;
         SetupPreviewColumns();
-        DrawBoolRow("Auto Send Score/Lead",  c.AutoSendLoss);
-        DrawBoolRow("Auto Send Ask to Roll", c.AutoSendAskRoll);
+        DrawBoolRow("Auto Send Score/Lead",     c.AutoSendLoss);
+        DrawBoolRow("Auto Send Ask to Roll",    c.AutoSendAskRoll);
+        DrawBoolRow("Auto Send Wrong Roll",     c.AutoSendWrongRoll);
+        DrawBoolRow("Auto Send Payment Received", c.AutoSendPaymentReceived);
+        DrawRow("Names in {leaderboard}",       c.LeaderboardNamesInMessage.ToString());
         DrawRow("Advertise Message", c.AdvertiseMessage);
         DrawRow("Rules Message",     c.RulesMessage);
         DrawRow("Request Gil",       c.TellAmountRequestMessage);
@@ -794,6 +812,8 @@ public sealed class PresetManagerTab
         DrawRow("Ask to Roll",       c.AskRollMessage);
         DrawRow("Ask to Roll (Coins)", c.AskRollWithCoinsMessage);
         DrawRow("Announce Pot",      c.AnnouncePotMessage);
+        DrawRow("Payment Received",  c.PaymentReceivedMessage);
+        DrawRow("Wrong Roll",        c.WrongRollMessage);
     }
 
     private static void DrawRaffleSection(RaffleConfig r)

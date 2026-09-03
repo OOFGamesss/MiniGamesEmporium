@@ -92,17 +92,22 @@ public sealed class RaffleGameTab
         }
 
         var splitH = MathF.Max(120f, ImGui.GetContentRegionAvail().Y);
-        using var split = ImRaii.Table("##RaffleSplit", 2,
+        using var split = ImRaii.Table("##RaffleSplit_v2",
+            CollapsiblePanels.SideColumnCount(PanelKeys.RaffleSide),
             ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV, new Vector2(-1f, splitH));
         if (!split.Success) return;
         ImGui.TableSetupColumn("##RafflePlayerCol", ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("##RaffleSideCol",   ImGuiTableColumnFlags.WidthFixed, RightPaneW);
+        CollapsiblePanels.SetupSideColumns(PanelKeys.RaffleSide, "##RaffleSide", RightPaneW * ImGuiHelpers.GlobalScale);
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         var leftH = ImGui.GetContentRegionAvail().Y;
         using (var left = ImRaii.Child("##RafflePlayerPane", new Vector2(-1f, leftH), false, ImGuiWindowFlags.NoScrollbar))
             if (left.Success) DrawLeftColumn(state);
+
         ImGui.TableSetColumnIndex(1);
+        if (!CollapsiblePanels.DrawSideTag(PanelKeys.RaffleSide, "##RaffleSideTag", CardAccent, "the side panel"))
+            return;
+        ImGui.TableSetColumnIndex(2);
         var rightH = ImGui.GetContentRegionAvail().Y;
         using (var right = ImRaii.Child("##RaffleSidePane", new Vector2(-1f, rightH), false, ImGuiWindowFlags.NoScrollbar))
             if (right.Success) DrawSidePane(state);
@@ -111,12 +116,13 @@ public sealed class RaffleGameTab
     private void DrawLeftColumn(RaffleState state)
     {
         var showKept = state.TradesToPotPercentAtStart < 100;
-        var bottomH  = GetStatsHeight(showKept);
+        var bottomH  = CollapsiblePanels.StatsReserveHeight(PanelKeys.RaffleStats, GetStatsHeight(showKept));
         var listH    = MathF.Max(80f, ImGui.GetContentRegionAvail().Y - bottomH - ImGui.GetStyle().ItemSpacing.Y - ThemedCard.ChromeHeight());
         var title    = $"Players ({this.service.ComputePlayersWithTickets()} / {state.Entries.Count} with tickets)";
         this.card.Draw("##RafflePlayersCard", title, CardAccent, CardTitle, listH,
             () => DrawPlayerList(state));
-        DrawBottomStats(state, showKept);
+        CollapsiblePanels.DrawStatsStrip(PanelKeys.RaffleStats, "##RaffleStatsTag",
+            CardAccent, "the stats panel", () => DrawBottomStats(state, showKept));
     }
 
     private static float GetStatsHeight(bool showKept)

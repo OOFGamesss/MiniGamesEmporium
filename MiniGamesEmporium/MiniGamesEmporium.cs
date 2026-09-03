@@ -105,6 +105,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         Configuration.Raffle.JoinChannels ??= new QueueConfig();
         Configuration.CoinCollector ??= new();
         Configuration.CoinCollector.Chat ??= new();
+        Configuration.CoinCollector.PlayerQueue ??= new();
+        Configuration.CoinCollector.Attempts ??= new();
         Configuration.VotingMadness ??= new();
         Configuration.VotingMadness.Chat ??= new();
         Configuration.VotingMadness.VoteChannels ??= new QueueConfig();

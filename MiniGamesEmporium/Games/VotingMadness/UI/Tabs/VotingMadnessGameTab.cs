@@ -52,7 +52,7 @@ public sealed class VotingMadnessGameTab
             ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
         if (!pane.Success) return;
 
-        var statsH = GetStatsHeight(state.HasCloseTime);
+        var statsH = CollapsiblePanels.StatsReserveHeight(PanelKeys.VotingMadnessStats, GetStatsHeight(state.HasCloseTime));
         var bodyH  = MathF.Max(80f, ImGui.GetContentRegionAvail().Y - statsH - ImGui.GetStyle().ItemSpacing.Y);
         using (var body = ImRaii.Child("##VMGameBody", new Vector2(-1f, bodyH), false))
         {
@@ -72,7 +72,8 @@ public sealed class VotingMadnessGameTab
         var targetY = ImGui.GetContentRegionMax().Y - statsH;
         if (targetY > ImGui.GetCursorPosY())
             ImGui.SetCursorPosY(targetY);
-        DrawBottomStats(state);
+        CollapsiblePanels.DrawStatsStrip(PanelKeys.VotingMadnessStats, "##VMStatsTag",
+            CardAccent, "the stats panel", () => DrawBottomStats(state));
     }
 
     private void DrawResultsBody(VotingMadnessState state)

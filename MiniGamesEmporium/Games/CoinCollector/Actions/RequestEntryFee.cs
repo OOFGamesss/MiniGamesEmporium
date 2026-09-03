@@ -1,3 +1,4 @@
+using MiniGamesEmporium.Actions;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
@@ -12,5 +13,7 @@ public static class RequestEntryFee
             config.CoinCollector.Chat.TellAmountRequestMessage,
             config, playerName: playerName);
         chatQueue.Enqueue(msg);
+        if (config.CoinCollector.TradeOnRequestGil)
+            SendTradeRequest.Execute(PlayerInfoService.StripWorld(playerName), chatQueue);
     }
 }

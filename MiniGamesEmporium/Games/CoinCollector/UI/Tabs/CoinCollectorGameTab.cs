@@ -8,7 +8,6 @@ using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using ECommons.DalamudServices;
 using MiniGamesEmporium.Actions;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.CoinCollector.Actions;
@@ -22,12 +21,13 @@ using MiniGamesEmporium.UI.Components;
 /// <summary>Draws the active game view for Coin Collector.</summary>
 
 namespace MiniGamesEmporium.Games.CoinCollector.UI.Tabs;
-public sealed class CoinCollectorGameTab
+public sealed class CoinCollectorGameTab : IDisposable
 {
-    private const float RightPaneW   = 250f;
-    private const float MinLogHeight = 120f;
-    private const float LogIndent    = 6f;
-    private const float TrophySide   = 140f;
+    private const float RightPaneW    = 250f;
+    private const float MinLogHeight  = 120f;
+    private const float PartyListMaxH = 260f;
+    private const float LogIndent     = 6f;
+    private const float TrophySide    = 140f;
 
     private static readonly Vector4 CardAccent = EmporiumNeonTheme.CoinCollectorIndigo;
     private static readonly Vector4 CardTitle  = EmporiumNeonTheme.Secondary(CardAccent);
@@ -37,17 +37,25 @@ public sealed class CoinCollectorGameTab
     private readonly CoinCollectorService coinCollectorService;
     private readonly ChatQueueService chatQueue;
     private readonly AutoPayoutService autoPayoutService;
-    private readonly PlayerInfoService playerInfo;
+    private readonly CoinCollectorQueueService queueService;
     private readonly ISharedImmediateTexture? trophyTexture;
     private readonly ThemedCard card = new();
 
-    public CoinCollectorGameTab(PluginConfiguration config, CoinCollectorService coinCollectorService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PlayerInfoService playerInfo)
+    private int wrongRollValue;
+    private int wrongRollMax;
+    private int wrongRollExpected;
+    private string wrongRollPlayer = string.Empty;
+
+    public CoinCollectorGameTab(PluginConfiguration config, CoinCollectorService coinCollectorService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, CoinCollectorQueueService queueService)
     {
         this.config               = config;
         this.coinCollectorService = coinCollectorService;
         this.chatQueue            = chatQueue;
         this.autoPayoutService    = autoPayoutService;
-        this.playerInfo           = playerInfo;
+        this.queueService         = queueService;
+        this.coinCollectorService.WrongRollDetected += OnWrongRollDetected;
+        this.coinCollectorService.RollAwaitingNext  += OnValidRoll;
+        this.coinCollectorService.TurnCompleted     += OnTurnCompleted;
         var path = Path.Combine(
             MiniGamesEmporium.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty,
             "Images", "trophy.png");
@@ -61,12 +69,13 @@ public sealed class CoinCollectorGameTab
         var session = this.coinCollectorService.GetActiveSession();
         if (session == null || !CoinCollectorGameIds.Matches(session.GameName)) return;
         var fullH = MathF.Max(100f, ImGui.GetContentRegionAvail().Y);
-        using var split = ImRaii.Table("##CCSplit", 2,
+        using var split = ImRaii.Table("##CCSplit_v2",
+            CollapsiblePanels.SideColumnCount(PanelKeys.CoinCollectorSide),
             ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV,
             new Vector2(-1f, fullH));
         if (!split.Success) return;
-        ImGui.TableSetupColumn("##CCGameCol",        ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("##CCLeaderboardCol", ImGuiTableColumnFlags.WidthFixed, RightPaneW);
+        ImGui.TableSetupColumn("##CCGameCol", ImGuiTableColumnFlags.WidthStretch);
+        CollapsiblePanels.SetupSideColumns(PanelKeys.CoinCollectorSide, "##CCLeaderboard", RightPaneW * ImGuiHelpers.GlobalScale);
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         var cellH = ImGui.GetContentRegionAvail().Y;
@@ -79,7 +88,12 @@ public sealed class CoinCollectorGameTab
                 ImGui.SetCursorPosY(targetY);
             drawBottomPanel();
         }
+
         ImGui.TableSetColumnIndex(1);
+        var showSidePane = CollapsiblePanels.DrawSideTag(
+            PanelKeys.CoinCollectorSide, "##CCLeaderboardTag", CardAccent, "the leaderboard");
+        if (!showSidePane) return;
+        ImGui.TableSetColumnIndex(2);
         DrawLeaderboardPane(ImGui.GetContentRegionAvail().Y);
     }
 
@@ -92,13 +106,30 @@ public sealed class CoinCollectorGameTab
 
     public void DrawSessionActionButtons()
     {
+        var row = new ShoutButtonRow();
         using (UIHelper.PushBlueButtonColours())
-            if (UIHelper.IconTextButton(FontAwesomeIcon.Scroll, "Send Rules", "##CCSendRules"))
+            if (row.Button(FontAwesomeIcon.Scroll, "Send Rules", "##CCSendRules"))
                 AnnounceRules.Execute(this.config, this.chatQueue);
-        ImGui.SameLine();
         using (UIHelper.PushOrangeButtonColours())
-            if (UIHelper.IconTextButton(FontAwesomeIcon.Bullhorn, "Advertise", "##CCAdvertise"))
+            if (row.Button(FontAwesomeIcon.Bullhorn, "Advertise", "##CCAdvertise"))
                 Advertise.Execute(this.config, this.chatQueue);
+        DrawStripFinishButton(row);
+    }
+
+    private void DrawStripFinishButton(ShoutButtonRow row)
+    {
+        if (!CollapsiblePanels.IsCollapsed(PanelKeys.CoinCollectorSide)) return;
+        if (this.coinCollectorService.IsSessionFinished()) return;
+
+        var canFinish = this.config.CoinCollector.SessionLeaderboard.Count > 0;
+        using (ImRaii.Disabled(!canFinish))
+        using (UIHelper.PushGreenButtonColours())
+        {
+            if (row.Button(FontAwesomeIcon.Trophy, "Finish Game", "##CCStripFinishGame"))
+                this.coinCollectorService.FinishSession();
+        }
+        if (!canFinish && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("No players have finished a turn yet.");
     }
 
     private void DrawLeaderboardPane(float height)
@@ -126,7 +157,7 @@ public sealed class CoinCollectorGameTab
                 if (board.Count == 0)
                     ImGui.TextDisabled("No one has played yet.");
                 else
-                    DrawLeaderboardTable(BuildLeaderboardRows(board));
+                    DrawLeaderboardTable(BuildLeaderboardRows());
             }
         }
 
@@ -160,37 +191,10 @@ public sealed class CoinCollectorGameTab
         }
     }
 
-    private LeaderboardRow[] BuildLeaderboardRows(List<CoinCollectorLeaderboardEntry> board)
-    {
-        var groups = new Dictionary<string, (int Best, int Plays, DateTime FirstBestAt, bool HasWin)>(StringComparer.OrdinalIgnoreCase);
-        foreach (var e in board)
-        {
-            if (!groups.TryGetValue(e.PlayerName, out var g))
-            {
-                groups[e.PlayerName] = (e.Coins, 1, e.PlayedAt, e.IsWinner);
-                continue;
-            }
-            var firstBestAt = e.Coins > g.Best ? e.PlayedAt
-                            : e.Coins == g.Best && e.PlayedAt < g.FirstBestAt ? e.PlayedAt
-                            : g.FirstBestAt;
-            groups[e.PlayerName] = (Math.Max(g.Best, e.Coins), g.Plays + 1, firstBestAt, g.HasWin || e.IsWinner);
-        }
-        var allowMultiple = this.config.CoinCollector.AllowMultipleWinners;
-        string? singleLeader = null;
-        if (!allowMultiple)
-            singleLeader = groups.OrderByDescending(kv => kv.Value.Best).ThenBy(kv => kv.Value.FirstBestAt).First().Key;
-        return groups
-            .Select(kv => new LeaderboardRow(
-                kv.Key,
-                kv.Value.Best,
-                kv.Value.Plays,
-                kv.Value.FirstBestAt,
-                allowMultiple ? kv.Value.HasWin : kv.Key.Equals(singleLeader, StringComparison.OrdinalIgnoreCase)))
-            .OrderByDescending(r => r.IsEffectiveWinner)
-            .ThenByDescending(r => r.BestScore)
-            .ThenBy(r => r.FirstBestAt)
+    private LeaderboardRow[] BuildLeaderboardRows() =>
+        this.coinCollectorService.BuildStandings()
+            .Select(r => new LeaderboardRow(r.PlayerName, r.BestScore, r.TimesPlayed, r.FirstBestAt, r.IsEffectiveWinner))
             .ToArray();
-    }
 
     private void DrawActiveSessionView(ActiveSession session)
     {
@@ -200,6 +204,11 @@ public sealed class CoinCollectorGameTab
             return;
         }
 
+        DrawLivePhase(session);
+    }
+
+    private void DrawLivePhase(ActiveSession session)
+    {
         if (!session.PlayerSet)
         {
             this.card.Draw("##CCPartyCard", "Select Player from Party", CardAccent, CardTitle, DrawPartyMemberList);
@@ -227,49 +236,75 @@ public sealed class CoinCollectorGameTab
 
     private void DrawPartyMemberList()
     {
-        var members = GetPartyMembers();
-        if (members.Count == 0)
+        var roster = this.queueService.GetRoster();
+        if (roster.Count == 0)
         {
             UIHelper.CentreTextDisabled("No other party members found. Invite the player to your party first.");
             return;
         }
 
-        using var table = ImRaii.Table("##CCPartyList", 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg, new Vector2(-1f, 0f));
+        var rowH   = ImGui.GetFrameHeight() + ImGui.GetStyle().CellPadding.Y * 2f;
+        var height = MathF.Min(PartyListMaxH * ImGuiHelpers.GlobalScale, rowH * (roster.Count + 1));
+        var nextUp = FirstUnplayedIndex(roster);
+
+        using var table = ImRaii.Table("##CCPartyList", 4,
+            ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.ScrollY,
+            new Vector2(-1f, height));
         if (!table.Success) return;
+        ImGui.TableSetupScrollFreeze(0, 1);
+        ImGui.TableSetupColumn("#",          ImGuiTableColumnFlags.WidthFixed, 26f * ImGuiHelpers.GlobalScale);
         ImGui.TableSetupColumn("Player",     ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("##CCSelBtn", ImGuiTableColumnFlags.WidthFixed, 90f);
+        ImGui.TableSetupColumn("Played",     ImGuiTableColumnFlags.WidthFixed, 74f * ImGuiHelpers.GlobalScale);
+        ImGui.TableSetupColumn("##CCSelBtn", ImGuiTableColumnFlags.WidthFixed, 90f * ImGuiHelpers.GlobalScale);
         ImGui.TableHeadersRow();
 
-        foreach (var (charName, worldName, displayName) in members)
-        {
-            ImGui.TableNextRow();
-            ImGui.TableSetColumnIndex(0);
-            ImGui.TextUnformatted(displayName);
-            ImGui.TableSetColumnIndex(1);
-            using var green = UIHelper.PushGreenButtonColours();
-            if (UIHelper.IconTextButton(FontAwesomeIcon.UserCheck, "Select", $"##CCSel_{charName}"))
-                this.coinCollectorService.SetPlayer(charName, worldName);
-        }
+        for (var i = 0; i < roster.Count; i++)
+            DrawRosterRow(roster[i], i + 1, i == nextUp);
     }
 
-    private List<(string CharName, string WorldName, string DisplayName)> GetPartyMembers()
+    private static int FirstUnplayedIndex(IReadOnlyList<CoinCollectorQueueEntry> roster)
     {
-        var result = new List<(string, string, string)>();
-        foreach (var member in Svc.Party)
+        for (var i = 0; i < roster.Count; i++)
         {
-            var name = member.Name.TextValue;
-            if (string.IsNullOrEmpty(name)) continue;
-            if (this.playerInfo.IsHost(name)) continue;
-            var world   = member.World.ValueNullable?.Name.ToString() ?? string.Empty;
-            var display = string.IsNullOrEmpty(world) ? name : $"{name}@{world}";
-            result.Add((name, world, display));
+            if (roster[i].TurnsTaken == 0) return i;
         }
-        return result;
+        return -1;
+    }
+
+    private void DrawRosterRow(CoinCollectorQueueEntry entry, int position, bool isNextUp)
+    {
+        var played = entry.TurnsTaken > 0;
+
+        ImGui.TableNextRow();
+        ImGui.TableSetColumnIndex(0);
+        ImGui.TextDisabled(position.ToString());
+
+        ImGui.TableSetColumnIndex(1);
+        if (played)
+            ImGui.TextDisabled(entry.DisplayName);
+        else if (isNextUp)
+            ImGui.TextColored(EmporiumNeonTheme.SuccessMint, $"{entry.DisplayName}  (next up)");
+        else
+            ImGui.TextUnformatted(entry.DisplayName);
+
+        ImGui.TableSetColumnIndex(2);
+        if (played)
+            ImGui.TextColored(EmporiumNeonTheme.NeonCyan, $"{entry.TurnsTaken}x  best {entry.BestCoins}");
+        else
+            ImGui.TextDisabled("-");
+
+        ImGui.TableSetColumnIndex(3);
+        using var green = UIHelper.PushGreenButtonColours();
+        if (UIHelper.IconTextButton(FontAwesomeIcon.UserCheck, "Select", $"##CCSel_{entry.PlayerName}"))
+            this.coinCollectorService.SetPlayer(entry.PlayerName, entry.PlayerWorld);
     }
 
     private void DrawPlayerBody(ActiveSession session)
     {
         UIHelper.CentreTextScaled(BuildDisplayName(session), EmporiumNeonTheme.SuccessMint, 1.4f);
+        var attempts = this.coinCollectorService.GetAttempts();
+        if (session.PaymentVerified && attempts.AttemptsPurchased > 1)
+            UIHelper.CentreText($"Attempt {attempts.AttemptsUsed} of {attempts.AttemptsPurchased}", EmporiumNeonTheme.NeonCyan);
         ImGui.Spacing();
 
         using (UIHelper.PushRedButtonColours())
@@ -304,21 +339,20 @@ public sealed class CoinCollectorGameTab
 
     private void DrawPrimaryBetActions(ActiveSession session)
     {
+        var row = new ShoutButtonRow();
         UIHelper.CentreNextButtonRow(
             (FontAwesomeIcon.CommentDots, "Request Gil"),
             (FontAwesomeIcon.Coins, "Trade"));
 
         using (UIHelper.PushBlueButtonColours())
         {
-            if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil", "##CCRequestGil"))
+            if (row.Button(FontAwesomeIcon.CommentDots, "Request Gil", "##CCRequestGil"))
                 RequestEntryFee.Execute(BuildDisplayName(session), this.config, this.chatQueue);
         }
 
-        ImGui.SameLine();
-
         using (UIHelper.PushAmberButtonColours())
         {
-            if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade", "##CCTradeBtn"))
+            if (row.Button(FontAwesomeIcon.Coins, "Trade", "##CCTradeBtn"))
                 SendTradeRequest.Execute(session.PlayerName, this.chatQueue);
         }
 
@@ -388,20 +422,20 @@ public sealed class CoinCollectorGameTab
         }
         ImGui.Spacing();
 
+        var row = new ShoutButtonRow();
         UIHelper.CentreNextButtonRow(
             (FontAwesomeIcon.CommentDots, "Request Gil (Buyer)"),
             (FontAwesomeIcon.Coins, "Trade (Buyer)"));
 
         using (UIHelper.PushBlueButtonColours())
         {
-            if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", "##CCBuyerRequestGil"))
+            if (row.Button(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", "##CCBuyerRequestGil"))
                 RequestEntryFeeBuyer.Execute(buyer, session.PlayerName, this.config, this.chatQueue);
         }
-        ImGui.SameLine();
 
         using (UIHelper.PushAmberButtonColours())
         {
-            if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade (Buyer)", "##CCBuyerTrade"))
+            if (row.Button(FontAwesomeIcon.Coins, "Trade (Buyer)", "##CCBuyerTrade"))
                 SendTradeRequest.Execute(buyer, this.chatQueue);
         }
     }
@@ -411,6 +445,9 @@ public sealed class CoinCollectorGameTab
         UIHelper.CentreTextDisabled(session.AmountTraded > 0
             ? $"{session.AmountTraded:N0} Gil received"
             : "No trade recorded yet.");
+        var purchased = this.coinCollectorService.GetAttempts().AttemptsPurchased;
+        if (purchased > 1)
+            UIHelper.CentreText($"{purchased} entries paid - {purchased} turns", EmporiumNeonTheme.SuccessMint);
         ImGui.Spacing();
 
         using var green = UIHelper.PushGreenButtonColours();
@@ -430,6 +467,8 @@ public sealed class CoinCollectorGameTab
     {
         var coins   = turn?.CoinsCollected ?? 0;
         var nextMax = this.coinCollectorService.GetNextRollCommandMax();
+
+        DrawWrongRollWarning(session);
 
         UIHelper.CentreValueRowScaled(
             "##CCNumInfo",
@@ -453,6 +492,43 @@ public sealed class CoinCollectorGameTab
             if (UIHelper.CentredIconTextButton(FontAwesomeIcon.Dice, "Ask to Roll", "##CCAskRoll"))
                 AnnounceAskRoll.Execute(BuildDisplayName(session), nextMax, coins, this.config, this.chatQueue);
         }
+    }
+
+    private void DrawWrongRollWarning(ActiveSession session)
+    {
+        if (this.wrongRollMax <= 0) return;
+        if (!this.wrongRollPlayer.Equals(session.PlayerName, StringComparison.OrdinalIgnoreCase))
+        {
+            ClearWrongRoll();
+            return;
+        }
+
+        var expected = this.wrongRollExpected > 0 ? $"/dice {this.wrongRollExpected}" : "/dice";
+        UIHelper.CentreText($"Wrong number rolled - {this.wrongRollValue} out of {this.wrongRollMax}", EmporiumNeonTheme.Bar777Red);
+        UIHelper.CentreTextDisabled($"That roll did not count. They need to roll {expected}.");
+        ImGui.Spacing();
+
+        var row = new ShoutButtonRow();
+        UIHelper.CentreNextButtonRow(
+            (FontAwesomeIcon.CommentDots, "Send Correction"),
+            (FontAwesomeIcon.Times, "Dismiss"));
+        using (UIHelper.PushOrangeButtonColours())
+        {
+            if (row.Button(FontAwesomeIcon.CommentDots, "Send Correction", "##CCSendWrongRoll"))
+            {
+                AnnounceWrongRoll.Execute(BuildDisplayName(session), this.wrongRollMax, this.wrongRollExpected, this.config, this.chatQueue);
+                ClearWrongRoll();
+            }
+        }
+        using (UIHelper.PushRedButtonColours())
+        {
+            if (row.Button(FontAwesomeIcon.Times, "Dismiss", "##CCDismissWrongRoll"))
+                ClearWrongRoll();
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
     }
 
     private void DrawGameLogBody()
@@ -492,9 +568,13 @@ public sealed class CoinCollectorGameTab
 
     private void DrawGameOverBody(ActiveSession session, CoinCollectorTurnState turn)
     {
+        var attempts = this.coinCollectorService.GetAttempts();
+
         UIHelper.CentreTextScaled(BuildDisplayName(session), EmporiumNeonTheme.WarnAmber, 1.6f);
         ImGui.Spacing();
         UIHelper.CentreText($"Coins Collected: {turn.CoinsCollected}", EmporiumNeonTheme.NeonCyan);
+        if (attempts.AttemptsPurchased > 1)
+            UIHelper.CentreTextDisabled($"Attempt {attempts.AttemptsUsed} of {attempts.AttemptsPurchased}");
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -514,10 +594,13 @@ public sealed class CoinCollectorGameTab
 
         ImGui.Spacing();
 
+        var hasMore   = this.coinCollectorService.HasAttemptsRemaining();
+        var nextIcon  = hasMore ? FontAwesomeIcon.Redo : FontAwesomeIcon.FlagCheckered;
+        var nextLabel = hasMore ? $"Next Attempt ({attempts.Remaining} left)" : "End Turn";
         using (UIHelper.PushGreenButtonColours())
         {
-            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.FlagCheckered, "End Turn", "##CCEndTurnBtn"))
-                this.coinCollectorService.EndCurrentTurn();
+            if (UIHelper.CentredIconTextButton(nextIcon, nextLabel, "##CCEndTurnBtn"))
+                this.coinCollectorService.AdvanceAfterTurn();
         }
     }
 
@@ -592,16 +675,16 @@ public sealed class CoinCollectorGameTab
         var payoutRunning = this.autoPayoutService.IsRunningFor(baseName);
         var payoutIcon    = payoutRunning ? FontAwesomeIcon.Stop : FontAwesomeIcon.MoneyBillWave;
         var payoutLabel   = payoutRunning ? "Stop Auto Payout" : "Auto Payout";
+        var row = new ShoutButtonRow();
         UIHelper.CentreNextButtonRow((FontAwesomeIcon.Coins, "Trade Winner"), (payoutIcon, payoutLabel));
 
         using (UIHelper.PushAmberButtonColours())
         {
-            if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade Winner", $"##CCWinnerTrade_{displayName}"))
+            if (row.Button(FontAwesomeIcon.Coins, "Trade Winner", $"##CCWinnerTrade_{displayName}"))
                 SendTradeRequest.Execute(baseName, this.chatQueue);
         }
 
-        ImGui.SameLine();
-        DrawWinnerAutoPayoutButton(displayName, baseName, remaining);
+        DrawWinnerAutoPayoutButton(row, displayName, baseName, remaining);
         ImGui.Spacing();
         DrawPayoutProgressBar(share, paid);
     }
@@ -637,19 +720,19 @@ public sealed class CoinCollectorGameTab
         ImGui.TextColored(colour, value);
     }
 
-    private void DrawWinnerAutoPayoutButton(string displayName, string baseName, long remaining)
+    private void DrawWinnerAutoPayoutButton(ShoutButtonRow row, string displayName, string baseName, long remaining)
     {
         if (this.autoPayoutService.IsRunningFor(baseName))
         {
             using var red = UIHelper.PushRedButtonColours();
-            if (UIHelper.IconTextButton(FontAwesomeIcon.Stop, "Stop Auto Payout", $"##CCStopAutoPayout_{displayName}"))
+            if (row.Button(FontAwesomeIcon.Stop, "Stop Auto Payout", $"##CCStopAutoPayout_{displayName}"))
                 this.autoPayoutService.Stop();
             return;
         }
 
         using var dis   = ImRaii.Disabled(remaining <= 0 || this.autoPayoutService.IsRunning);
         using var green = UIHelper.PushGreenButtonColours();
-        if (UIHelper.IconTextButton(FontAwesomeIcon.MoneyBillWave, "Auto Payout", $"##CCAutoPayout_{displayName}"))
+        if (row.Button(FontAwesomeIcon.MoneyBillWave, "Auto Payout", $"##CCAutoPayout_{displayName}"))
         {
             this.autoPayoutService.Start(
                 baseName,
@@ -675,6 +758,33 @@ public sealed class CoinCollectorGameTab
         string.IsNullOrEmpty(session.PlayerWorld)
             ? session.PlayerName
             : $"{session.PlayerName}@{session.PlayerWorld}";
+
+    private void OnWrongRollDetected(int rollValue, int rollMax, int expectedMax)
+    {
+        this.wrongRollValue    = rollValue;
+        this.wrongRollMax      = rollMax;
+        this.wrongRollExpected = expectedMax;
+        this.wrongRollPlayer   = this.coinCollectorService.GetActiveSession()?.PlayerName ?? string.Empty;
+    }
+
+    private void OnValidRoll(int rollValue, int coins) => ClearWrongRoll();
+
+    private void OnTurnCompleted(string playerName, int coins) => ClearWrongRoll();
+
+    private void ClearWrongRoll()
+    {
+        this.wrongRollValue    = 0;
+        this.wrongRollMax      = 0;
+        this.wrongRollExpected = 0;
+        this.wrongRollPlayer   = string.Empty;
+    }
+
+    public void Dispose()
+    {
+        this.coinCollectorService.WrongRollDetected -= OnWrongRollDetected;
+        this.coinCollectorService.RollAwaitingNext  -= OnValidRoll;
+        this.coinCollectorService.TurnCompleted     -= OnTurnCompleted;
+    }
 
     private readonly record struct LeaderboardRow(string PlayerName, int BestScore, int TimesPlayed, DateTime FirstBestAt, bool IsEffectiveWinner);
 }

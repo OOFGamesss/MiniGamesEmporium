@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using MiniGamesEmporium.Config;
@@ -22,6 +22,9 @@ public sealed class CoinCollectorService
     public event Action<string, int>? WinDetected;
     public event Action<string, int>? SessionLost;
     public event Action<int, int>? RollAwaitingNext;
+    public event Action<int, int, int>? WrongRollDetected;
+    public event Action<string, int>? PaymentReady;
+    public event Action<string, int>? TurnCompleted;
 
     public CoinCollectorService(PluginConfiguration config, HistoryService historyService)
     {
@@ -54,6 +57,8 @@ public sealed class CoinCollectorService
         this.config.CoinCollectorSession          = null;
         this.config.CoinCollector.SessionFinished = false;
         this.config.CoinCollector.WinnerPayouts.Clear();
+        this.config.CoinCollector.PlayerQueue.Clear();
+        this.config.CoinCollector.Attempts.Reset();
         this.config.Save();
         SessionUpdated?.Invoke();
     }
@@ -69,6 +74,8 @@ public sealed class CoinCollectorService
         this.config.CoinCollector.WinnerPayouts.Clear();
         this.config.CoinCollectorActiveSession = null;
         this.config.CoinCollectorSession       = null;
+        this.config.CoinCollector.PlayerQueue.Clear();
+        this.config.CoinCollector.Attempts.Reset();
         this._gameLog.Clear();
         this.config.Save();
         SessionUpdated?.Invoke();
@@ -97,39 +104,74 @@ public sealed class CoinCollectorService
         SessionUpdated?.Invoke();
     }
 
-    public List<(string Name, int Coins)> GetSessionWinners()
+    public List<CoinCollectorStanding> BuildStandings() => ComputeStandings(this.config);
+
+    public static List<CoinCollectorStanding> ComputeStandings(PluginConfiguration config)
     {
-        var board = this.config.CoinCollector.SessionLeaderboard;
+        var board = config.CoinCollector.SessionLeaderboard;
         if (board.Count == 0) return [];
 
-        var groups = new Dictionary<string, (int Best, DateTime FirstBestAt, bool HasWin)>(StringComparer.OrdinalIgnoreCase);
+        var groups = new Dictionary<string, (int Best, int Plays, DateTime FirstBestAt, bool HasWin)>(StringComparer.OrdinalIgnoreCase);
         foreach (var e in board)
         {
             if (!groups.TryGetValue(e.PlayerName, out var g))
             {
-                groups[e.PlayerName] = (e.Coins, e.PlayedAt, e.IsWinner);
+                groups[e.PlayerName] = (e.Coins, 1, e.PlayedAt, e.IsWinner);
                 continue;
             }
             var firstBestAt = e.Coins > g.Best ? e.PlayedAt
                             : e.Coins == g.Best && e.PlayedAt < g.FirstBestAt ? e.PlayedAt
                             : g.FirstBestAt;
-            groups[e.PlayerName] = (Math.Max(g.Best, e.Coins), firstBestAt, g.HasWin || e.IsWinner);
+            groups[e.PlayerName] = (Math.Max(g.Best, e.Coins), g.Plays + 1, firstBestAt, g.HasWin || e.IsWinner);
         }
 
-        if (this.config.CoinCollector.AllowMultipleWinners)
+        var winnerKeys = ResolveWinnerKeys(config, groups);
+
+        return groups
+            .Select(kv => new CoinCollectorStanding(
+                kv.Key, kv.Value.Best, kv.Value.Plays, kv.Value.FirstBestAt, winnerKeys.Contains(kv.Key)))
+            .OrderByDescending(r => r.IsEffectiveWinner)
+            .ThenByDescending(r => r.BestScore)
+            .ThenBy(r => r.FirstBestAt)
+            .ToList();
+    }
+
+    private static HashSet<string> ResolveWinnerKeys(PluginConfiguration config, Dictionary<string, (int Best, int Plays, DateTime FirstBestAt, bool HasWin)> groups)
+    {
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (groups.Count == 0) return keys;
+
+        if (!config.CoinCollector.AllowMultipleWinners)
         {
-            var flagged = groups.Where(kv => kv.Value.HasWin)
-                .OrderByDescending(kv => kv.Value.Best).ThenBy(kv => kv.Value.FirstBestAt)
-                .Select(kv => (kv.Key, kv.Value.Best)).ToList();
-            if (flagged.Count > 0) return flagged;
-            var max = groups.Max(kv => kv.Value.Best);
-            return groups.Where(kv => kv.Value.Best == max)
-                .OrderBy(kv => kv.Value.FirstBestAt)
-                .Select(kv => (kv.Key, kv.Value.Best)).ToList();
+            keys.Add(groups.OrderByDescending(kv => kv.Value.Best).ThenBy(kv => kv.Value.FirstBestAt).First().Key);
+            return keys;
         }
 
-        var leader = groups.OrderByDescending(kv => kv.Value.Best).ThenBy(kv => kv.Value.FirstBestAt).First();
-        return [(leader.Key, leader.Value.Best)];
+        foreach (var kv in groups.Where(kv => kv.Value.HasWin))
+            keys.Add(kv.Key);
+        if (keys.Count > 0) return keys;
+
+        var max = groups.Max(kv => kv.Value.Best);
+        foreach (var kv in groups.Where(kv => kv.Value.Best == max))
+            keys.Add(kv.Key);
+        return keys;
+    }
+
+    public List<(string Name, int Coins)> GetSessionWinners() =>
+        BuildStandings().Where(r => r.IsEffectiveWinner).Select(r => (r.PlayerName, r.BestScore)).ToList();
+
+    public int GetStandingPosition(string displayName) => ComputeStandingPosition(this.config, displayName);
+
+    public static int ComputeStandingPosition(PluginConfiguration config, string displayName)
+    {
+        var standings = ComputeStandings(config);
+        var bare      = PlayerInfoService.StripWorld(displayName);
+        for (var i = 0; i < standings.Count; i++)
+        {
+            if (PlayerInfoService.StripWorld(standings[i].PlayerName).Equals(bare, StringComparison.OrdinalIgnoreCase))
+                return i + 1;
+        }
+        return 0;
     }
 
     public long GetSessionWinnerShare()
@@ -166,6 +208,7 @@ public sealed class CoinCollectorService
         session.PlayerSet        = false;
         session.AmountTraded     = 0;
         session.PaidByPlayerName = string.Empty;
+        this.config.CoinCollector.Attempts.Reset();
         this.config.Save();
         SessionUpdated?.Invoke();
     }
@@ -206,8 +249,54 @@ public sealed class CoinCollectorService
             session.PlayerSet   = true;
         }
         session.AmountTraded += amount;
+        RecalculateAttempts(session);
+        var attempts = this.config.CoinCollector.Attempts;
+        var readyNow = !attempts.PaymentAnnounced && session.AmountTraded >= this.config.CoinCollector.EntryCost;
+        if (readyNow) attempts.PaymentAnnounced = true;
+        this.config.Save();
+        if (readyNow) PaymentReady?.Invoke(session.PlayerName, attempts.AttemptsPurchased);
+        SessionUpdated?.Invoke();
+    }
+
+    private void RecalculateAttempts(ActiveSession session)
+    {
+        var cc        = this.config.CoinCollector;
+        var attempts  = cc.Attempts;
+        attempts.PlayerName = session.PlayerName;
+        if (!cc.AllowMultipleAttempts || cc.EntryCost <= 0)
+        {
+            attempts.AttemptsPurchased = session.AmountTraded > 0 ? 1 : 0;
+            return;
+        }
+        attempts.AttemptsPurchased = Math.Max(session.AmountTraded > 0 ? 1 : 0, session.AmountTraded / cc.EntryCost);
+    }
+
+    public CoinCollectorAttemptState GetAttempts() => this.config.CoinCollector.Attempts;
+
+    public bool HasAttemptsRemaining()
+    {
+        var session = GetActiveSession();
+        if (session == null || !session.PaymentVerified) return false;
+        return this.config.CoinCollector.Attempts.Remaining > 0;
+    }
+
+    public void StartNextAttempt()
+    {
+        var session = GetActiveSession();
+        if (session == null || !session.PaymentVerified) return;
+        var attempts = this.config.CoinCollector.Attempts;
+        if (attempts.Remaining <= 0) return;
+        attempts.AttemptsUsed++;
+        this.config.CoinCollectorSession = new CoinCollectorTurnState();
+        this._gameLog.Add($"Attempt {attempts.AttemptsUsed} of {attempts.AttemptsPurchased} for {session.PlayerName}.");
         this.config.Save();
         SessionUpdated?.Invoke();
+    }
+
+    public void AdvanceAfterTurn()
+    {
+        if (HasAttemptsRemaining()) StartNextAttempt();
+        else EndCurrentTurn();
     }
 
     public void TryRecordWinnerPayout(string partnerName, long amountSent)
@@ -240,6 +329,12 @@ public sealed class CoinCollectorService
             GameName   = CoinCollectorGameIds.DisplayName,
         });
         this._gameLog.Clear();
+        RecalculateAttempts(session);
+        var attempts = this.config.CoinCollector.Attempts;
+        if (attempts.AttemptsPurchased <= 0) attempts.AttemptsPurchased = 1;
+        attempts.AttemptsUsed = 1;
+        if (attempts.AttemptsPurchased > 1)
+            this._gameLog.Add($"{session.PlayerName} paid for {attempts.AttemptsPurchased} turns.");
         this.config.CoinCollectorSession = new CoinCollectorTurnState();
         this.config.Save();
         SessionUpdated?.Invoke();
@@ -253,7 +348,11 @@ public sealed class CoinCollectorService
         if (turn.IsGameOver || turn.IsWinner) return;
 
         var isSeedRoll = turn.CurrentRollMax == 0;
-        if (!TryResolveRollMax(turn, rollMax, out var effectiveMax)) return;
+        if (!TryResolveRollMax(turn, rollMax, out var effectiveMax))
+        {
+            RejectWrongRoll(session, rollValue, rollMax);
+            return;
+        }
 
         turn.RollLog.Add(rollValue);
         turn.RollMaxLog.Add(effectiveMax);
@@ -266,6 +365,7 @@ public sealed class CoinCollectorService
             this._gameLog.Add($"{session.PlayerName} collected {turn.CoinsCollected} coin{(turn.CoinsCollected == 1 ? "" : "s")}");
             this.config.Save();
             SessionLost?.Invoke(session.PlayerName, turn.CoinsCollected);
+            TurnCompleted?.Invoke(session.PlayerName, turn.CoinsCollected);
             SessionUpdated?.Invoke();
             return;
         }
@@ -286,12 +386,23 @@ public sealed class CoinCollectorService
             this._gameLog.Add($"{session.PlayerName} wins with {turn.CoinsCollected} coin{(turn.CoinsCollected == 1 ? "" : "s")}");
             this.config.Save();
             WinDetected?.Invoke(session.PlayerName, turn.CoinsCollected);
+            TurnCompleted?.Invoke(session.PlayerName, turn.CoinsCollected);
             SessionUpdated?.Invoke();
             return;
         }
 
         this.config.Save();
         RollAwaitingNext?.Invoke(rollValue, turn.CoinsCollected);
+        SessionUpdated?.Invoke();
+    }
+
+    private void RejectWrongRoll(ActiveSession session, int rollValue, int rollMax)
+    {
+        if (rollMax <= 0) return;
+        var expectedMax = GetNextRollCommandMax();
+        var expected    = expectedMax > 0 ? $"/dice {expectedMax}" : "/dice";
+        this._gameLog.Add($"{session.PlayerName} rolled {rollValue} out of {rollMax} - expected {expected}. Roll not counted.");
+        WrongRollDetected?.Invoke(rollValue, rollMax, expectedMax);
         SessionUpdated?.Invoke();
     }
 
@@ -332,6 +443,7 @@ public sealed class CoinCollectorService
         session.AmountTraded     = 0;
         session.PaidByPlayerName = string.Empty;
         session.PaymentVerified  = false;
+        this.config.CoinCollector.Attempts.Reset();
         this.config.CoinCollectorSession = null;
         this.config.Save();
         SessionUpdated?.Invoke();
@@ -424,6 +536,9 @@ public sealed class CoinCollectorService
             Timestamp      = DateTime.UtcNow,
         });
     }
+
+    public readonly record struct CoinCollectorStanding(
+        string PlayerName, int BestScore, int TimesPlayed, DateTime FirstBestAt, bool IsEffectiveWinner);
 
     private static bool TradeNameMatchesSession(ActiveSession session, string tradeName)
     {

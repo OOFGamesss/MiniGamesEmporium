@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.CoinCollector.Actions;
 using MiniGamesEmporium.Games.CoinCollector.Services;
@@ -20,6 +20,15 @@ public sealed class CoinCollectorChatAutomation : IDisposable
         this.chatQueue            = chatQueue;
         coinCollectorService.SessionLost      += OnSessionLost;
         coinCollectorService.RollAwaitingNext += OnRollAwaitingNext;
+        coinCollectorService.WrongRollDetected += OnWrongRollDetected;
+    }
+
+    private void OnWrongRollDetected(int rollValue, int wrongRollMax, int expectedRollMax)
+    {
+        if (!this.config.CoinCollector.Chat.AutoSendWrongRoll) return;
+        var session = this.coinCollectorService.GetActiveSession();
+        if (session == null) return;
+        AnnounceWrongRoll.Execute(FullName(session.PlayerName), wrongRollMax, expectedRollMax, this.config, this.chatQueue);
     }
 
     private void OnSessionLost(string playerName, int coins)
@@ -49,5 +58,6 @@ public sealed class CoinCollectorChatAutomation : IDisposable
     {
         this.coinCollectorService.SessionLost      -= OnSessionLost;
         this.coinCollectorService.RollAwaitingNext -= OnRollAwaitingNext;
+        this.coinCollectorService.WrongRollDetected -= OnWrongRollDetected;
     }
 }

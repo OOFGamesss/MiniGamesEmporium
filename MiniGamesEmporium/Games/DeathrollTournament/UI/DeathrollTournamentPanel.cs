@@ -1,4 +1,4 @@
-﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using MiniGamesEmporium.Config;
@@ -116,13 +116,18 @@ public sealed class DeathrollTournamentPanel : IDisposable
             return;
         }
         ImGui.Spacing();
-        var statsH = DeathrollStatsTab.GetInlineHeight(this.deathrollService.IsGilPrize());
+        var statsH  = DeathrollStatsTab.GetInlineHeight(this.deathrollService.IsGilPrize());
+        var reserve = CollapsiblePanels.StatsReserveHeight(PanelKeys.DeathrollStats, statsH);
         this.bracketTab.Draw(
             skipLeadingSpacing: true,
-            reserveBottom: statsH,
-            drawStatsInline: this.statsTab.DrawInline,
+            reserveBottom: reserve,
+            drawStatsInline: DrawStatsStrip,
             drawShoutsInline: DrawShouts);
     }
+
+    private void DrawStatsStrip() =>
+        CollapsiblePanels.DrawStatsStrip(PanelKeys.DeathrollStats, "##DRStatsTag",
+            EmporiumNeonTheme.DeathrollTournamentPink, "the stats panel", this.statsTab.DrawInline);
 
     private void DrawShouts()
     {

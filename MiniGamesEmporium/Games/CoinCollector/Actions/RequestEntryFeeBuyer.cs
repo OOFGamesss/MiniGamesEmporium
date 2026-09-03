@@ -1,3 +1,4 @@
+using MiniGamesEmporium.Actions;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Services;
 
@@ -12,7 +13,9 @@ public static class RequestEntryFeeBuyer
             config.CoinCollector.Chat.RequestGilBuyerMessage,
             config,
             playerName: PlayerInfoService.StripWorld(playerName),
-            buyerName: buyerName.Trim());
+            buyerName:  buyerName.Trim());
         chatQueue.Enqueue(msg);
+        if (config.CoinCollector.TradeOnRequestGil)
+            SendTradeRequest.Execute(PlayerInfoService.StripWorld(buyerName), chatQueue);
     }
 }

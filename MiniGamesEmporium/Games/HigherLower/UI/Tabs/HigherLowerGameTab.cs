@@ -70,12 +70,13 @@ public sealed class HigherLowerGameTab
         var session = this.higherLowerService.GetActiveSession();
         if (session == null || !HigherLowerGameIds.Matches(session.GameName)) return;
         var fullH = MathF.Max(100f, ImGui.GetContentRegionAvail().Y);
-        using var split = ImRaii.Table("##HLSplit", 2,
+        using var split = ImRaii.Table("##HLSplit_v2",
+            CollapsiblePanels.SideColumnCount(PanelKeys.HigherLowerSide),
             ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV,
             new Vector2(-1f, fullH));
         if (!split.Success) return;
-        ImGui.TableSetupColumn("##HLGameCol",        ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("##HLLeaderboardCol", ImGuiTableColumnFlags.WidthFixed, RightPaneW);
+        ImGui.TableSetupColumn("##HLGameCol", ImGuiTableColumnFlags.WidthStretch);
+        CollapsiblePanels.SetupSideColumns(PanelKeys.HigherLowerSide, "##HLLeaderboard", RightPaneW * ImGuiHelpers.GlobalScale);
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         var cellH = ImGui.GetContentRegionAvail().Y;
@@ -88,7 +89,11 @@ public sealed class HigherLowerGameTab
                 ImGui.SetCursorPosY(targetY);
             drawBottomPanel();
         }
+
         ImGui.TableSetColumnIndex(1);
+        if (!CollapsiblePanels.DrawSideTag(PanelKeys.HigherLowerSide, "##HLLeaderboardTag", CardAccent, "the leaderboard"))
+            return;
+        ImGui.TableSetColumnIndex(2);
         DrawLeaderboardPane(ImGui.GetContentRegionAvail().Y);
     }
 

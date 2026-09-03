@@ -231,7 +231,12 @@ public sealed class PresetService
             TargetCoins          = s.TargetCoins,
             AllowMultipleWinners = s.AllowMultipleWinners,
             TradesToPotPercent   = s.TradesToPotPercent,
-            Chat                 = DeepClone(s.Chat),
+            Chat                  = DeepClone(s.Chat),
+            TradeOnRequestGil     = s.TradeOnRequestGil,
+            AutoBeginOnPayment    = s.AutoBeginOnPayment,
+            AutoEndTurn           = s.AutoEndTurn,
+            AutoEndTurnDelayMs    = s.AutoEndTurnDelayMs,
+            AllowMultipleAttempts = s.AllowMultipleAttempts,
         };
     }
 
@@ -328,7 +333,12 @@ public sealed class PresetService
         this.config.CoinCollector.TargetCoins          = c.TargetCoins;
         this.config.CoinCollector.AllowMultipleWinners = c.AllowMultipleWinners;
         this.config.CoinCollector.TradesToPotPercent   = c.TradesToPotPercent;
-        this.config.CoinCollector.Chat                 = DeepClone(c.Chat);
+        this.config.CoinCollector.Chat                  = DeepClone(c.Chat);
+        this.config.CoinCollector.TradeOnRequestGil     = c.TradeOnRequestGil;
+        this.config.CoinCollector.AutoBeginOnPayment    = c.AutoBeginOnPayment;
+        this.config.CoinCollector.AutoEndTurn           = c.AutoEndTurn;
+        this.config.CoinCollector.AutoEndTurnDelayMs    = c.AutoEndTurnDelayMs;
+        this.config.CoinCollector.AllowMultipleAttempts = c.AllowMultipleAttempts;
     }
 
     public string BuildExportString(bool bar777, bool deathroll, bool raffle, bool higherlower, bool votingMadness, bool coinCollector, bool discord, bool queue)
@@ -560,7 +570,12 @@ public sealed class PresetService
             TargetCoins          = entry.TargetCoins,
             AllowMultipleWinners = entry.AllowMultipleWinners,
             TradesToPotPercent   = entry.TradesToPotPercent,
-            Chat                 = DeepClone(entry.Chat),
+            Chat                  = DeepClone(entry.Chat),
+            TradeOnRequestGil     = entry.TradeOnRequestGil,
+            AutoBeginOnPayment    = entry.AutoBeginOnPayment,
+            AutoEndTurn           = entry.AutoEndTurn,
+            AutoEndTurnDelayMs    = entry.AutoEndTurnDelayMs,
+            AllowMultipleAttempts = entry.AllowMultipleAttempts,
         };
     }
 
@@ -672,7 +687,12 @@ public sealed class PresetService
             TargetCoins          = s.TargetCoins,
             AllowMultipleWinners = s.AllowMultipleWinners,
             TradesToPotPercent   = s.TradesToPotPercent,
-            Chat                 = DeepClone(s.Chat),
+            Chat                  = DeepClone(s.Chat),
+            TradeOnRequestGil     = s.TradeOnRequestGil,
+            AutoBeginOnPayment    = s.AutoBeginOnPayment,
+            AutoEndTurn           = s.AutoEndTurn,
+            AutoEndTurnDelayMs    = s.AutoEndTurnDelayMs,
+            AllowMultipleAttempts = s.AllowMultipleAttempts,
         };
     }
 

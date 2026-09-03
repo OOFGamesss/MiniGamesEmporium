@@ -36,16 +36,20 @@ public sealed class CoinCollectorPanel : IDisposable
     private readonly CoinCollectorChatSettingsTab chatSettingsTab;
     private readonly CoinCollectorLeaderboardTab leaderboardTab;
     private readonly CoinCollectorChatAutomation chatAutomation;
+    private readonly CoinCollectorTurnAutomation turnAutomation;
+    private readonly CoinCollectorQueueService queueService;
 
     public CoinCollectorPanel(PluginConfiguration config, CoinCollectorService coinCollectorService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PlayerInfoService playerInfoService, HistoryService historyService)
     {
         this.config               = config;
         this.coinCollectorService = coinCollectorService;
-        this.gameTab              = new CoinCollectorGameTab(config, coinCollectorService, chatQueue, autoPayoutService, playerInfoService);
+        this.queueService         = new CoinCollectorQueueService(config, coinCollectorService, playerInfoService);
+        this.gameTab              = new CoinCollectorGameTab(config, coinCollectorService, chatQueue, autoPayoutService, this.queueService);
         this.settingsTab          = new CoinCollectorSettingsTab(config);
         this.chatSettingsTab      = new CoinCollectorChatSettingsTab(config);
         this.leaderboardTab       = new CoinCollectorLeaderboardTab(config, coinCollectorService, chatQueue, historyService);
         this.chatAutomation       = new CoinCollectorChatAutomation(config, coinCollectorService, chatQueue);
+        this.turnAutomation       = new CoinCollectorTurnAutomation(config, coinCollectorService, chatQueue);
     }
 
     public static IReadOnlyList<GameSection> Sections { get; } =
@@ -77,9 +81,16 @@ public sealed class CoinCollectorPanel : IDisposable
             return;
         }
 
-        var statsH = CoinCollectorLeaderboardTab.GetInlineHeight(showKept: this.config.CoinCollector.TradesToPotPercent < 100);
-        this.gameTab.Draw(skipLeadingSpacing: true, reserveBottom: statsH, drawBottomPanel: this.leaderboardTab.DrawInline);
+        this.queueService.Refresh();
+
+        var statsH  = CoinCollectorLeaderboardTab.GetInlineHeight(showKept: this.config.CoinCollector.TradesToPotPercent < 100);
+        var reserve = CollapsiblePanels.StatsReserveHeight(PanelKeys.CoinCollectorStats, statsH);
+        this.gameTab.Draw(skipLeadingSpacing: true, reserveBottom: reserve, drawBottomPanel: DrawStatsStrip);
     }
+
+    private void DrawStatsStrip() =>
+        CollapsiblePanels.DrawStatsStrip(PanelKeys.CoinCollectorStats, "##CCStatsTag",
+            CardAccent, "the stats panel", this.leaderboardTab.DrawInline);
 
     private void DrawChatSection()
     {
@@ -89,7 +100,8 @@ public sealed class CoinCollectorPanel : IDisposable
 
     private void DrawSettingsSection()
     {
-        this.settingsTab.Draw();
+        using var scroll = ImRaii.Child("##CCSettingsScroll", new Vector2(-1f, -1f), false);
+        if (scroll.Success) this.settingsTab.Draw();
     }
 
     private void DrawStartSessionDoor()
@@ -140,6 +152,9 @@ public sealed class CoinCollectorPanel : IDisposable
 
     public void Dispose()
     {
+        this.turnAutomation.Dispose();
         this.chatAutomation.Dispose();
+        this.gameTab.Dispose();
+        this.queueService.Dispose();
     }
 }

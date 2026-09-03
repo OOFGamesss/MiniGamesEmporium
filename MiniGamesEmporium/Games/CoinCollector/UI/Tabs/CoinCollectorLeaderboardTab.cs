@@ -46,7 +46,6 @@ public sealed class CoinCollectorLeaderboardTab
         return rows * rowH + inputH + extraWinnerLines + ImGui.GetStyle().WindowPadding.Y * 2f + 4f;
     }
 
-    public static float GetInlineHeight() => GetInlineHeight(showKept: false);
     public static float GetInlineHeight(bool showKept) => ChildHeight(showKept) + ImGui.GetStyle().ItemSpacing.Y * 2f;
 
     public void DrawInline()
@@ -108,53 +107,6 @@ public sealed class CoinCollectorLeaderboardTab
                 RemoveDonation.Execute(this.config, this.historyService, this.donationInput);
                 this.donationInput = 0;
             }
-    }
-
-    public void DrawFullLeaderboard()
-    {
-        ImGui.Spacing();
-        ImGui.TextColored(EmporiumNeonTheme.CoinCollectorIndigo, "Session Leaderboard");
-        ImGui.Separator();
-        ImGui.Spacing();
-
-        var board = this.config.CoinCollector.SessionLeaderboard;
-        if (board.Count == 0)
-        {
-            ImGui.TextDisabled("No players have finished a turn yet.");
-            return;
-        }
-
-        var winnerCount = this.coinCollectorService.GetWinnerCount();
-        var share       = this.coinCollectorService.GetPerWinnerShare();
-
-        if (winnerCount > 0)
-        {
-            var pot = this.coinCollectorService.GetTotalPot();
-            ImGui.TextColored(EmporiumNeonTheme.WinGold, $"{winnerCount} winner(s) - {share:N0} Gil each (pot: {pot:N0} Gil)");
-            ImGui.Spacing();
-        }
-
-        using var tbl = ImRaii.Table("##CCLeaderboard", 3, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg, new Vector2(-1, 0));
-        if (!tbl.Success) return;
-        ImGui.TableSetupColumn("Rank",   ImGuiTableColumnFlags.WidthFixed,   50f);
-        ImGui.TableSetupColumn("Player", ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("Coins",  ImGuiTableColumnFlags.WidthFixed,   70f);
-        ImGui.TableHeadersRow();
-
-        var sorted = board.OrderByDescending(e => e.Coins).ThenBy(e => e.PlayedAt).ToList();
-        for (var i = 0; i < sorted.Count; i++)
-        {
-            var entry = sorted[i];
-            ImGui.TableNextRow();
-            var col = entry.IsWinner ? WinnerRowColour : EmporiumNeonTheme.NeonCyan;
-            ImGui.TableSetColumnIndex(0);
-            ImGui.TextColored(col, (i + 1).ToString());
-            ImGui.TableSetColumnIndex(1);
-            var displayName = entry.IsWinner ? $"{entry.PlayerName} WINNER" : entry.PlayerName;
-            ImGui.TextColored(col, displayName);
-            ImGui.TableSetColumnIndex(2);
-            ImGui.TextColored(col, entry.Coins.ToString());
-        }
     }
 
     private void DrawTotalPotRow(long totalPot)

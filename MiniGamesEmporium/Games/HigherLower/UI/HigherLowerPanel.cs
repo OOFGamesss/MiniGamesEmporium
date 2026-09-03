@@ -79,9 +79,14 @@ public sealed class HigherLowerPanel : IDisposable
             return;
         }
 
-        var statsH = HigherLowerLeaderboardTab.GetInlineHeight(showKept: this.config.HigherLower.TradesToPotPercent < 100);
-        this.gameTab.Draw(skipLeadingSpacing: true, reserveBottom: statsH, drawBottomPanel: this.leaderboardTab.DrawInline);
+        var statsH  = HigherLowerLeaderboardTab.GetInlineHeight(showKept: this.config.HigherLower.TradesToPotPercent < 100);
+        var reserve = CollapsiblePanels.StatsReserveHeight(PanelKeys.HigherLowerStats, statsH);
+        this.gameTab.Draw(skipLeadingSpacing: true, reserveBottom: reserve, drawBottomPanel: DrawStatsStrip);
     }
+
+    private void DrawStatsStrip() =>
+        CollapsiblePanels.DrawStatsStrip(PanelKeys.HigherLowerStats, "##HLStatsTag",
+            EmporiumNeonTheme.HigherLowerOrange, "the stats panel", this.leaderboardTab.DrawInline);
 
     private void DrawChatSection()
     {

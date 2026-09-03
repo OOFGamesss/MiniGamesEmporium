@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 /// <summary>Serialisable chat configuration for Coin Collector messages and toggles.</summary>
 
@@ -17,11 +17,18 @@ public class CoinCollectorChatConfig
         "/p Unlucky {player}! You collected {coins} coins. You needed {highestcoins} to take the lead!";
     public string LossWinningMessage { get; set; } =
         "/p Well done {player}! You are now currently winning on {coins} coins!";
+    public string WrongRollMessage { get; set; } =
+        "/p {player} that roll was out of {wrongmax} and does not count. Please roll /dice {rollmax} instead!";
+    public string PaymentReceivedMessage { get; set; } =
+        "/p {player} your {cost} gil entry is in - roll /dice {rollmax} to start collecting!";
     public string AskRollMessage { get; set; } =
         "/p {player} roll /dice {rollmax} to collect a coin!";
     public string AskRollWithCoinsMessage { get; set; } =
         "/p {player} you have {coins} coins - roll /dice {rollmax} to collect another!";
     public bool AutoSendAskRoll { get; set; } = false;
+    public bool AutoSendWrongRoll { get; set; } = false;
+    public bool AutoSendPaymentReceived { get; set; } = true;
+    public int LeaderboardNamesInMessage { get; set; } = 3;
     public string AnnouncePotMessage { get; set; } =
         "/yell Current Pot: {totalpot} Gil!";
     public string AdvertiseMessage { get; set; } =

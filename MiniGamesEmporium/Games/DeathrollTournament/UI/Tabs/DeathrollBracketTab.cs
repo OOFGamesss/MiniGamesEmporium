@@ -1,4 +1,4 @@
-﻿using Dalamud.Bindings.ImGui;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
@@ -44,7 +44,10 @@ public sealed class DeathrollBracketTab
     private static readonly Vector4 CardAccent       = EmporiumNeonTheme.DeathrollTournamentPink;
     private static readonly Vector4 CardTitle        = EmporiumNeonTheme.Secondary(CardAccent);
     private const float RightPaneW  = 300f;
+    private const float BestOfPaneW = 240f;
     private const float TrophySide  = 140f;
+    private static readonly Vector4 TagAccent = EmporiumNeonTheme.DeathrollTournamentPink;
+
     private readonly PluginConfiguration config;
     private readonly DeathrollTournamentService deathrollService;
     private readonly DeathrollBettingService bettingService;
@@ -101,12 +104,13 @@ public sealed class DeathrollBracketTab
             return;
         }
         var fullH = MathF.Max(100f, ImGui.GetContentRegionAvail().Y);
-        using var split = ImRaii.Table("##DRSplit", 2,
+        using var split = ImRaii.Table("##DRSplit_v2",
+            CollapsiblePanels.SideColumnCount(PanelKeys.DeathrollTracker),
             ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV,
             new Vector2(-1f, fullH));
         if (!split.Success) return;
         ImGui.TableSetupColumn("##DRBracketCol", ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("##DRTrackerCol", ImGuiTableColumnFlags.WidthFixed, RightPaneW);
+        CollapsiblePanels.SetupSideColumns(PanelKeys.DeathrollTracker, "##DRTracker", RightPaneW * ImGuiHelpers.GlobalScale);
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         drawShoutsInline?.Invoke();
@@ -120,19 +124,24 @@ public sealed class DeathrollBracketTab
                 ImGui.SetCursorPosY(targetY);
             drawStatsInline();
         }
+
         ImGui.TableSetColumnIndex(1);
+        if (!CollapsiblePanels.DrawSideTag(PanelKeys.DeathrollTracker, "##DRTrackerTag", TagAccent, "the tracker"))
+            return;
+        ImGui.TableSetColumnIndex(2);
         DrawTrackerPane(state, ImGui.GetContentRegionAvail().Y);
     }
 
     private void DrawPreTournamentSetup(float reserveBottom, Action? drawStatsInline, Action? drawShoutsInline)
     {
         var splitH = MathF.Max(60f, ImGui.GetContentRegionAvail().Y);
-        using var split = ImRaii.Table("##DRPreSplit", 2,
+        using var split = ImRaii.Table("##DRPreSplit_v2",
+            CollapsiblePanels.SideColumnCount(PanelKeys.DeathrollBestOf),
             ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV,
             new Vector2(-1f, splitH));
         if (!split.Success) return;
         ImGui.TableSetupColumn("##DRPlayerCol", ImGuiTableColumnFlags.WidthStretch);
-        ImGui.TableSetupColumn("##DRBestOfCol", ImGuiTableColumnFlags.WidthFixed, 240f);
+        CollapsiblePanels.SetupSideColumns(PanelKeys.DeathrollBestOf, "##DRBestOf", BestOfPaneW * ImGuiHelpers.GlobalScale);
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
         drawShoutsInline?.Invoke();
@@ -141,7 +150,11 @@ public sealed class DeathrollBracketTab
         using (var playerPane = ImRaii.Child("##DRPlayerPane", new Vector2(-1f, playerPaneH), false, ImGuiWindowFlags.NoScrollbar))
             if (playerPane.Success) DrawPlayerList();
         drawStatsInline?.Invoke();
+
         ImGui.TableSetColumnIndex(1);
+        if (!CollapsiblePanels.DrawSideTag(PanelKeys.DeathrollBestOf, "##DRBestOfTag", TagAccent, "the best of panel"))
+            return;
+        ImGui.TableSetColumnIndex(2);
         var boH = ImGui.GetContentRegionAvail().Y;
         using var boPane = ImRaii.Child("##DRBestOfPane", new Vector2(-1f, boH), false, ImGuiWindowFlags.NoScrollbar);
         if (boPane.Success) DrawBestOfPaneBody();

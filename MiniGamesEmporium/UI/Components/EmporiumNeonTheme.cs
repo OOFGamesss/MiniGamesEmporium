@@ -40,6 +40,12 @@ public static class EmporiumNeonTheme
     public static readonly Vector4 SuccessMint = new(0.35f, 1f, 0.55f, 1f);
     public static readonly Vector4 WarnAmber = new(1f, 0.55f, 0.15f, 1f);
     public static readonly Vector4 WarningPanel = new(1f, 0.72f, 0.42f, 1f);
+    public static readonly Vector4 PanelToggleOn = new(0.26f, 0.16f, 0.52f, 1f);
+    public static readonly Vector4 PanelToggleOnHovered = new(0.36f, 0.24f, 0.72f, 1f);
+    public static readonly Vector4 PanelToggleOnActive = new(0.20f, 0.12f, 0.42f, 1f);
+    public static readonly Vector4 PanelToggleOff = new(0.16f, 0.16f, 0.20f, 1f);
+    public static readonly Vector4 PanelToggleOffHovered = new(0.26f, 0.26f, 0.32f, 1f);
+    public static readonly Vector4 PanelToggleOffActive = new(0.12f, 0.12f, 0.16f, 1f);
     public static readonly Vector4 EmporiumPurple = new(0.22f, 0.07f, 0.36f, 1f);
     public static readonly Vector4 EmporiumPurpleHovered = new(0.32f, 0.10f, 0.50f, 1f);
     public static readonly Vector4 EmporiumPurpleActive = new(0.44f, 0.12f, 0.66f, 1f);
