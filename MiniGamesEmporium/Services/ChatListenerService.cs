@@ -48,7 +48,7 @@ public sealed class ChatListenerService : IDisposable
         if (string.IsNullOrEmpty(messageText)) return;
         this.log.Debug($"[{kind}({(ushort)kind})] '{messageText}'");
 
-        if (kind is XivChatType.RandomNumber or XivChatType.Party or XivChatType.Alliance)
+        if (kind is XivChatType.RandomNumber or XivChatType.Party or XivChatType.CrossParty or XivChatType.Alliance)
         {
             if (message.Message != null
                 && this.rollService.TryParseRoll(kind, message.Message, message.Sender, out var roll))

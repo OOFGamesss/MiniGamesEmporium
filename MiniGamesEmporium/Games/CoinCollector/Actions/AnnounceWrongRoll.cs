@@ -14,6 +14,6 @@ public static class AnnounceWrongRoll
             playerName:   playerName,
             rollMax:      expectedRollMax,
             wrongRollMax: wrongRollMax);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

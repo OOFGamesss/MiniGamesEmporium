@@ -17,7 +17,7 @@ public static class AnnounceRules
         {
             if (string.IsNullOrWhiteSpace(line))
                 continue;
-            chatQueue.Enqueue(CoinCollectorMessageFormatter.Format(line, config));
+            chatQueue.EnqueueToParty(CoinCollectorMessageFormatter.Format(line, config));
         }
     }
 }

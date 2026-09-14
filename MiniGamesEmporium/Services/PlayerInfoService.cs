@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game.ClientState.Objects.SubKinds;
@@ -16,20 +16,29 @@ public sealed class PlayerInfoService
     public string HostWorld =>
         MiniGamesEmporium.ObjectTable.LocalPlayer?.HomeWorld.Value.Name.ToString() ?? string.Empty;
 
-    public string HostFullName
+    public string HostFullName => GetHostFullName();
+
+    public static string GetHostFullName()
     {
-        get
-        {
-            var name = HostName;
-            if (string.IsNullOrEmpty(name)) return string.Empty;
-            var world = HostWorld;
-            return string.IsNullOrEmpty(world) ? name : $"{name}@{world}";
-        }
+        var player = MiniGamesEmporium.ObjectTable.LocalPlayer;
+        if (player == null) return string.Empty;
+        var name = player.Name.TextValue;
+        if (string.IsNullOrEmpty(name)) return string.Empty;
+        var world = player.HomeWorld.Value.Name.ToString();
+        return string.IsNullOrEmpty(world) ? name : $"{name}@{world}";
     }
 
     public bool IsHost(string name)
     {
         var host = HostName;
+        return !string.IsNullOrEmpty(host)
+            && StripWorld(name).Equals(host, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsHostPlayer(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        var host = MiniGamesEmporium.ObjectTable.LocalPlayer?.Name.TextValue;
         return !string.IsNullOrEmpty(host)
             && StripWorld(name).Equals(host, StringComparison.OrdinalIgnoreCase);
     }

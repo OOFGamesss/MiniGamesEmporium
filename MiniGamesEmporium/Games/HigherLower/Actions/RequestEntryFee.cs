@@ -11,6 +11,6 @@ public static class RequestEntryFee
         var msg = HigherLowerMessageFormatter.Format(
             config.HigherLower.Chat.TellAmountRequestMessage,
             config, playerName: playerName);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

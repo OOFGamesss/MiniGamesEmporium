@@ -5,7 +5,7 @@ using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 
-/// <summary>Central service that parses /random, /dice party and /dice alliance rolls into a single roll result for every game.</summary>
+/// <summary>Central service that parses /random, /dice party, /dice alliance and cross-world party rolls into a single roll result for every game.</summary>
 
 namespace MiniGamesEmporium.Services;
 
@@ -27,6 +27,7 @@ public sealed class RollService
         {
             XivChatType.RandomNumber => TryParseRandom(message, sender, out roll),
             XivChatType.Party        => TryParseDice(message, sender, out roll),
+            XivChatType.CrossParty   => TryParseDice(message, sender, out roll),
             XivChatType.Alliance     => TryParseDice(message, sender, out roll),
             _                        => false,
         };

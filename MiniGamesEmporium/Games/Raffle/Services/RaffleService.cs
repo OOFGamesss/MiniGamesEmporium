@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using MiniGamesEmporium.Config;
@@ -124,6 +124,36 @@ public sealed class RaffleService
         entry.Buyer = string.Empty;
         Save();
         SessionUpdated?.Invoke();
+    }
+
+    public void HostPaysForPlayer(string playerEntry)
+    {
+        var state = this.config.RaffleSession;
+        if (state == null) return;
+        var entry = FindEntry(playerEntry);
+        if (entry == null) return;
+        var cost = state.TicketCostAtStart;
+        if (cost <= 0) return;
+        var host = PlayerInfoService.GetHostFullName();
+        if (string.IsNullOrEmpty(host)) return;
+
+        entry.Buyer     = host;
+        var available   = entry.CreditGil + cost;
+        var wanted      = (int)Math.Min(available / cost, RaffleGameIds.MaxTicketPoolSize);
+        var granted     = wanted > 0 ? Allocate(state, entry.PlayerName, wanted) : 0;
+        entry.CreditGil = available - (long)granted * cost;
+
+        this.historyService.AddTransaction(new TransactionRecord
+        {
+            PlayerName = $"{PlayerInfoService.StripWorld(entry.PlayerName)} (Paid by {host})",
+            Amount     = (int)Math.Min(cost, int.MaxValue),
+            Timestamp  = DateTime.UtcNow,
+            GameName   = RaffleGameIds.DisplayName,
+        });
+        Save();
+        SessionUpdated?.Invoke();
+        if (granted > 0)
+            TicketsAutoGranted?.Invoke(entry.PlayerName);
     }
 
     public void AddTicketsManual(string playerEntry, int count)

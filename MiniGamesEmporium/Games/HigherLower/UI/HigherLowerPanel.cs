@@ -39,12 +39,12 @@ public sealed class HigherLowerPanel : IDisposable
     private readonly HigherLowerLeaderboardTab leaderboardTab;
     private readonly HigherLowerChatAutomation chatAutomation;
 
-    public HigherLowerPanel(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PlayerInfoService playerInfoService, HistoryService historyService)
+    public HigherLowerPanel(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PartyService partyService, HistoryService historyService)
     {
         this.config             = config;
         this.higherLowerService = higherLowerService;
         this.chatQueue          = chatQueue;
-        this.gameTab            = new HigherLowerGameTab(config, higherLowerService, chatQueue, autoPayoutService, playerInfoService);
+        this.gameTab            = new HigherLowerGameTab(config, higherLowerService, chatQueue, autoPayoutService, partyService);
         this.settingsTab        = new HigherLowerSettingsTab(config);
         this.chatSettingsTab    = new HigherLowerChatSettingsTab(config);
         this.leaderboardTab     = new HigherLowerLeaderboardTab(config, higherLowerService, chatQueue, historyService);

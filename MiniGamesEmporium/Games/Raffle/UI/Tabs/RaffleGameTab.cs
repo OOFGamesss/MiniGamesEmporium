@@ -1,4 +1,4 @@
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
@@ -332,16 +332,23 @@ public sealed class RaffleGameTab
                 ImGui.CloseCurrentPopup();
             }
             ImGui.Spacing();
-            if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", $"##RaffleBuyerTell{idx}"))
+            if (PlayerInfoService.IsHostPlayer(buyer))
             {
-                RequestGilBuyer.Execute(buyer, playerEntry, this.config, this.chatQueue);
-                ImGui.CloseCurrentPopup();
+                ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "You covered this ticket.");
             }
-            ImGui.SameLine();
-            if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade (Buyer)", $"##RaffleBuyerTrade{idx}"))
+            else
             {
-                SendTradeRequest.Execute(buyer, this.chatQueue);
-                ImGui.CloseCurrentPopup();
+                if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", $"##RaffleBuyerTell{idx}"))
+                {
+                    RequestGilBuyer.Execute(buyer, playerEntry, this.config, this.chatQueue);
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.SameLine();
+                if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade (Buyer)", $"##RaffleBuyerTrade{idx}"))
+                {
+                    SendTradeRequest.Execute(buyer, this.chatQueue);
+                    ImGui.CloseCurrentPopup();
+                }
             }
         }
         else
@@ -362,6 +369,26 @@ public sealed class RaffleGameTab
             else
             {
                 ImGui.TextDisabled("Target a player in-game to set them as the buyer.");
+            }
+
+            var cost = this.config.RaffleSession?.TicketCostAtStart ?? 0L;
+            if (cost > 0)
+            {
+                ImGui.Spacing();
+                ImGui.Separator();
+                ImGui.Spacing();
+                ImGui.TextDisabled($"Cover this ticket yourself ({cost:N0} Gil)");
+                ImGui.Spacing();
+                using (UIHelper.PushGoldButtonColours())
+                {
+                    if (UIHelper.IconTextButton(FontAwesomeIcon.HandHoldingUsd, "Host Pays Ticket", $"##RaffleHostPays{idx}"))
+                    {
+                        this.service.HostPaysForPlayer(playerEntry);
+                        ImGui.CloseCurrentPopup();
+                    }
+                }
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip($"Sets you as the buyer and grants one ticket, crediting {cost:N0} Gil to the pot.");
             }
         }
     }

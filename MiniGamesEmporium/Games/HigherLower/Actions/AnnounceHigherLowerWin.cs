@@ -15,6 +15,6 @@ public static class AnnounceHigherLowerWin
             rounds: rounds,
             totalPotOverride: totalPot,
             winningAmount: winningAmount);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

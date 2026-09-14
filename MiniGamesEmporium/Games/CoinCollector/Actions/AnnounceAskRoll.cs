@@ -13,6 +13,6 @@ public static class AnnounceAskRoll
         var msg = CoinCollectorMessageFormatter.Format(
             template,
             config, playerName: playerName, coins: coins, rollMax: rollMax);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

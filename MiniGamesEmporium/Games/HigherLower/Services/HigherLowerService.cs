@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game.Chat;
@@ -57,6 +57,7 @@ public sealed class HigherLowerService : IDisposable
             PlayerSet       = false,
             PaymentVerified = false,
             AmountTraded    = 0,
+            HostPaidGil     = 0,
             RollLog         = [],
             StartedAt       = DateTime.UtcNow,
         };
@@ -174,6 +175,7 @@ public sealed class HigherLowerService : IDisposable
         session.PlayerWorld      = string.Empty;
         session.PlayerSet        = false;
         session.AmountTraded     = 0;
+        session.HostPaidGil      = 0;
         session.PaidByPlayerName = string.Empty;
         this.config.Save();
         SessionUpdated?.Invoke();
@@ -195,6 +197,25 @@ public sealed class HigherLowerService : IDisposable
         var session = GetActiveSession();
         if (session == null) return;
         session.PaidByPlayerName = string.Empty;
+        if (session.HostPaidGil > 0 && !session.PaymentVerified)
+        {
+            session.AmountTraded = Math.Max(0, session.AmountTraded - session.HostPaidGil);
+            session.HostPaidGil  = 0;
+        }
+        this.config.Save();
+        SessionUpdated?.Invoke();
+    }
+
+    public void HostPaysEntry()
+    {
+        var session = GetActiveSession();
+        if (session == null || session.PaymentVerified || !session.PlayerSet) return;
+        var host = PlayerInfoService.GetHostFullName();
+        if (string.IsNullOrEmpty(host)) return;
+        var cost = Math.Max(0, this.config.HigherLower.EntryCost);
+        session.PaidByPlayerName = host;
+        session.AmountTraded    += cost;
+        session.HostPaidGil     += cost;
         this.config.Save();
         SessionUpdated?.Invoke();
     }
@@ -352,6 +373,7 @@ public sealed class HigherLowerService : IDisposable
         session.PlayerWorld      = string.Empty;
         session.PlayerSet        = false;
         session.AmountTraded     = 0;
+        session.HostPaidGil      = 0;
         session.PaidByPlayerName = string.Empty;
         session.PaymentVerified  = false;
         this.config.HigherLowerSession = null;
@@ -422,7 +444,7 @@ public sealed class HigherLowerService : IDisposable
         if (turn.IsGameOver || turn.IsWinner || turn.GuessConfirmed) return;
         if (turn.RollLog.Count == 0) return;
         var kind = message.LogKind;
-        if (kind != XivChatType.Party && kind != XivChatType.Alliance) return;
+        if (kind is not (XivChatType.Party or XivChatType.CrossParty or XivChatType.Alliance)) return;
         var senderText = message.Sender?.TextValue ?? string.Empty;
         if (!senderText.Contains(session.PlayerName.Trim(), StringComparison.OrdinalIgnoreCase))
             return;

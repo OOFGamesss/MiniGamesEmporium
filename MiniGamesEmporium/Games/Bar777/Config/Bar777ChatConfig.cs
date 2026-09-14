@@ -1,4 +1,5 @@
 ﻿using System;
+using MiniGamesEmporium.Utility;
 
 /// <summary>Serialisable chat configuration for BAR 777 messages and toggles.</summary>
 
@@ -62,52 +63,18 @@ public class Bar777ChatConfig
             ChatChannel.Alliance => "/a",
             _ => "/s",
         };
-        this.StartRollsMessage = ConvertLeadingChannel(this.StartRollsMessage, target);
-        this.TellAmountRequestMessage = ConvertLeadingChannel(this.TellAmountRequestMessage, target);
-        this.TellBuyerRequestMessage = ConvertLeadingChannel(this.TellBuyerRequestMessage, target);
-        this.HalfwayMessage = ConvertLeadingChannel(this.HalfwayMessage, target);
-        this.UnluckyMessage = ConvertLeadingChannel(this.UnluckyMessage, target);
-        this.WinShoutMessage = ConvertLeadingChannel(this.WinShoutMessage, target);
-        this.YellPotMessage = ConvertLeadingChannel(this.YellPotMessage, target);
-        this.JoinQueueMessage = ConvertLeadingChannel(this.JoinQueueMessage, target);
-        this.ReminderToPlayMessage = ConvertLeadingChannel(this.ReminderToPlayMessage, target);
-        this.AnnounceKeywordMessage = ConvertLeadingChannel(this.AnnounceKeywordMessage, target);
-        this.NextPlayerUpMessage = ConvertLeadingChannel(this.NextPlayerUpMessage, target);
-        this.AdvertiseMessage = ConvertLeadingChannel(this.AdvertiseMessage, target);
-        this.RulesMessage = ConvertLeadingChannelPerLine(this.RulesMessage, target);
-    }
-
-    private static string ConvertLeadingChannelPerLine(string message, string target)
-    {
-        if (string.IsNullOrEmpty(message))
-            return message;
-
-        var lines = message.Replace("\r\n", "\n").Split('\n');
-        for (var i = 0; i < lines.Length; i++)
-            lines[i] = ConvertLeadingChannel(lines[i], target);
-        return string.Join("\n", lines);
-    }
-
-    private static string ConvertLeadingChannel(string message, string target)
-    {
-        if (string.IsNullOrEmpty(message))
-            return message;
-
-        int split = message.IndexOfAny(new[] { ' ', '\t' });
-        string token = split < 0 ? message : message.Substring(0, split);
-        string rest = split < 0 ? string.Empty : message.Substring(split);
-
-        switch (token.ToLowerInvariant())
-        {
-            case "/s":
-            case "/say":
-            case "/p":
-            case "/party":
-            case "/a":
-            case "/alliance":
-                return target + rest;
-            default:
-                return message;
-        }
+        this.StartRollsMessage = ChatChannelText.ConvertLeadingChannel(this.StartRollsMessage, target);
+        this.TellAmountRequestMessage = ChatChannelText.ConvertLeadingChannel(this.TellAmountRequestMessage, target);
+        this.TellBuyerRequestMessage = ChatChannelText.ConvertLeadingChannel(this.TellBuyerRequestMessage, target);
+        this.HalfwayMessage = ChatChannelText.ConvertLeadingChannel(this.HalfwayMessage, target);
+        this.UnluckyMessage = ChatChannelText.ConvertLeadingChannel(this.UnluckyMessage, target);
+        this.WinShoutMessage = ChatChannelText.ConvertLeadingChannel(this.WinShoutMessage, target);
+        this.YellPotMessage = ChatChannelText.ConvertLeadingChannel(this.YellPotMessage, target);
+        this.JoinQueueMessage = ChatChannelText.ConvertLeadingChannel(this.JoinQueueMessage, target);
+        this.ReminderToPlayMessage = ChatChannelText.ConvertLeadingChannel(this.ReminderToPlayMessage, target);
+        this.AnnounceKeywordMessage = ChatChannelText.ConvertLeadingChannel(this.AnnounceKeywordMessage, target);
+        this.NextPlayerUpMessage = ChatChannelText.ConvertLeadingChannel(this.NextPlayerUpMessage, target);
+        this.AdvertiseMessage = ChatChannelText.ConvertLeadingChannel(this.AdvertiseMessage, target);
+        this.RulesMessage = ChatChannelText.ConvertLeadingChannelPerLine(this.RulesMessage, target);
     }
 }

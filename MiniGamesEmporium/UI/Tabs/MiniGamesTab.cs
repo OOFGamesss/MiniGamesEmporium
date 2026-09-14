@@ -70,6 +70,7 @@ public sealed class MiniGamesTab : IDisposable
         AutoPayoutService autoPayoutService,
         HigherLowerService higherLowerService,
         PlayerInfoService playerInfoService,
+        PartyService partyService,
         RaffleService raffleService,
         VotingMadnessService votingMadnessService,
         CoinCollectorService coinCollectorService)
@@ -79,7 +80,7 @@ public sealed class MiniGamesTab : IDisposable
         this.deathrollTournamentPanel = new DeathrollTournamentPanel(config, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, chatQueue, log, historyService, autoPayoutService);
         this.rafflePanel              = new RafflePanel(config, raffleService, chatQueue, historyService, autoPayoutService, playerInfoService);
         this.minefieldGambitPanel     = new MinefieldGambitPanel();
-        this.higherLowerPanel         = new HigherLowerPanel(config, higherLowerService, chatQueue, autoPayoutService, playerInfoService, historyService);
+        this.higherLowerPanel         = new HigherLowerPanel(config, higherLowerService, chatQueue, autoPayoutService, partyService, historyService);
         this.beerPongPanel            = new BeerPongPanel();
         this.dartsPanel               = new DartsPanel();
         this.eightBallPoolPanel       = new EightBallPoolPanel();
@@ -87,7 +88,7 @@ public sealed class MiniGamesTab : IDisposable
         this.raidBossPanel            = new RaidBossPanel();
         this.dealOrNoDealPanel        = new DealOrNoDealPanel();
         this.votingMadnessPanel       = new VotingMadnessPanel(config, votingMadnessService, chatQueue);
-        this.coinCollectorPanel       = new CoinCollectorPanel(config, coinCollectorService, chatQueue, autoPayoutService, playerInfoService, historyService);
+        this.coinCollectorPanel       = new CoinCollectorPanel(config, coinCollectorService, chatQueue, autoPayoutService, partyService, historyService);
         this.NavEntries =
         [
             new(MiniGame.Bar777, () => config.Bar777.CustomName, FontAwesomeIcon.Dice, EmporiumNeonTheme.Bar777Red, Bar777Panel.Sections),

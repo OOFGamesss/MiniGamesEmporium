@@ -39,11 +39,11 @@ public sealed class CoinCollectorPanel : IDisposable
     private readonly CoinCollectorTurnAutomation turnAutomation;
     private readonly CoinCollectorQueueService queueService;
 
-    public CoinCollectorPanel(PluginConfiguration config, CoinCollectorService coinCollectorService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PlayerInfoService playerInfoService, HistoryService historyService)
+    public CoinCollectorPanel(PluginConfiguration config, CoinCollectorService coinCollectorService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PartyService partyService, HistoryService historyService)
     {
         this.config               = config;
         this.coinCollectorService = coinCollectorService;
-        this.queueService         = new CoinCollectorQueueService(config, coinCollectorService, playerInfoService);
+        this.queueService         = new CoinCollectorQueueService(config, coinCollectorService, partyService);
         this.gameTab              = new CoinCollectorGameTab(config, coinCollectorService, chatQueue, autoPayoutService, this.queueService);
         this.settingsTab          = new CoinCollectorSettingsTab(config);
         this.chatSettingsTab      = new CoinCollectorChatSettingsTab(config);

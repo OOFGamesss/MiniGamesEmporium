@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 /// <summary>Serialisable snapshot of the active BAR 777 session.</summary>
@@ -19,6 +19,7 @@ public class ActiveSession
     public int AmountTraded { get; set; } = 0;
     public List<int> RollLog { get; set; } = [];
     public string PaidByPlayerName { get; set; } = string.Empty;
+    public int HostPaidGil { get; set; } = 0;
     public long WinnerPayoutGil { get; set; } = 0;
     public Guid? PayoutTransactionId { get; set; } = null;
 }

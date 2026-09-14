@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using MiniGamesEmporium.Config;
@@ -81,6 +81,7 @@ public sealed class Bar777SessionService
             PaymentVerified = false,
             WinTriggered = false,
             AmountTraded = 0,
+            HostPaidGil = 0,
             RollLog = [],
             StartedAt = DateTime.UtcNow,
         };
@@ -248,6 +249,26 @@ public sealed class Bar777SessionService
         var session = this.config.ActiveSession;
         if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
         session.PaidByPlayerName = string.Empty;
+        if (session.HostPaidGil > 0 && !session.PaymentVerified)
+        {
+            session.AmountTraded = Math.Max(0, session.AmountTraded - session.HostPaidGil);
+            session.HostPaidGil = 0;
+        }
+        this.config.Save();
+        SessionUpdated?.Invoke();
+    }
+
+    public void HostPaysEntry()
+    {
+        var session = this.config.ActiveSession;
+        if (session == null || !Bar777GameIds.Matches(session.GameName)) return;
+        if (session.PaymentVerified || Bar777GameIds.IsAnyPlaceholder(session.PlayerName)) return;
+        var host = PlayerInfoService.GetHostFullName();
+        if (string.IsNullOrEmpty(host)) return;
+        var cost = Math.Max(0, this.config.Bar777.CostPerRoll);
+        session.PaidByPlayerName = host;
+        session.AmountTraded += cost;
+        session.HostPaidGil += cost;
         this.config.Save();
         SessionUpdated?.Invoke();
     }
@@ -305,6 +326,7 @@ public sealed class Bar777SessionService
             PlayerName = Bar777GameIds.WalkInPlayerPlaceholder,
             RollsAllowed = this.config.Bar777.MaxRolls,
             AmountTraded = 0,
+            HostPaidGil = 0,
             RollLog = [],
             StartedAt = DateTime.UtcNow,
         };
@@ -390,6 +412,7 @@ public sealed class Bar777SessionService
         session.PaymentVerified = false;
         session.WinTriggered = false;
         session.AmountTraded = 0;
+        session.HostPaidGil = 0;
         session.PaidByPlayerName = string.Empty;
         session.StartedAt = DateTime.UtcNow;
         this.config.Save();

@@ -67,6 +67,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
     private readonly Bar777SessionService bar777SessionService;
     private readonly SessionService sessionService;
     private readonly PlayerInfoService playerInfoService;
+    private readonly PartyService partyService;
     private readonly RollService rollService;
     private readonly PresetService presetService;
     private readonly DeathrollTournamentService deathrollService;
@@ -121,7 +122,8 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
         MigrateDeathrollChatConfig();
         MigrateHigherLowerActiveSession();
         historyService = new HistoryService(PluginInterface, Configuration);
-        chatQueueService = new ChatQueueService();
+        partyService = new PartyService();
+        chatQueueService = new ChatQueueService(partyService);
         sessionService = new SessionService();
         bar777SessionService = new Bar777SessionService(Configuration, historyService);
         playerInfoService = new PlayerInfoService();
@@ -197,7 +199,7 @@ public sealed class MiniGamesEmporium : IDalamudPlugin
             Log);
         tradeListenerService  = new TradeListenerService(bar777SessionService, sessionService, deathrollService, deathrollBettingService, higherLowerService, raffleService, coinCollectorService, Log);
         autoPayoutService     = new AutoPayoutService(chatQueueService, Log);
-        mainWindow = new MainWindow(Configuration, bar777SessionService, sessionService, chatQueueService, deathrollService, deathrollBettingService, deathrollDiscordService, drtWebviewService, presetService, Log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService, votingMadnessService, coinCollectorService);
+        mainWindow = new MainWindow(Configuration, bar777SessionService, sessionService, chatQueueService, deathrollService, deathrollBettingService, deathrollDiscordService, drtWebviewService, presetService, Log, historyService, autoPayoutService, higherLowerService, playerInfoService, partyService, raffleService, votingMadnessService, coinCollectorService);
         windowSystem.AddWindow(mainWindow);
         windowOpenedIpc = new WindowOpenedIpc(PluginInterface, Log, mainWindow);
         bar777Rules = new Bar777Rules(PluginInterface, Framework, Log, Configuration);

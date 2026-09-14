@@ -11,6 +11,6 @@ public static class AnnouncePot
         var msg = CoinCollectorMessageFormatter.Format(
             config.CoinCollector.Chat.AnnouncePotMessage,
             config, totalPotOverride: totalPot);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

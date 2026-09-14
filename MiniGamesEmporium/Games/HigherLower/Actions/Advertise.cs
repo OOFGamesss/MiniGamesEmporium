@@ -17,7 +17,7 @@ public static class Advertise
         {
             if (string.IsNullOrWhiteSpace(line))
                 continue;
-            chatQueue.Enqueue(HigherLowerMessageFormatter.Format(line, config));
+            chatQueue.EnqueueToParty(HigherLowerMessageFormatter.Format(line, config));
         }
     }
 }

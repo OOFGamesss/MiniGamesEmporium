@@ -15,6 +15,6 @@ public static class AnnouncePaymentReceived
             rollMax:    rollMax,
             attempt:    1,
             attempts:   attempts);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

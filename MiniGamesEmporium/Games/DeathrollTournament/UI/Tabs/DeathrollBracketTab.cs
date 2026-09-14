@@ -1,4 +1,4 @@
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
@@ -410,16 +410,23 @@ public sealed class DeathrollBracketTab
                     ImGui.CloseCurrentPopup();
                 }
                 ImGui.Spacing();
-                if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", $"##DRBuyerTell{idx}"))
+                if (PlayerInfoService.IsHostPlayer(buyer))
                 {
-                    RequestGilBuyer.Execute(buyer, entry, this.config, this.chatQueue);
-                    ImGui.CloseCurrentPopup();
+                    ImGui.TextColored(EmporiumNeonTheme.WarnAmber, "You covered this entry.");
                 }
-                ImGui.SameLine();
-                if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade (Buyer)", $"##DRBuyerTrade{idx}"))
+                else
                 {
-                    SendTradeRequest.Execute(buyer, this.chatQueue);
-                    ImGui.CloseCurrentPopup();
+                    if (UIHelper.IconTextButton(FontAwesomeIcon.CommentDots, "Request Gil (Buyer)", $"##DRBuyerTell{idx}"))
+                    {
+                        RequestGilBuyer.Execute(buyer, entry, this.config, this.chatQueue);
+                        ImGui.CloseCurrentPopup();
+                    }
+                    ImGui.SameLine();
+                    if (UIHelper.IconTextButton(FontAwesomeIcon.Coins, "Trade (Buyer)", $"##DRBuyerTrade{idx}"))
+                    {
+                        SendTradeRequest.Execute(buyer, this.chatQueue);
+                        ImGui.CloseCurrentPopup();
+                    }
                 }
             }
             else
@@ -440,6 +447,29 @@ public sealed class DeathrollBracketTab
                 else
                 {
                     ImGui.TextDisabled("Target a player in-game to set them as the buyer.");
+                }
+
+                var entryCost = this.config.DeathrollSession?.EntryCost ?? this.config.DeathrollTournament.EntryCost;
+                var alreadyPaid = this.deathrollService.IsPaid(entry);
+                ImGui.Spacing();
+                ImGui.Separator();
+                ImGui.Spacing();
+                ImGui.TextDisabled($"Cover this entry yourself ({entryCost:N0} Gil)");
+                ImGui.Spacing();
+                using (ImRaii.Disabled(alreadyPaid))
+                using (UIHelper.PushGoldButtonColours())
+                {
+                    if (UIHelper.IconTextButton(FontAwesomeIcon.HandHoldingUsd, "Host Pays Entry", $"##DRHostPays{idx}"))
+                    {
+                        this.deathrollService.HostPaysForPlayer(entry);
+                        ImGui.CloseCurrentPopup();
+                    }
+                }
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    ImGui.SetTooltip(alreadyPaid
+                        ? "This player is already marked as paid."
+                        : $"Sets you as the buyer and marks them paid, crediting {entryCost:N0} Gil to the pot.");
                 }
             }
         }

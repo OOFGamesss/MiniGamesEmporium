@@ -14,7 +14,7 @@ public static class RequestEntryFeeBuyer
             config,
             playerName: PlayerInfoService.StripWorld(playerName),
             buyerName:  buyerName.Trim());
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
         if (config.CoinCollector.TradeOnRequestGil)
             SendTradeRequest.Execute(PlayerInfoService.StripWorld(buyerName), chatQueue);
     }

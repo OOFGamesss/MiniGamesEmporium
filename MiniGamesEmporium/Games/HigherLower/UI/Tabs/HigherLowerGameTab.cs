@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,7 +8,6 @@ using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
-using ECommons.DalamudServices;
 using MiniGamesEmporium.Actions;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.HigherLower.Actions;
@@ -46,17 +45,17 @@ public sealed class HigherLowerGameTab
     private readonly HigherLowerService higherLowerService;
     private readonly ChatQueueService chatQueue;
     private readonly AutoPayoutService autoPayoutService;
-    private readonly PlayerInfoService playerInfo;
+    private readonly PartyService partyService;
     private readonly ISharedImmediateTexture? trophyTexture;
     private readonly ThemedCard card = new();
 
-    public HigherLowerGameTab(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PlayerInfoService playerInfo)
+    public HigherLowerGameTab(PluginConfiguration config, HigherLowerService higherLowerService, ChatQueueService chatQueue, AutoPayoutService autoPayoutService, PartyService partyService)
     {
         this.config             = config;
         this.higherLowerService = higherLowerService;
         this.chatQueue          = chatQueue;
         this.autoPayoutService  = autoPayoutService;
-        this.playerInfo         = playerInfo;
+        this.partyService       = partyService;
         var path = Path.Combine(
             MiniGamesEmporium.PluginInterface.AssemblyLocation.Directory?.FullName ?? string.Empty,
             "Images", "trophy.png");
@@ -269,14 +268,10 @@ public sealed class HigherLowerGameTab
     private List<(string CharName, string WorldName, string DisplayName)> GetPartyMembers()
     {
         var result = new List<(string, string, string)>();
-        foreach (var member in Svc.Party)
+        foreach (var member in this.partyService.GetOtherMembers())
         {
-            var name = member.Name.TextValue;
-            if (string.IsNullOrEmpty(name)) continue;
-            if (this.playerInfo.IsHost(name)) continue;
-            var world   = member.World.ValueNullable?.Name.ToString() ?? string.Empty;
-            var display = string.IsNullOrEmpty(world) ? name : $"{name}@{world}";
-            result.Add((name, world, display));
+            var display = string.IsNullOrEmpty(member.World) ? member.Name : $"{member.Name}@{member.World}";
+            result.Add((member.Name, member.World, display));
         }
         return result;
     }
@@ -400,24 +395,50 @@ public sealed class HigherLowerGameTab
         if (string.IsNullOrEmpty(charName))
         {
             UIHelper.CentreTextDisabled("Target a player in-game to set them as the buyer.");
-            return;
+        }
+        else
+        {
+            var style        = ImGui.GetStyle();
+            var targetedRowW = ImGui.CalcTextSize("Targeted:").X + style.ItemSpacing.X + ImGui.CalcTextSize(charName).X;
+            UIHelper.CentreNext(targetedRowW);
+            ImGui.TextDisabled("Targeted:");
+            ImGui.SameLine();
+            ImGui.TextUnformatted(charName);
+            ImGui.Spacing();
+
+            using (UIHelper.PushGreenButtonColours())
+            {
+                if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##HLSetBuyer"))
+                {
+                    var full = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
+                    this.higherLowerService.SetBuyer(full);
+                }
+            }
         }
 
-        var style        = ImGui.GetStyle();
-        var targetedRowW = ImGui.CalcTextSize("Targeted:").X + style.ItemSpacing.X + ImGui.CalcTextSize(charName).X;
-        UIHelper.CentreNext(targetedRowW);
-        ImGui.TextDisabled("Targeted:");
-        ImGui.SameLine();
-        ImGui.TextUnformatted(charName);
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawHostPaysButton(session);
+    }
+
+    private void DrawHostPaysButton(ActiveSession session)
+    {
+        var cost = Math.Max(0, this.config.HigherLower.EntryCost);
+        UIHelper.CentreTextDisabled($"Cover this entry yourself ({cost:N0} Gil)");
         ImGui.Spacing();
 
-        using (UIHelper.PushGreenButtonColours())
+        using (ImRaii.Disabled(!session.PlayerSet))
+        using (UIHelper.PushGoldButtonColours())
         {
-            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##HLSetBuyer"))
-            {
-                var full = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
-                this.higherLowerService.SetBuyer(full);
-            }
+            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.HandHoldingUsd, "Host Pays Entry", "##HLHostPays"))
+                this.higherLowerService.HostPaysEntry();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip(session.PlayerSet
+                ? $"Sets you as the buyer and credits {cost:N0} Gil to the pot, then press Begin Game."
+                : "Select a player first.");
         }
     }
 
@@ -437,6 +458,13 @@ public sealed class HigherLowerGameTab
                 this.higherLowerService.ClearBuyer();
         }
         ImGui.Spacing();
+
+        if (PlayerInfoService.IsHostPlayer(buyer))
+        {
+            UIHelper.CentreText("You are covering this entry", EmporiumNeonTheme.WarnAmber);
+            UIHelper.CentreTextDisabled($"{session.HostPaidGil:N0} Gil credited - press Begin Game");
+            return;
+        }
 
         UIHelper.CentreNextButtonRow(
             (FontAwesomeIcon.CommentDots, "Request Gil (Buyer)"),
@@ -515,7 +543,7 @@ public sealed class HigherLowerGameTab
         using (UIHelper.PushBlueButtonColours())
         {
             if (UIHelper.IconTextButton(FontAwesomeIcon.Dice, rollLabel, "##HLRollBtn"))
-                this.chatQueue.Enqueue($"/dice party {dice}");
+                this.chatQueue.Enqueue(this.partyService.GetDiceCommand(dice));
         }
 
         ImGui.SameLine();
@@ -548,7 +576,7 @@ public sealed class HigherLowerGameTab
         using (UIHelper.PushBlueButtonColours())
         {
             if (UIHelper.IconTextButton(FontAwesomeIcon.Dice, rollLabel, "##HLRollBtn"))
-                this.chatQueue.Enqueue($"/dice party {dice}");
+                this.chatQueue.Enqueue(this.partyService.GetDiceCommand(dice));
         }
     }
 

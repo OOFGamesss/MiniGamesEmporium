@@ -23,6 +23,6 @@ public static class AnnounceCoinCollectorLoss
             playerName:   playerName,
             coins:        coins,
             highestCoins: highestCoins);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

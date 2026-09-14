@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ECommons.DalamudServices;
 using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.CoinCollector.Models;
 using MiniGamesEmporium.Services;
@@ -13,13 +12,13 @@ public sealed class CoinCollectorQueueService : IDisposable
 {
     private readonly PluginConfiguration config;
     private readonly CoinCollectorService coinCollectorService;
-    private readonly PlayerInfoService playerInfo;
+    private readonly PartyService partyService;
 
-    public CoinCollectorQueueService(PluginConfiguration config, CoinCollectorService coinCollectorService, PlayerInfoService playerInfo)
+    public CoinCollectorQueueService(PluginConfiguration config, CoinCollectorService coinCollectorService, PartyService partyService)
     {
         this.config               = config;
         this.coinCollectorService = coinCollectorService;
-        this.playerInfo           = playerInfo;
+        this.partyService         = partyService;
         this.coinCollectorService.TurnCompleted += OnTurnCompleted;
     }
 
@@ -28,6 +27,7 @@ public sealed class CoinCollectorQueueService : IDisposable
     public void Refresh()
     {
         if (!this.coinCollectorService.IsSessionActive()) return;
+        if (!this.partyService.IsReady) return;
 
         var present = ReadPartyMembers();
         var roster  = this.config.CoinCollector.PlayerQueue;
@@ -70,14 +70,10 @@ public sealed class CoinCollectorQueueService : IDisposable
     private List<(string CharName, string WorldName)> ReadPartyMembers()
     {
         var result = new List<(string, string)>();
-        foreach (var member in Svc.Party)
+        foreach (var member in this.partyService.GetOtherMembers())
         {
-            var name = member.Name.TextValue;
-            if (string.IsNullOrEmpty(name)) continue;
-            if (this.playerInfo.IsHost(name)) continue;
-            if (result.Any(m => NamesMatch(m.Item1, name))) continue;
-            var world = member.World.ValueNullable?.Name.ToString() ?? string.Empty;
-            result.Add((name, world));
+            if (result.Any(m => NamesMatch(m.Item1, member.Name))) continue;
+            result.Add((member.Name, member.World));
         }
         return result;
     }

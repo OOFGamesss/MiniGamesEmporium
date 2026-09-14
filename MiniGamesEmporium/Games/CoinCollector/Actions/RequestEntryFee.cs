@@ -12,7 +12,7 @@ public static class RequestEntryFee
         var msg = CoinCollectorMessageFormatter.Format(
             config.CoinCollector.Chat.TellAmountRequestMessage,
             config, playerName: playerName);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
         if (config.CoinCollector.TradeOnRequestGil)
             SendTradeRequest.Execute(PlayerInfoService.StripWorld(playerName), chatQueue);
     }

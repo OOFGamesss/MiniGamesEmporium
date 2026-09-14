@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using MiniGamesEmporium.Config;
@@ -51,6 +51,7 @@ public sealed class CoinCollectorService
             PlayerSet       = false,
             PaymentVerified = false,
             AmountTraded    = 0,
+            HostPaidGil     = 0,
             RollLog         = [],
             StartedAt       = DateTime.UtcNow,
         };
@@ -207,6 +208,7 @@ public sealed class CoinCollectorService
         session.PlayerWorld      = string.Empty;
         session.PlayerSet        = false;
         session.AmountTraded     = 0;
+        session.HostPaidGil      = 0;
         session.PaidByPlayerName = string.Empty;
         this.config.CoinCollector.Attempts.Reset();
         this.config.Save();
@@ -229,6 +231,27 @@ public sealed class CoinCollectorService
         var session = GetActiveSession();
         if (session == null) return;
         session.PaidByPlayerName = string.Empty;
+        if (session.HostPaidGil > 0 && !session.PaymentVerified)
+        {
+            session.AmountTraded = Math.Max(0, session.AmountTraded - session.HostPaidGil);
+            session.HostPaidGil  = 0;
+            RecalculateAttempts(session);
+        }
+        this.config.Save();
+        SessionUpdated?.Invoke();
+    }
+
+    public void HostPaysEntry()
+    {
+        var session = GetActiveSession();
+        if (session == null || session.PaymentVerified || !session.PlayerSet) return;
+        var host = PlayerInfoService.GetHostFullName();
+        if (string.IsNullOrEmpty(host)) return;
+        var cost = Math.Max(0, this.config.CoinCollector.EntryCost);
+        session.PaidByPlayerName = host;
+        session.AmountTraded    += cost;
+        session.HostPaidGil     += cost;
+        RecalculateAttempts(session);
         this.config.Save();
         SessionUpdated?.Invoke();
     }
@@ -441,6 +464,7 @@ public sealed class CoinCollectorService
         session.PlayerWorld      = string.Empty;
         session.PlayerSet        = false;
         session.AmountTraded     = 0;
+        session.HostPaidGil      = 0;
         session.PaidByPlayerName = string.Empty;
         session.PaymentVerified  = false;
         this.config.CoinCollector.Attempts.Reset();

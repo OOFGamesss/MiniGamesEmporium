@@ -1,4 +1,4 @@
-using MiniGamesEmporium.Config;
+﻿using MiniGamesEmporium.Config;
 using MiniGamesEmporium.Games.DeathrollTournament.Models;
 using MiniGamesEmporium.Games.DeathrollTournament.State;
 using MiniGamesEmporium.Games.DeathrollTournament.Utility;
@@ -157,6 +157,26 @@ public sealed class DeathrollTournamentService
             GameName   = DeathrollGameIds.DisplayName,
         });
         MarkAsPaid(match);
+    }
+
+    public void HostPaysForPlayer(string playerEntry)
+    {
+        if (!IsSessionActive()) return;
+        var name = PlayerInfoService.StripWorld(playerEntry);
+        if (string.IsNullOrEmpty(name) || IsPaid(name)) return;
+        var host = PlayerInfoService.GetHostFullName();
+        if (string.IsNullOrEmpty(host)) return;
+        var entryCost = this.config.DeathrollSession?.EntryCost ?? this.config.DeathrollTournament.EntryCost;
+
+        this.config.DeathrollTournament.PlayerBuyers[name] = host;
+        this.historyService.AddTransaction(new TransactionRecord
+        {
+            PlayerName = $"{name} (Paid by {host})",
+            Amount     = (int)entryCost,
+            Timestamp  = DateTime.UtcNow,
+            GameName   = DeathrollGameIds.DisplayName,
+        });
+        MarkAsPaid(name);
     }
 
     private (string? match, string buyerName) ResolvePayingEntrant(string tradePartner)

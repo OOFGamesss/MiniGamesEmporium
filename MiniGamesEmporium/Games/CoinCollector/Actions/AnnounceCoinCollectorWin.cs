@@ -15,6 +15,6 @@ public static class AnnounceCoinCollectorWin
             coins: coins,
             totalPotOverride: totalPot,
             winningAmount: winningAmount);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

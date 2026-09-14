@@ -1,4 +1,4 @@
-using Dalamud.Bindings.ImGui;
+﻿using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
@@ -364,24 +364,51 @@ public sealed class Bar777GameTab
         if (string.IsNullOrEmpty(charName))
         {
             UIHelper.CentreTextDisabled("Target a player in-game to set them as the buyer.");
-            return;
+        }
+        else
+        {
+            var style        = ImGui.GetStyle();
+            var targetedRowW = ImGui.CalcTextSize("Targeted:").X + style.ItemSpacing.X + ImGui.CalcTextSize(charName).X;
+            UIHelper.CentreNext(targetedRowW);
+            ImGui.TextDisabled("Targeted:");
+            ImGui.SameLine();
+            ImGui.TextUnformatted(charName);
+            ImGui.Spacing();
+
+            using (UIHelper.PushGreenButtonColours())
+            {
+                if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##SetBuyer"))
+                {
+                    var fullName = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
+                    this.bar777SessionService.SetBuyer(fullName);
+                }
+            }
         }
 
-        var style        = ImGui.GetStyle();
-        var targetedRowW = ImGui.CalcTextSize("Targeted:").X + style.ItemSpacing.X + ImGui.CalcTextSize(charName).X;
-        UIHelper.CentreNext(targetedRowW);
-        ImGui.TextDisabled("Targeted:");
-        ImGui.SameLine();
-        ImGui.TextUnformatted(charName);
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawHostPaysButton(session);
+    }
+
+    private void DrawHostPaysButton(ActiveSession session)
+    {
+        var cost      = Math.Max(0, this.config.Bar777.CostPerRoll);
+        var hasPlayer = !Bar777GameIds.IsAnyPlaceholder(session.PlayerName);
+        UIHelper.CentreTextDisabled($"Cover this roll yourself ({cost:N0} Gil)");
         ImGui.Spacing();
 
-        using (UIHelper.PushGreenButtonColours())
+        using (ImRaii.Disabled(!hasPlayer))
+        using (UIHelper.PushGoldButtonColours())
         {
-            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##SetBuyer"))
-            {
-                var fullName = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
-                this.bar777SessionService.SetBuyer(fullName);
-            }
+            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.HandHoldingUsd, "Host Pays Entry", "##BarHostPays"))
+                this.bar777SessionService.HostPaysEntry();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip(hasPlayer
+                ? $"Sets you as the buyer and credits {cost:N0} Gil to the pot, then start the game as usual."
+                : "Select a player first.");
         }
     }
 
@@ -403,6 +430,13 @@ public sealed class Bar777GameTab
                 this.bar777SessionService.ClearBuyer();
         }
         ImGui.Spacing();
+
+        if (PlayerInfoService.IsHostPlayer(buyer))
+        {
+            UIHelper.CentreText("You are covering this roll", EmporiumNeonTheme.WarnAmber);
+            UIHelper.CentreTextDisabled($"{session.HostPaidGil:N0} Gil credited - start the game as usual");
+            return;
+        }
 
         UIHelper.CentreNextButtonRow(
             (FontAwesomeIcon.CommentDots, "Request Gil (Buyer)"),

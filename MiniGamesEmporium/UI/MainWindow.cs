@@ -133,6 +133,7 @@ public sealed class MainWindow : Window, IDisposable
         AutoPayoutService autoPayoutService,
         HigherLowerService higherLowerService,
         PlayerInfoService playerInfoService,
+        PartyService partyService,
         RaffleService raffleService,
         VotingMadnessService votingMadnessService,
         CoinCollectorService coinCollectorService)
@@ -146,7 +147,7 @@ public sealed class MainWindow : Window, IDisposable
         Flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
         this.transactionHistoryTab = new TransactionHistoryTab(historyService);
         this.sessionHistoryTab     = new SessionHistoryTab(historyService);
-        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, chatQueue, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, log, historyService, autoPayoutService, higherLowerService, playerInfoService, raffleService, votingMadnessService, coinCollectorService);
+        this.miniGamesTab          = new MiniGamesTab(config, bar777SessionService, chatQueue, deathrollService, bettingService, deathrollDiscordService, drtWebviewService, log, historyService, autoPayoutService, higherLowerService, playerInfoService, partyService, raffleService, votingMadnessService, coinCollectorService);
         this.presetManagerTab      = new PresetManagerTab(config, presetService);
         this.settingsTab           = new SettingsTab(config);
         this.supportTab            = new SupportTab();

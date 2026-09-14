@@ -18,7 +18,7 @@ public static class AnnounceRules
             if (string.IsNullOrWhiteSpace(line))
                 continue;
             var msg = HigherLowerMessageFormatter.Format(line, config);
-            chatQueue.Enqueue(msg);
+            chatQueue.EnqueueToParty(msg);
         }
     }
 }

@@ -23,6 +23,6 @@ public static class AnnounceHigherLowerLoss
             playerName:   playerName,
             rounds:       rounds,
             highestRound: highestRound);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

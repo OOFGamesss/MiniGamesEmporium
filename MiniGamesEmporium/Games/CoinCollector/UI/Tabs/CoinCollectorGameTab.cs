@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -384,24 +384,50 @@ public sealed class CoinCollectorGameTab : IDisposable
         if (string.IsNullOrEmpty(charName))
         {
             UIHelper.CentreTextDisabled("Target a player in-game to set them as the buyer.");
-            return;
+        }
+        else
+        {
+            var style        = ImGui.GetStyle();
+            var targetedRowW = ImGui.CalcTextSize("Targeted:").X + style.ItemSpacing.X + ImGui.CalcTextSize(charName).X;
+            UIHelper.CentreNext(targetedRowW);
+            ImGui.TextDisabled("Targeted:");
+            ImGui.SameLine();
+            ImGui.TextUnformatted(charName);
+            ImGui.Spacing();
+
+            using (UIHelper.PushGreenButtonColours())
+            {
+                if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##CCSetBuyer"))
+                {
+                    var full = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
+                    this.coinCollectorService.SetBuyer(full);
+                }
+            }
         }
 
-        var style        = ImGui.GetStyle();
-        var targetedRowW = ImGui.CalcTextSize("Targeted:").X + style.ItemSpacing.X + ImGui.CalcTextSize(charName).X;
-        UIHelper.CentreNext(targetedRowW);
-        ImGui.TextDisabled("Targeted:");
-        ImGui.SameLine();
-        ImGui.TextUnformatted(charName);
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        DrawHostPaysButton(session);
+    }
+
+    private void DrawHostPaysButton(ActiveSession session)
+    {
+        var cost = Math.Max(0, this.config.CoinCollector.EntryCost);
+        UIHelper.CentreTextDisabled($"Cover this entry yourself ({cost:N0} Gil)");
         ImGui.Spacing();
 
-        using (UIHelper.PushGreenButtonColours())
+        using (ImRaii.Disabled(!session.PlayerSet))
+        using (UIHelper.PushGoldButtonColours())
         {
-            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.UserCheck, "Set as Buyer", "##CCSetBuyer"))
-            {
-                var full = string.IsNullOrEmpty(worldName) ? charName : $"{charName}@{worldName}";
-                this.coinCollectorService.SetBuyer(full);
-            }
+            if (UIHelper.CentredIconTextButton(FontAwesomeIcon.HandHoldingUsd, "Host Pays Entry", "##CCHostPays"))
+                this.coinCollectorService.HostPaysEntry();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+        {
+            ImGui.SetTooltip(session.PlayerSet
+                ? $"Sets you as the buyer and credits {cost:N0} Gil to the pot, then press Begin Game."
+                : "Select a player first.");
         }
     }
 
@@ -421,6 +447,13 @@ public sealed class CoinCollectorGameTab : IDisposable
                 this.coinCollectorService.ClearBuyer();
         }
         ImGui.Spacing();
+
+        if (PlayerInfoService.IsHostPlayer(buyer))
+        {
+            UIHelper.CentreText("You are covering this entry", EmporiumNeonTheme.WarnAmber);
+            UIHelper.CentreTextDisabled($"{session.HostPaidGil:N0} Gil credited - press Begin Game");
+            return;
+        }
 
         var row = new ShoutButtonRow();
         UIHelper.CentreNextButtonRow(

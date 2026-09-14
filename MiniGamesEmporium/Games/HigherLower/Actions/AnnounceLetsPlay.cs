@@ -11,6 +11,6 @@ public static class AnnounceLetsPlay
         var msg = HigherLowerMessageFormatter.Format(
             config.HigherLower.Chat.LetsPlayMessage,
             config, playerName: playerName);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }

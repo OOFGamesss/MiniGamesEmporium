@@ -4,7 +4,7 @@
   "InternalName": "MiniGamesEmporium",
   "Punchline": "Six live games under one roof, with more on the way.",
   "Description": "The all-in-one hosting tool for FFXIV gambling venues, with six live games: BAR 777, Coin Collector, Deathroll Tournament, Higher/Lower, Raffle, and Voting Madness. Handles player queues, trade verification, boosted pots, ticket draws, live vote tallying, automated chat, and a full transaction ledger.",
-  "Changelog": "- Coin Collector improvements.\n- All panels are now toggleable.",
+  "Changelog": "- Certain games would not register if you were in an alliance, now fixed.\n- New Host pays Entry button so you can give players free entry without destroying the pot.",
   "RepoUrl": "https://github.com/OOFGamesss/MiniGamesEmporium",
   "ApplicableVersion": "any",
   "Tags": [

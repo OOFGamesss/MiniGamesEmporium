@@ -11,6 +11,6 @@ public static class AnnounceAskGuess
         var msg = HigherLowerMessageFormatter.Format(
             config.HigherLower.Chat.AskGuessMessage,
             config, playerName: playerName, rolledNumber: rolledNumber);
-        chatQueue.Enqueue(msg);
+        chatQueue.EnqueueToParty(msg);
     }
 }
