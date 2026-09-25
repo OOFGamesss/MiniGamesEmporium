@@ -10,7 +10,7 @@ public static class AnnounceHigherLowerLoss
         string playerName,
         int rounds,
         bool isLeading,
-        int highestRound,
+        int roundsToLead,
         PluginConfiguration config,
         ChatQueueService chatQueue)
     {
@@ -22,7 +22,7 @@ public static class AnnounceHigherLowerLoss
             config,
             playerName:   playerName,
             rounds:       rounds,
-            highestRound: highestRound);
+            roundsToLead: roundsToLead);
         chatQueue.EnqueueToParty(msg);
     }
 }

@@ -35,20 +35,21 @@ public sealed class CoinCollectorChatSettingsTab
 
     private static readonly (string Token, string Desc)[] Placeholders =
     [
-        ("{player}",        "Player name; @World included only for /tell messages"),
-        ("{buyername}",     "Name of the player paying on someone else's behalf (Request Gil (Buyer) message only)"),
+        ("{player}",        "Current player's name, blank if none is selected; @World included only for /tell messages"),
+        ("{buyername}",     "Name of the player paying on the current player's behalf, blank if they are paying themselves"),
         ("{cost}",          "Entry cost in Gil"),
-        ("{coins}",         "Number of coins collected so far (Ask to Roll (With Coins) message only)"),
+        ("{coins}",         "Coins the current player has collected this turn"),
         ("{totalpot}",      "Total pot in Gil"),
-        ("{winningamount}", "Winner's share of the pot (Win Shout message only)"),
-        ("{rollmax}",       "Number to roll next, blank for the opening roll (Ask to Roll message only)"),
-        ("{highestcoins}",  "Coins needed to lead (or the player's own coins when winning) - Announce messages only"),
+        ("{winningamount}", "Winner's share of the pot - the pot split between everyone currently in the lead"),
+        ("{rollmax}",       "Number the current player rolls next, blank for the opening roll"),
+        ("{highestcoins}",  "Best coin score on the leaderboard so far, 0 before anyone has finished"),
+        ("{coinstolead}",   "Coins needed to take the lead from the current top score"),
         ("{position}",      "The player's current leaderboard position, or 'next' if they have not played yet"),
         ("{leader}",        "Name of whoever is currently in the lead, comma separated for a tie"),
         ("{leaderboard}",   "Ranked list of the top players and their coins, e.g. 1. Alice (7), 2. Bob (5)"),
         ("{wrongmax}",      "The number the player wrongly rolled out of (Wrong Roll message only)"),
-        ("{attempt}",       "Which paid turn the player is on, when they bought several"),
-        ("{attempts}",      "How many paid turns the player bought in total"),
+        ("{attempt}",       "Which paid turn the current player is on, when they bought several"),
+        ("{attempts}",      "How many paid turns the current player bought in total"),
     ];
 
     private static void DrawPlaceholderReference() => PlaceholderReference.Draw(Placeholders);

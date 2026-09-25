@@ -14,7 +14,7 @@ public class CoinCollectorChatConfig
         "/shout Congratulations {player}! You collected {coins} coins and won {winningamount} Gil!";
     public bool AutoSendLoss { get; set; } = false;
     public string LossUnluckyMessage { get; set; } =
-        "/p Unlucky {player}! You collected {coins} coins. You needed {highestcoins} to take the lead!";
+        "/p Unlucky {player}! You collected {coins} coins. You needed {coinstolead} to take the lead!";
     public string LossWinningMessage { get; set; } =
         "/p Well done {player}! You are now currently winning on {coins} coins!";
     public string WrongRollMessage { get; set; } =

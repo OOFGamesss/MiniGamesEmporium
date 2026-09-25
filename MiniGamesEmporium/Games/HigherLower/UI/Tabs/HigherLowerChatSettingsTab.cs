@@ -33,14 +33,15 @@ public sealed class HigherLowerChatSettingsTab
 
     private static readonly (string Token, string Desc)[] Placeholders =
     [
-        ("{player}",       "Player name; @World included only for /tell messages"),
-        ("{buyername}",    "Name of the player paying on someone else's behalf (Request Gil (Buyer) message only)"),
+        ("{player}",       "Current player's name, blank if none is selected; @World included only for /tell messages"),
+        ("{buyername}",    "Name of the player paying on the current player's behalf, blank if they are paying themselves"),
         ("{cost}",         "Entry cost in Gil"),
-        ("{rounds}",       "Number of rounds correct"),
+        ("{rounds}",       "Rounds the current player has got correct this turn"),
         ("{totalpot}",     "Total pot in Gil"),
-        ("{winningamount}", "Winner's share of the pot (Win Shout message only)"),
-        ("{rollednumber}", "Most recently rolled number (Ask Guess message only)"),
-        ("{highestround}", "Target rounds to lead (or player's own rounds when winning) - Announce messages only"),
+        ("{winningamount}", "Winner's share of the pot - the pot split between everyone currently in the lead"),
+        ("{rollednumber}", "Most recently rolled number this turn, blank before the first roll"),
+        ("{highestround}", "Best round score on the leaderboard so far, 0 before anyone has finished"),
+        ("{roundstolead}", "Rounds needed to take the lead from the current top score"),
     ];
 
     private static void DrawPlaceholderReference() => PlaceholderReference.Draw(Placeholders);

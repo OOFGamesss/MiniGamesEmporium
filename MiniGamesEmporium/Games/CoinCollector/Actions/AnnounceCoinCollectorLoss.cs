@@ -10,7 +10,7 @@ public static class AnnounceCoinCollectorLoss
         string playerName,
         int coins,
         bool isLeading,
-        int highestCoins,
+        int coinsToLead,
         PluginConfiguration config,
         ChatQueueService chatQueue)
     {
@@ -20,9 +20,9 @@ public static class AnnounceCoinCollectorLoss
         var msg = CoinCollectorMessageFormatter.Format(
             template,
             config,
-            playerName:   playerName,
-            coins:        coins,
-            highestCoins: highestCoins);
+            playerName:  playerName,
+            coins:       coins,
+            coinsToLead: coinsToLead);
         chatQueue.EnqueueToParty(msg);
     }
 }

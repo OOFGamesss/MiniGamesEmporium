@@ -107,9 +107,11 @@ public sealed class HigherLowerService : IDisposable
         SessionUpdated?.Invoke();
     }
 
-    public List<(string Name, int Rounds)> GetSessionWinners()
+    public List<(string Name, int Rounds)> GetSessionWinners() => ComputeSessionWinners(this.config);
+
+    public static List<(string Name, int Rounds)> ComputeSessionWinners(PluginConfiguration config)
     {
-        var board = this.config.HigherLower.SessionLeaderboard;
+        var board = config.HigherLower.SessionLeaderboard;
         if (board.Count == 0) return [];
 
         var groups = new Dictionary<string, (int Best, DateTime FirstBestAt, bool HasWin)>(StringComparer.OrdinalIgnoreCase);
@@ -126,7 +128,7 @@ public sealed class HigherLowerService : IDisposable
             groups[e.PlayerName] = (Math.Max(g.Best, e.RoundsCorrect), firstBestAt, g.HasWin || e.IsWinner);
         }
 
-        if (this.config.HigherLower.AllowMultipleWinners)
+        if (config.HigherLower.AllowMultipleWinners)
         {
             var flagged = groups.Where(kv => kv.Value.HasWin)
                 .OrderByDescending(kv => kv.Value.Best).ThenBy(kv => kv.Value.FirstBestAt)
@@ -420,12 +422,27 @@ public sealed class HigherLowerService : IDisposable
         return board.Count(e => e.RoundsCorrect >= rounds) <= 1;
     }
 
-    public int GetLeadTarget(int playerRounds)
+    public int GetLeadTarget(int playerRounds) => ComputeLeadTarget(this.config, playerRounds);
+
+    public static int ComputeLeadTarget(PluginConfiguration config, int playerRounds)
     {
-        var board = this.config.HigherLower.SessionLeaderboard;
+        var board = config.HigherLower.SessionLeaderboard;
         if (board.Count == 0) return playerRounds + 1;
         var sessMax = board.Max(e => e.RoundsCorrect);
-        return this.config.HigherLower.AllowMultipleWinners ? sessMax : sessMax + 1;
+        return config.HigherLower.AllowMultipleWinners ? sessMax : sessMax + 1;
+    }
+
+    public static int ComputeTopRounds(PluginConfiguration config)
+    {
+        var board = config.HigherLower.SessionLeaderboard;
+        return board.Count == 0 ? 0 : board.Max(e => e.RoundsCorrect);
+    }
+
+    public static long ComputeWinnerShare(PluginConfiguration config, long totalPot)
+    {
+        var hl      = config.HigherLower;
+        var winners = hl.SessionFinished ? hl.WinnerPayouts.Count : ComputeSessionWinners(config).Count;
+        return winners > 0 ? totalPot / winners : totalPot;
     }
 
     public long GetPerWinnerShare()

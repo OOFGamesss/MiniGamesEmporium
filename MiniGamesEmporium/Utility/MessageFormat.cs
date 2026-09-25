@@ -2,6 +2,7 @@ using System;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Plugin.Services;
+using MiniGamesEmporium.Models;
 using MiniGamesEmporium.Services;
 
 /// <summary>Shared helpers for substituting common placeholders in game chat message templates.</summary>
@@ -26,6 +27,14 @@ public static class MessageFormat
 
     public static string Position(int queuePosition) =>
         queuePosition == 0 ? "next" : $"#{queuePosition}";
+
+    public static string LivePlayer(ActiveSession? session)
+    {
+        if (session == null || !session.PlayerSet) return string.Empty;
+        return string.IsNullOrEmpty(session.PlayerWorld)
+            ? session.PlayerName
+            : $"{session.PlayerName}@{session.PlayerWorld}";
+    }
 
     public static void CopyTellToClipboard(string playerNameWithWorld, IChatGui chatGui)
     {

@@ -436,23 +436,25 @@ public sealed class CoinCollectorService
             effectiveMax = turn.CurrentRollMax;
             return rollMax == turn.CurrentRollMax;
         }
-        var configured = GetStartingRollMax();
+        var configured = GetStartingRollMax(this.config);
         effectiveMax = configured;
         return configured == DefaultDiceMax ? rollMax == 0 || rollMax == DefaultDiceMax : rollMax == configured;
     }
 
-    private int GetStartingRollMax()
+    private static int GetStartingRollMax(PluginConfiguration config)
     {
-        var configured = this.config.CoinCollector.StartingRollMax;
+        var configured = config.CoinCollector.StartingRollMax;
         return configured <= 1 ? DefaultDiceMax : configured;
     }
 
-    public int GetNextRollCommandMax()
+    public int GetNextRollCommandMax() => ComputeNextRollCommandMax(this.config);
+
+    public static int ComputeNextRollCommandMax(PluginConfiguration config)
     {
-        var turn = this.config.CoinCollectorSession;
+        var turn = config.CoinCollectorSession;
         if (turn == null || turn.IsGameOver || turn.IsWinner) return 0;
         if (turn.CurrentRollMax != 0) return turn.CurrentRollMax;
-        var configured = GetStartingRollMax();
+        var configured = GetStartingRollMax(config);
         return configured == DefaultDiceMax ? 0 : configured;
     }
 
@@ -512,12 +514,29 @@ public sealed class CoinCollectorService
         return board.Count(e => e.Coins >= coins) <= 1;
     }
 
-    public int GetLeadTarget(int playerCoins)
+    public int GetLeadTarget(int playerCoins) => ComputeLeadTarget(this.config, playerCoins);
+
+    public static int ComputeLeadTarget(PluginConfiguration config, int playerCoins)
     {
-        var board = this.config.CoinCollector.SessionLeaderboard;
+        var board = config.CoinCollector.SessionLeaderboard;
         if (board.Count == 0) return playerCoins + 1;
         var sessMax = board.Max(e => e.Coins);
-        return this.config.CoinCollector.AllowMultipleWinners ? sessMax : sessMax + 1;
+        return config.CoinCollector.AllowMultipleWinners ? sessMax : sessMax + 1;
+    }
+
+    public static int ComputeTopScore(PluginConfiguration config)
+    {
+        var board = config.CoinCollector.SessionLeaderboard;
+        return board.Count == 0 ? 0 : board.Max(e => e.Coins);
+    }
+
+    public static long ComputeWinnerShare(PluginConfiguration config, long totalPot)
+    {
+        var cc      = config.CoinCollector;
+        var winners = cc.SessionFinished
+            ? cc.WinnerPayouts.Count
+            : ComputeStandings(config).Count(r => r.IsEffectiveWinner);
+        return winners > 0 ? totalPot / winners : totalPot;
     }
 
     public long GetPerWinnerShare()

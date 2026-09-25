@@ -10,28 +10,35 @@ public static class HigherLowerMessageFormatter
     public static string Format(
         string template,
         PluginConfiguration config,
-        string playerName = "",
+        string? playerName = null,
         int queuePosition = 0,
-        int rounds = 0,
+        int? rounds = null,
         long? totalPotOverride = null,
         string? keywordOverride = null,
-        string buyerName = "",
-        int rolledNumber = 0,
-        int highestRound = 0,
-        long winningAmount = 0)
+        string? buyerName = null,
+        int? rolledNumber = null,
+        int? roundsToLead = null,
+        long? winningAmount = null)
     {
+        var session    = config.HigherLowerActiveSession;
+        var turn       = config.HigherLowerSession;
+        var roundCount = rounds ?? turn?.RoundsCorrect ?? 0;
+        var rolled     = rolledNumber ?? (turn?.RollLog.Count > 0 ? (int?)turn.RollLog[^1] : null);
         var totalPot   = totalPotOverride ?? HigherLowerService.ComputeTotalPot(config);
-        var display    = MessageFormat.DisplayPlayer(template, playerName);
+        var share      = winningAmount ?? HigherLowerService.ComputeWinnerShare(config, totalPot);
+        var toLead     = roundsToLead ?? HigherLowerService.ComputeLeadTarget(config, roundCount);
+        var display    = MessageFormat.DisplayPlayer(template, playerName ?? MessageFormat.LivePlayer(session));
         return template
-            .Replace("{buyername}",    buyerName)
+            .Replace("{buyername}",    buyerName ?? session?.PaidByPlayerName ?? string.Empty)
             .Replace("{player}",       display)
             .Replace("{position}",     MessageFormat.Position(queuePosition))
             .Replace("{cost}",         config.HigherLower.EntryCost.ToString("N0"))
-            .Replace("{rounds}",       rounds.ToString())
+            .Replace("{rounds}",       roundCount.ToString())
             .Replace("{totalpot}",     totalPot.ToString("N0"))
-            .Replace("{winningamount}", winningAmount.ToString("N0"))
+            .Replace("{winningamount}", share.ToString("N0"))
             .Replace("{keyword}",      keywordOverride ?? config.QueueKeyword)
-            .Replace("{rollednumber}", rolledNumber.ToString())
-            .Replace("{highestround}", highestRound.ToString());
+            .Replace("{rollednumber}", rolled?.ToString() ?? string.Empty)
+            .Replace("{highestround}", HigherLowerService.ComputeTopRounds(config).ToString())
+            .Replace("{roundstolead}", toLead.ToString());
     }
 }

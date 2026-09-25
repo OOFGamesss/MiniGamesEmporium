@@ -14,7 +14,7 @@ public class HigherLowerChatConfig
         "/shout Congratulations {player}! You survived {rounds} rounds and won {winningamount} Gil!";
     public bool AutoSendLoss { get; set; } = false;
     public string LossUnluckyMessage { get; set; } =
-        "/p Unlucky {player}! You made it to {rounds} rounds. You needed {highestround} to take the lead!";
+        "/p Unlucky {player}! You made it to {rounds} rounds. You needed {roundstolead} to take the lead!";
     public string LossWinningMessage { get; set; } =
         "/p Well done {player}! You are now currently winning on {rounds} rounds!";
     public string LetsPlayMessage { get; set; } =

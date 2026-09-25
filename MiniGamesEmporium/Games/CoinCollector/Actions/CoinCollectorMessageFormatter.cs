@@ -15,38 +15,48 @@ public static class CoinCollectorMessageFormatter
     public static string Format(
         string template,
         PluginConfiguration config,
-        string playerName = "",
+        string? playerName = null,
         int queuePosition = -1,
-        int coins = 0,
+        int? coins = null,
         long? totalPotOverride = null,
         string? keywordOverride = null,
-        string buyerName = "",
-        int rollMax = 0,
-        int highestCoins = 0,
-        long winningAmount = 0,
+        string? buyerName = null,
+        int? rollMax = null,
+        int? coinsToLead = null,
+        long? winningAmount = null,
         int wrongRollMax = 0,
-        int attempt = 0,
-        int attempts = 0)
+        int? attempt = null,
+        int? attempts = null)
     {
-        var totalPot = totalPotOverride ?? CoinCollectorService.ComputeTotalPot(config);
-        var display  = MessageFormat.DisplayPlayer(template, playerName);
-        var position = queuePosition >= 0
+        var session      = config.CoinCollectorActiveSession;
+        var paidAttempts = config.CoinCollector.Attempts;
+        var player       = playerName ?? MessageFormat.LivePlayer(session);
+        var coinCount    = coins ?? config.CoinCollectorSession?.CoinsCollected ?? 0;
+        var nextMax      = rollMax ?? CoinCollectorService.ComputeNextRollCommandMax(config);
+        var attemptNo    = attempt ?? paidAttempts.AttemptsUsed;
+        var attemptCount = attempts ?? paidAttempts.AttemptsPurchased;
+        var totalPot     = totalPotOverride ?? CoinCollectorService.ComputeTotalPot(config);
+        var share        = winningAmount ?? CoinCollectorService.ComputeWinnerShare(config, totalPot);
+        var toLead       = coinsToLead ?? CoinCollectorService.ComputeLeadTarget(config, coinCount);
+        var display      = MessageFormat.DisplayPlayer(template, player);
+        var position     = queuePosition >= 0
             ? queuePosition
-            : CoinCollectorService.ComputeStandingPosition(config, playerName);
+            : CoinCollectorService.ComputeStandingPosition(config, player);
         return template
-            .Replace("{buyername}",     buyerName)
+            .Replace("{buyername}",     buyerName ?? session?.PaidByPlayerName ?? string.Empty)
             .Replace("{player}",        display)
             .Replace("{position}",      MessageFormat.Position(position))
             .Replace("{cost}",          config.CoinCollector.EntryCost.ToString("N0"))
-            .Replace("{coins}",         coins.ToString())
+            .Replace("{coins}",         coinCount.ToString())
             .Replace("{totalpot}",      totalPot.ToString("N0"))
-            .Replace("{winningamount}", winningAmount.ToString("N0"))
+            .Replace("{winningamount}", share.ToString("N0"))
             .Replace("{keyword}",       keywordOverride ?? config.QueueKeyword)
-            .Replace("{rollmax}",       rollMax > 0 ? rollMax.ToString() : string.Empty)
-            .Replace("{highestcoins}",  highestCoins.ToString())
+            .Replace("{rollmax}",       nextMax > 0 ? nextMax.ToString() : string.Empty)
+            .Replace("{highestcoins}",  CoinCollectorService.ComputeTopScore(config).ToString())
+            .Replace("{coinstolead}",   toLead.ToString())
             .Replace("{wrongmax}",      wrongRollMax > 0 ? wrongRollMax.ToString() : string.Empty)
-            .Replace("{attempt}",       attempt > 0 ? attempt.ToString() : "1")
-            .Replace("{attempts}",      attempts > 0 ? attempts.ToString() : "1")
+            .Replace("{attempt}",       attemptNo > 0 ? attemptNo.ToString() : "1")
+            .Replace("{attempts}",      attemptCount > 0 ? attemptCount.ToString() : "1")
             .Replace("{leader}",        BuildLeaderText(config))
             .Replace("{leaderboard}",   BuildLeaderboardText(config));
     }
